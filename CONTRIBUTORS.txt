@@ -1,0 +1,45 @@
+# alphabetical order.
+
+Andrew Hintz <drew@overt.org>
+    - Addition of "Mark positions" option to pstalker IDA export.
+    - Beta testing.
+
+Cody Pierce <cpierce@tippingpoint.com>
+    - PAIMEIfilefuzz.
+    - General ideas, beta testing and morale support.
+
+Cameron Hotchkies <nummish@0x90.org>
+    - PIDA enhancements.
+    - General ideas, beta testing and morale support.
+
+Gerardo Richarte <gera@corest.com>
+    - Ideas, bug reports and fixes.
+    - Generally being a funny guy.
+
+Igor Skochinsky <http://www.openrce.org/profile/view/igorsk>
+    - Various bug reports, patches and support.
+
+Mathew Murphy <mmurphy@tippingpoint.com>
+    - Memory and handle leak fixes.
+    - Windows API wizardry.
+
+Nicolas Pouvesle <nicolas.pouvesle@gmail.com>
+    - Ideas, bug reports and fixes.
+
+Otto Ebeling
+    - PyDbg enhancements and bug reports.
+
+Paul Sabanal <http://www.openrce.org/profile/view/p0l>
+    - Bug reports and debugging support.
+
+Peter Silberman <peter.silberman@gmail.com>
+    - PAIMEIdiff.
+    - Various framework enhancements.
+    - General ideas, beta testing and morale support.
+
+Rinat Zakirov <rinatzakirov@gmail.com>
+    - Click to sort columns to pstalker module.
+
+Thomas Ptacek <http://www.matasano.com/log/>
+    - Timestamp column to pstalker module.
+    - General ideas and public support.

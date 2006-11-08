@@ -130,6 +130,7 @@ class module (pgraph.graph):
                     self.add_edge(edge)
 
 
+
     ####################################################################################################################
     def __init_enumerate_imports__ (self):
         '''
@@ -207,6 +208,24 @@ class module (pgraph.graph):
                     ea     += 4
                     opcode += 1
 
+    ####################################################################################################################
+    
+    def load_from_sql(host, username, password, id):
+        '''
+	Loads the information about a module from a SQL datastore. (Assumption of MySQL as backend)
+
+	@type  host: String
+	@param host: the hostname of the SQL datastore
+
+	@type  username: String
+	@param username: The username for authenticating to the SQL datastore
+
+	@type  password: String
+	@param password: The password for authenticating to the SQL datastore
+	'''
+        # do some shit
+	return # a new module instance
+    
 
     ####################################################################################################################
     def find_function (self, ea):

@@ -1044,15 +1044,15 @@ class pydbg(pydbg_core):
         if not self.bp_is_ours(self.exception_address):
             # system breakpoints.
             if self.exception_address == self.system_break:
-                if self.first_breakpoint:
-                    self.pydbg_log("first windows driven system breakpoint at %08x" % self.exception_address)
-                    self.first_breakpoint = False
-
                 # pass control to user registered call back.
                 if self.callbacks.has_key(EXCEPTION_BREAKPOINT):
                     continue_status = self.callbacks[EXCEPTION_BREAKPOINT](self)
                 else:
                     continue_status = DBG_CONTINUE
+
+                if self.first_breakpoint:
+                    self.pydbg_log("first windows driven system breakpoint at %08x" % self.exception_address)
+                    self.first_breakpoint = False
 
             # ignore all other breakpoints we didn't explicitly set.
             else:

@@ -1040,10 +1040,13 @@ class pydbg(pydbg_core):
 
         self.pydbg_log("pydbg.exception_handler_breakpoint() at %08x from thread id %d" % (self.exception_address, self.dbg.dwThreadId))
 
+        # breakpoints we did not set.
         if not self.bp_is_ours(self.exception_address):
-            # the first windows driven system break point.
-            if self.first_breakpoint:
-                self.pydbg_log("first windows driven system breakpoint at %08x" % self.exception_address)
+            # system breakpoints.
+            if self.exception_address == self.system_break:
+                if self.first_breakpoint:
+                    self.pydbg_log("first windows driven system breakpoint at %08x" % self.exception_address)
+                    self.first_breakpoint = False
 
                 # pass control to user registered call back.
                 if self.callbacks.has_key(EXCEPTION_BREAKPOINT):
@@ -1051,12 +1054,12 @@ class pydbg(pydbg_core):
                 else:
                     continue_status = DBG_CONTINUE
 
-                self.first_breakpoint = False
-
-            # ignore breakpoints we didn't explicitly set.
+            # ignore all other breakpoints we didn't explicitly set.
             else:
                 self.pydbg_log("breakpoint not ours %08x" % self.exception_address)
                 continue_status = DBG_EXCEPTION_NOT_HANDLED
+
+        # breakpoints we did set.
         else:
             # restore the original byte at the breakpoint address.
             self.pydbg_log("restoring original byte at %08x" % self.exception_address)

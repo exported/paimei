@@ -57,6 +57,7 @@ class pydbg_core(object):
     callbacks         = {}         # exception callback handler dictionary
     system_dlls       = []         # list of loaded system dlls
     dirty             = False      # flag specifying that the memory space of the debuggee was modified
+    system_break      = None       # the address at which initial and forced breakpoints occur at
 
     # internal variables specific to the last triggered exception.
     context           = None       # thread context of offending thread
@@ -100,6 +101,10 @@ class pydbg_core(object):
         system_info = SYSTEM_INFO()
         kernel32.GetSystemInfo(byref(system_info))
         self.page_size = system_info.dwPageSize
+
+        # determine the system DbgBreakPoint address. this is the address at which initial and forced breaks happen.
+        # XXX - need to look into fixing this for pydbg client/server.
+        self.system_break = self.func_resolve("ntdll.dll", "DbgBreakPoint")
 
         self.core_log("system page size is %d" % self.page_size)
 

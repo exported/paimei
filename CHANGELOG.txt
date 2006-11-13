@@ -2,6 +2,11 @@ xx.xx.2006 [REV ]
     gui.pstalker:
         - Added timestamp column.
         - Made columns sortable.
+    pgraph:
+        - Set default depth for graph_down() and graph_up() to infinite.
+    pydbg:
+        - Improved detection of system breakpoints by resolving ntdll!DbgBreakPoint.
+        - Added logic for compatability with DebugBreakProcess() API.
 
 
 09.13.2006 [REV 122]

@@ -14,44 +14,47 @@
 #
 
 '''
-@author:       Pedram Amini
+@author:       Pedram Amini, Cameron Hotchkies
 @license:      GNU General Public License 2.0 or later
 @contact:      pedram.amini@gmail.com
 @organization: www.openrce.org
 '''
 
 try:
-    from idaapi   import *
-    from idautils import *
-    from idc      import *
+    from idaapi     import *
+    from idautils   import *
+    from idc        import *
 except:
     pass
 
-from defines import *
+from defines        import *
+from sql_singleton  import *
 
 class instruction:
     '''
     '''
 
-    ea             = None                          # effective address of instruction
-    analysis       = None                          # analysis options
+    __ea           = None                          # effective address of instruction
+    __comment      = ""                            # comment at instruction EA
+    __bytes        = []                            # instruction raw bytes, mnemonic and operands
+    __mnem         = None                          # the mnemonic of the instruction
+    __op1          = None                          # the first operand (optional)
+    __op2          = None                          # the second operand (optional)
+    __op3          = None                          # the third operand (optional)
+
+    dbid         = None                          # Database ID
+
+    __cached       = False    
     basic_block    = None                          # pointer to parent container
-    disasm         = None                          # sanitized disassembly at instruction
-    comment        = ""                            # comment at instruction EA
-
-    bytes          = []                            # instruction raw bytes, mnemonic and operands
-    mnem           = None
-    op1            = None
-    op2            = None
-    op3            = None
-
+    #disasm         = None                          # sanitized disassembly at instruction
+    
     refs_string    = None                          # string, if any, that this instruction references
     refs_api       = None                          # known API, if any, that this instruction references
     refs_arg       = None                          # argument, if any, that this instruction references
     refs_constant  = None                          # constant value, if any, that this instruction references
     refs_var       = None                          # local variable, if any, that this instruction references
 
-    ext            = {}
+    ext            = {}    
 
     ####################################################################################################################
     def __init__ (self, ea, analysis=0, basic_block=None):
@@ -67,25 +70,30 @@ class instruction:
         @type  basic_block: pgraph.basic_block
         @param basic_block: (Optional, Def=None) Pointer to parent basic block container
         '''
-
-        self.ea          = ea                            # effective address of instruction
-        self.analysis    = analysis                      # analysis options
-        self.basic_block = basic_block                   # pointer to parent container
-        self.disasm      = self.get_disasm(ea)           # sanitized disassembly at instruction
-        self.comment     = Comment(ea)
-        self.ext         = {}
-
+        
+        
         # raw instruction bytes.
         self.bytes = []
 
+        for address in xrange(ea, ItemEnd(ea)):
+            self.bytes.append(Byte(address))
+        
+        # TODO: add in bytes
+        self.__create_instruction(ea, basic_block.dbid, basic_block.function.dbid, basic_block.function.module.dbid, GetMnem(ea), "FFFF")
+        
+        comment = Comment(ea)
+        
+        self.ea          = ea                            # effective address of instruction
+        self.basic_block = basic_block                   # pointer to parent container
+        self.comment     = Comment(ea)
+        self.ext         = {}
+        
         # instruction mnemonic and operands.
-        self.mnem = GetMnem(ea)
         self.op1  = GetOpnd(ea, 0)
         self.op2  = GetOpnd(ea, 1)
         self.op3  = GetOpnd(ea, 2)
 
-        for address in xrange(ea, ItemEnd(ea)):
-            self.bytes.append(Byte(address))
+        
 
         # XXX - this is a dirty hack to determine if and any API reference.
         xref  = Dfirst(self.ea)
@@ -105,114 +113,19 @@ class instruction:
         self.refs_arg      = self._get_arg_ref()
         self.refs_constant = self._get_constant_ref()
         self.refs_var      = self._get_var_ref()
+        
+        
+    ####################################################################################################################  
+    def __create_instruction (self, address, basic_block_id, function_id, module_id, mnemonic, bytes):
+        ss = sql_singleton()
+        
+        sql = ss.INSERT_INSTRUCTION % (address, basic_block_id, function_id, module_id, mnemonic, bytes) 
+        
+        cr = ss.cursor()
+        
+        cr.execute(sql)
+        self.dbid = cr.lastrowid  
 
-
-    ####################################################################################################################
-    def _get_arg_ref (self):
-        '''
-        Return the stack offset of the argument referenced, if any, by the instruction.
-
-        @author: Peter Silberman
-
-        @rtype:  Mixed
-        @return: Referenced argument stack offset or None.
-        '''
-
-        func = get_func(self.ea)
-
-        if not func:
-            return None
-
-        # determine if either of the operands references a stack offset.
-        op_num = 0
-        offset = calc_stkvar_struc_offset(func, self.ea, 0)
-
-        if offset == BADADDR:
-            op_num = 1
-            offset = calc_stkvar_struc_offset(func, self.ea, 1)
-
-            if offset == BADADDR:
-                return None
-
-        # for some reason calc_stkvar_struc_offset detects constant values as an index into the stack struct frame. we
-        # implement this check to ignore this false positive.
-        # XXX - may want to look into why this is the case later.
-        if self._get_constant_ref(op_num):
-            return None
-
-        if self.basic_block.function.args.has_key(offset):
-            return self.basic_block.function.args[offset]
-
-        return None
-
-
-    ####################################################################################################################
-    def _get_constant_ref (self, opnum=0):
-        '''
-        Return the constant value, if any, reference by the instruction.
-
-        @author: Peter Silberman
-
-        @rtype:  Mixed
-        @return: Integer value of referenced constant, otherwise None.
-        '''
-
-        instruction = idaapi.get_current_instruction()
-
-        if not instruction:
-            return None
-
-        if opnum:
-            op0 = idaapi.get_instruction_operand(instruction, opnum)
-
-            if op0.value and op0.type == o_imm and GetStringType(self.ea) == None:
-                return op0.value
-
-        else:
-            op0 = idaapi.get_instruction_operand(instruction, 0)
-
-            if op0.value and op0.type == o_imm and GetStringType(self.ea) == None:
-                return op0.value
-
-            op1 = idaapi.get_instruction_operand(instruction, 1)
-
-            if op1.value and op1.type == o_imm and GetStringType(self.ea) == None:
-                return op1.value
-
-        return None
-
-
-    ####################################################################################################################
-    def _get_var_ref (self):
-        '''
-        Return the stack offset of the local variable referenced, if any, by the instruction.
-
-        @author: Peter Silberman
-
-        @rtype:  Mixed
-        @return: Referenced local variable stack offset or None.
-        '''
-
-        func = get_func(self.ea)
-
-        if not func:
-            return None
-
-        # determine if either of the operands references a stack offset.
-        op_num = 0
-        offset = calc_stkvar_struc_offset(func, self.ea, 0)
-
-        if offset == BADADDR:
-            op_num = 1
-            offset = calc_stkvar_struc_offset(func, self.ea, 1)
-
-            if offset == BADADDR:
-                return None
-
-        if self.basic_block.function.local_vars.has_key(offset):
-            return self.basic_block.function.local_vars[offset]
-
-        return None
 
 
     ####################################################################################################################
@@ -255,31 +168,332 @@ class instruction:
 
         return 0
 
+    ####################################################################################################################
+    # ea accessors
+    
+    def getAddress (self):
+        '''
+        The address of the instruction
+        
+        @rtype:  DWORD
+        @return: The address of the instruction
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __ea
+        
+    ####
+    
+    def setAddress (self, value):
+        '''
+        Sets the address of the instruction.
+        
+        @type  value: DWORD
+        @param value: The address of the instruction.
+        '''
+        
+        if self.__cached:
+            __ea = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteAddress (self):
+        '''
+        Clears the name of the module
+        '''
+        del __ea  
+    
+    ####################################################################################################################
+    # comment accessors
+    
+    def getComment (self):
+        '''
+        The instruction comment.
+        
+        @rtype:  String
+        @return: The instruction comment
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __comment
+        
+    ####
+    
+    def setComment (self, value):
+        '''
+        Sets the instruction comment.
+        
+        @type  value: String
+        @param value: The instruction comment.
+        '''
+        
+        if self.__cached:
+            __comment = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteComment (self):
+        '''
+        destructs the instruction comment
+        '''
+        
+        del __comment
+            
+            
+    ####################################################################################################################
+    # bytes accessors
+    
+    def getBytes (self):
+        '''
+        The raw bytes of the instruction
+        
+        @rtype:  [Integers]
+        @return: The raw bytes of the instruction
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __bytes
+        
+    ####
+    
+    def setBytes (self, value):
+        '''
+        Sets the name of the module.
+        
+        @type  value: [Integer]
+        @param value: The raw bytes of the instruction
+        '''
+        
+        if self.__cached:
+            __bytes = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteBytes (self):
+        '''
+        destructs the raw bytes of the instruction
+        '''
+        
+        del __bytes
+            
+    
+    ####################################################################################################################
+    # mnem accessors
+    
+    def getMnemonic (self):
+        '''
+        The instruction mnemonic.
+        
+        @rtype:  String
+        @return: The instruction mnemonic
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __mnem
+        
+    ####
+    
+    def setMnemonic (self, value):
+        '''
+        Sets the instruction mnemonic.
+        
+        @type  value: String
+        @param value: The instuction mnemonic.
+        '''
+        
+        if self.__cached:
+            __mnem = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteMnemonic (self):
+        '''
+        destructs the instuction mnemonic
+        '''
+        
+        del __mnem 
+        
+    ####################################################################################################################
+    # op1 accessors
+    
+    def getOperand1 (self):
+        '''
+        Sets the first operand of the instruction
+        
+        @rtype:  String
+        @return: The first operand of the instruction
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __op1
+        
+    ####
+    
+    def setOperand1 (self, value):
+        '''
+        Sets the first operand of the instruction
+        
+        @type  value: String
+        @param value: The first operand of the instruction
+        '''
+        
+        if self.__cached:
+            __op1 = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteOperand1 (self):
+        '''
+        destructs the first operand of the instruction
+        '''
+        del __op1
+            
+    ####################################################################################################################
+    # op2 accessors
+    
+    def getOperand2 (self):
+        '''
+        Sets the second operand of the instruction
+        
+        @rtype:  String
+        @return: The second operand of the instruction
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __op2
+        
+    ####
+    
+    def setOperand2 (self, value):
+        '''
+        Sets the second operand of the instruction
+        
+        @type  value: String
+        @param value: The second operand of the instruction
+        '''
+        
+        if self.__cached:
+            __op2 = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteOperand2 (self):
+        '''
+        destructs the second operand of the instruction
+        '''
+        del __op2
+            
 
     ####################################################################################################################
-    def get_disasm (self, ea):
+    # op1 accessors
+    
+    def getOperand3 (self):
         '''
-        A GetDisasm() wrapper that strips comments and extraneous whitespace.
-
-        @type  ea: DWORD
-        @param ea: Effective address of instruction to analyze
-
+        Sets the third operand of the instruction
+        
         @rtype:  String
-        @return: Sanitized disassembly at ea.
+        @return: The third operand of the instruction
         '''
-
-        disasm = GetDisasm(ea)
-
-        # if the disassembled line contains a comment. then strip it and the trailing whitespace.
-        if disasm.count(";"):
-            disasm = disasm[0:disasm.rindex(";")].rstrip(" ")
-
-        # shrink whitespace.
-        while disasm.count("  "):
-            disasm = disasm.replace("  ", " ")
-
-        return disasm
-
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __op3
+        
+    ####
+    
+    def setOperand3 (self, value):
+        '''
+        Sets the third operand of the instruction
+        
+        @type  value: String
+        @param value: The third operand of the instruction
+        '''
+        
+        if self.__cached:
+            __op3 = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteOperand3 (self):
+        '''
+        destructor for the first operand of the instruction
+        '''
+        
+        del __op3
+            
+    
+    ####################################################################################################################
+    # disasm accessors
+    
+    def getDisasm (self):
+        '''
+        Returns the disassembly view of the instruction.
+        
+        @rtype:   String
+        @returns: The disassembly view of the instruction.
+        '''
+        
+        ret_val = self.mnem
+        
+        if self.op1 != None:
+            ret_val += " " + self.op1
+            
+            if self.op2 != None:
+                ret_val += ", " + self.op2
+                
+                if self.op3 != None:
+                    ret_val += ", " + self.op3
+                    
+        return ret_val
+        
+    def setDisasm (self, value):
+        
+        raise TypeError, "disasm is a read-only property"
+        
+    def deleteDisasm (self):
+        # nothing to destroy
+        pass
 
     ####################################################################################################################
     def get_string_reference (self, ea):
@@ -505,3 +719,15 @@ class instruction:
         "fcomi"    : __SET_CARRY | __SET_ZERO | __SET_PARITY,
         "fcomip"   : __SET_CARRY | __SET_ZERO | __SET_PARITY
     }
+    
+    ####################################################################################################################
+    # PROPERTIES
+    
+    ea      = property(getAddress, setAddress, deleteAddress, "ea")
+    comment = property(getComment, setComment, deleteComment, "comment")
+    bytes   = property(getBytes, setBytes, deleteBytes, "bytes")
+    mnem    = property(getMnemonic, setMnemonic, deleteMnemonic, "mnem")
+    op1     = property(getOperand1, setOperand1, deleteOperand1, "op1")
+    op2     = property(getOperand2, setOperand2, deleteOperand2, "op2")
+    op3     = property(getOperand3, setOperand3, deleteOperand3, "op3")
+    disasm  = property(getDisasm, setDisasm, deleteDisasm, "disasm")

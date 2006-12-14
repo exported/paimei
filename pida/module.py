@@ -14,38 +14,36 @@
 #
 
 '''
-@author:       Pedram Amini
+@author:       Pedram Amini, Cameron Hotchkies
 @license:      GNU General Public License 2.0 or later
 @contact:      pedram.amini@gmail.com
 @organization: www.openrce.org
 '''
 
-try:
-    from idaapi   import *
-    from idautils import *
-    from idc      import *
-except:
-    pass
-
 import sys
 import pgraph
 
+from sql_singleton import *
+
 from function import *
 from defines  import *
+
 
 class module (pgraph.graph):
     '''
     '''
 
-    name      = None
-    base      = None
-    depth     = None
-    analysis  = None
-    signature = None
-    ext       = {}
-
+    # most of these should be read via properties
+    __name      = None
+    __base      = None
+    __signature = None
+    
+    dbid      = None      # Database ID
+    
+    __cached  = False
+    ext       = {}    
     ####################################################################################################################
-    def __init__ (self, name="", signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE):
+    def __init__ (self, database_file, database_id=1):
         '''
         Analysis of an IDA database requires the instantiation of this class and will handle, depending on the requested
         depth, the analysis of all functions, basic blocks, instructions and more specifically which analysis techniques
@@ -71,142 +69,24 @@ class module (pgraph.graph):
         '''
 
         # run the parent classes initialization routine first.
-        super(module, self).__init__(name)
+        # this will need to be fixed
+        #super(module, self).__init__(name)
 
-        self.name      = name
-        self.base      = MinEA() - 0x1000      # XXX - cheap hack
-        self.depth     = depth
-        self.analysis  = analysis
-        self.signature = signature
-        self.ext       = {}
-        self.log       = True
-
-        # convenience alias.
-        self.functions = self.nodes
-
-        # enumerate and add the functions within the module.
-        if self.log:
-            print "Analyzing functions..."
-
-        for ea in Functions(MinEA(), MaxEA()):
-            func = function(ea, self.depth, self.analysis, self)
-            func.shape = "ellipse"
-            self.add_node(func)
-
-        # enumerate and add nodes for each import within the module.
-        if self.depth & DEPTH_INSTRUCTIONS and self.analysis & ANALYSIS_IMPORTS:
-            if self.log:
-                print"Enumerating imports..."
-
-            self.__init_enumerate_imports__()
-
-        # enumerate and propogate attributes for any discovered RPC interfaces.
-        if self.analysis & ANALYSIS_RPC:
-            if self.log:
-                print "Enumerating RPC interfaces..."
-
-            self.__init_enumerate_rpc__()
-
-        # enumerate and add the intramodular cross references.
-        if self.log:
-            print "Enumerating intramodular cross references..."
-
-        for func in self.nodes.values():
-            xrefs = CodeRefsTo(func.ea_start, 0)
-            xrefs.extend(DataRefsTo(func.ea_start))
-
-            for ref in xrefs:
-                from_func = get_func(ref)
-
-                if from_func:
-                    # GHETTO - add the actual source EA to the function.
-                    if not self.nodes[from_func.startEA].outbound_eas.has_key(ref):
-                        self.nodes[from_func.startEA].outbound_eas[ref] = []
-
-                    self.nodes[from_func.startEA].outbound_eas[ref].append(func.ea_start)
-
-                    edge = pgraph.edge.edge(from_func.startEA, func.ea_start)
-
-                    self.add_edge(edge)
-
-
+        self.dbid = database_id
 
     ####################################################################################################################
-    def __init_enumerate_imports__ (self):
-        '''
-        Enumerate and add nodes / edges for each import within the module. This routine will pass through the entire
-        module structure.
-        '''
+    def __create_module_record(self, name, base, version):
+        ss = sql_singleton()
+        ss.connection(name)
+        sql = ss.INSERT_MODULE % (name, base, version)        
+         
+        cr = ss.cursor()
+        
+        cr.execute(sql)
+        self.dbid = cr.lastrowid
+               
+        ss.connection(name).commit()   
 
-        for func in self.nodes.values():
-            for bb in func.nodes.values():
-                for instruction in bb.instructions.values():
-                    if instruction.refs_api:
-                        (address, api) = instruction.refs_api
-
-                        node = function(address, module=self)
-                        node.color = 0xB4B4DA
-                        self.add_node(node)
-
-                        edge = pgraph.edge.edge(func.ea_start, address)
-                        self.add_edge(edge)
-
-
-    ####################################################################################################################
-    def __init_enumerate_rpc__ (self):
-        '''
-        Enumerate all RPC interfaces and add additional properties to the RPC functions. This routine will pass through
-        the entire IDA database. This was entirely ripped from my RPC enumeration IDC script:
-
-            http://www.openrce.org/downloads/details/3/RPC%20Enumerator
-
-        The approach appears to be stable enough.
-        '''
-
-        # walk through the entire database.
-        # we don't just look at .text as .rdata also been spotted to house RPC structs.
-        for loop_ea in Heads(MinEA(), MaxEA()):
-            ea     = loop_ea;
-            length = Byte(ea);
-            magic  = Dword(ea + 0x18);
-
-            # RPC_SERVER_INTERFACE found.
-            if length == 0x44 and magic == 0x8A885D04:
-                # grab the rpc interface uuid.
-                uuid = ""
-                for x in xrange(ea+4, ea+4+16):
-                    uuid += chr(Byte(x))
-
-                # jump to MIDL_SERVER_INFO.
-                ea = Dword(ea + 0x3C);
-
-                # jump to DispatchTable.
-                ea = Dword(ea + 0x4);
-
-                # enumerate the dispatch routines.
-                opcode = 0
-                while 1:
-                    addr = Dword(ea)
-
-                    if addr == BADADDR:
-                        break
-
-                    # sometimes ida doesn't correctly get the function start thanks to the whole 'mov reg, reg' noop
-                    # nonsense. so try the next instruction.
-                    if not len(GetFunctionName(addr)):
-                        addr = NextNotTail(addr)
-
-                    if not len(GetFunctionName(addr)):
-                        break
-
-                    if self.nodes.has_key(addr):
-                        self.nodes[addr].rpc_uuid   = self.uuid_bin_to_string(uuid)
-                        self.nodes[addr].rpc_opcode = opcode
-                    else:
-                        print "PIDA.MODULE> No function node for RPC routine @%08X" % addr
-
-                    ea     += 4
-                    opcode += 1
 
     ####################################################################################################################
     
@@ -223,10 +103,140 @@ class module (pgraph.graph):
 	@type  password: String
 	@param password: The password for authenticating to the SQL datastore
 	'''
-        # do some shit
-	return # a new module instance
+        
+    ss = sql_singleton()
+    ss.connection(self.db_filename)
+    sql = ss.LOAD_MODULE % (dbid)        
+     
+    cr = ss.cursor()
     
+    results = cr.execute(sql).fetchone()
 
+    self.name = results["name"]
+
+    self.__cached = True
+                
+	return
+	
+    ####################################################################################################################
+    # name accessors
+    
+    def getName (self):
+        '''
+        The name of the module.
+        
+        @rtype:  String
+        @return: The name of the module
+        '''
+        
+        if not self.__cached:
+            self.load_from_sql()
+            
+        return self.__name
+        
+    ####
+      
+    def setName (self, value):
+        '''
+        Sets the name of the module.
+        
+        @type  value: String
+        @param value: The name of the module.
+        '''
+        
+        if self.__cached:
+            __name = value
+            
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE module SET name='%s' where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+        
+    ####
+        
+    def deleteName (self):
+        '''
+        destructs the name of the module
+        '''
+        del __name 
+            
+    ####################################################################################################################
+    # base accessors
+        
+    def getBase (self):
+        '''
+        Gets the base address of the module
+        
+        @rtype:  Dword
+        @return: The base address of the module
+        '''
+        
+        if not self.__cached:
+            #TODO: Call SQL load
+            pass
+            
+        return __base        
+        
+    def setBase (self, value):
+        '''
+        Sets the base address of the module.
+        
+        @type  value: Dword
+        @param value: The base address of the module.
+        '''
+        
+        if self.__cached:
+            __base = value
+        
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE module SET base=%d where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+        
+    def deleteBase (self):
+        '''
+        destructs the base address of the module
+        '''
+        del __base 
+            
+    ####################################################################################################################
+    # signature accessors
+        
+    def getSignature (self):
+        '''
+        Gets the signature of the module
+        
+        @rtype:  String
+        @return: The signature of the module
+        '''
+        
+        if not self.__cached:
+            #TODO: Call SQL load
+            pass
+            
+        return __signature
+        
+    def setSignature (self, value):
+        '''
+        Sets the signature of the module.
+        
+        @type  value: String
+        @param value: The signature of the module.
+        '''
+        
+        if self.__cached:
+            __signature = value
+            
+        ss = sql_singleton()
+        ss.cursor().execute("UPDATE module SET signature='%s' where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+        
+    def deleteSignature (self):
+        '''
+        destructs the signature of the module
+        '''
+        del __signature 
+            
     ####################################################################################################################
     def find_function (self, ea):
         '''
@@ -427,3 +437,11 @@ class module (pgraph.graph):
         (block4, block5, block6) = struct.unpack(">HHL", uuid[8:16])
 
         return "%08x-%04x-%04x-%04x-%04x%08x" % (block1, block2, block3, block4, block5, block6)
+    
+    ####################################################################################################################
+    # PROPERTIES
+    
+    name      = property(getName, setName, deleteName, "name")
+    base      = property(getBase, setBase, deleteBase, "base")
+    signature = property(getSignature, setSignature, deleteSignature, "signature")
+    

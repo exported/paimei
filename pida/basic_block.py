@@ -14,40 +14,42 @@
 #
 
 '''
-@author:       Pedram Amini
+@author:       Pedram Amini, Cameron Hotchkies
 @license:      GNU General Public License 2.0 or later
 @contact:      pedram.amini@gmail.com
 @organization: www.openrce.org
 '''
 
 try:
-    from idaapi   import *
-    from idautils import *
-    from idc      import *
+    from idaapi     import *
+    from idautils   import *
+    from idc        import *
 except:
     pass
 
 import pgraph
-
-from instruction import *
-from defines     import *
+from sql_singleton  import *
+from instruction    import *
+from defines        import *
 
 class basic_block (pgraph.node):
     '''
     '''
 
     id               = None
-    ea_start         = None
-    ea_end           = None
-    depth            = None
-    analysis         = None
+    __cached         = False
+    __ea_start       = None
+    __ea_end         = None
     function         = None
     instructions     = {}
-    num_instructions = 0
+    
+    dbid             = None     # Database ID
+    
     ext              = {}
 
+
     ####################################################################################################################
-    def __init__ (self, ea_start, ea_end, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, function=None):
+    def __init__ (self, database_id):
         '''
         Analyze the basic block from ea_start to ea_end.
 
@@ -65,34 +67,128 @@ class basic_block (pgraph.node):
         @param function: (Optional, Def=None) Pointer to parent function container
         '''
 
+        # TODO
         # run the parent classes initialization routine first.
-        super(basic_block, self).__init__(ea_start)
+        # super(basic_block, self).__init__(ea_start)
 
-        heads = [head for head in Heads(ea_start, ea_end + 1) if isCode(GetFlags(head))]
+        self.dbid = database_id
 
-        self.id               = ea_start
-        self.ea_start         = ea_start
-        self.ea_end           = ea_end
-        self.depth            = depth
-        self.analysis         = analysis
-        self.function         = function
-        self.num_instructions = len(heads)
-        self.instructions     = {}
-        self.ext              = {}
-
-        # convenience alias.
-        self.nodes = self.instructions
-
-        # bubble up the instruction count to the function. this is in a try except block to catch situations where the
-        # analysis was not bubbled down from a function.
-        try:
-            self.function.num_instructions += self.num_instructions
-        except:
+    ####################################################################################################################
+    # ea_start accessors
+    
+    def getEaStart (self):
+        '''
+        Gets the starting address of the basic block.
+        
+        @rtype:  DWORD
+        @return: The starting address of the basic block.
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
             pass
+            
+        return __ea_start
+        
+    ####
+    
+    def setEaStart (self, value):
+        '''
+        Sets the starting address of the basic block.
+        
+        @type  value: DWORD
+        @param value: The starting address of the basic block.
+        '''
+        
+        if self.__cached:
+            __ea_start = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteEaStart (self):
+        '''
+        destructs the starting address of the basic block
+        '''
+        del __ea_start 
 
-        if self.depth & DEPTH_INSTRUCTIONS:
-            for ea in heads:
-                self.instructions[ea] = instr = instruction(ea, self.analysis, self)
+    ####################################################################################################################
+    # ea_end accessors
+    
+    def getEaEnd (self):
+        '''
+        Gets the ending address of the basic block.
+        
+        @rtype:  DWORD
+        @return: The ending address of the basic block.
+        '''
+        
+        if not self.__cached:
+            #TODO: call SQL load
+            pass
+            
+        return __ea_end
+        
+    ####
+    
+    def setEaEnd (self, value):
+        '''
+        Sets the ending address of the basic block.
+        
+        @type  value: DWORD
+        @param value: The ending address of the basic block.
+        '''
+        
+        if self.__cached:
+            __ea_end = value
+            
+        #TODO
+        # write to SQL
+    
+    ####
+        
+    def deleteEaEnd (self):
+        '''
+        destructs the ending address of the basic block
+        '''
+        del __ea_end 
+
+    ####################################################################################################################
+    # num_instructions accessors
+    
+    def getNumInstructions (self):
+        '''
+        Gets the number of instructions in the basic block.
+        
+        @rtype:  Integer
+        @return: The number of instructions in the basic block.
+        '''
+        
+        #TODO: call SQL Query
+            
+        return ret_val
+        
+    ####
+    
+    def setNumInstructions (self, value):
+        '''
+        Sets the number of instructions in the basic block. (This will raise an exception as this is read-only)
+        
+        @type  value: Integer
+        @param value: The number of instructions in the basic block.
+        '''
+        
+        raise TypeError, "The num_instructions property is read-only"
+        
+    ####
+        
+    def deleteNumInstructions (self):
+        '''
+        destructs the number of instructions in the basic block
+        '''
+        pass # dynamically generated property value
 
 
     ####################################################################################################################
@@ -244,3 +340,10 @@ class basic_block (pgraph.node):
         instruction_keys.sort()
 
         return [self.instructions[key] for key in instruction_keys]
+        
+    ####################################################################################################################
+    # PROPERTIES
+    
+    num_instructions = property(getNumInstructions, setNumInstructions, deleteNumInstructions, "num_instructions")
+    ea_start         = property(getEaStart, setEaStart, deleteEaStart, "ea_start")
+    ea_end           = property(getEaEnd, setEaEnd, deleteEaEnd, "ea_end")

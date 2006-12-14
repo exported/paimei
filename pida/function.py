@@ -14,20 +14,13 @@
 #
 
 '''
-@author:       Pedram Amini
+@author:       Pedram Amini, Cameron Hotchkies
 @license:      GNU General Public License 2.0 or later
 @contact:      pedram.amini@gmail.com
 @organization: www.openrce.org
 '''
 
-try:
-    from idaapi   import *
-    from idautils import *
-    from idc      import *
-except:
-    pass
-
-import pgraph
+from sql_singleton import *
 
 from basic_block import *
 from defines     import *
@@ -35,42 +28,45 @@ from defines     import *
 class function (pgraph.graph, pgraph.node):
     '''
     '''
+    dbid                = None
+    __cached            = False
+
+    __ea_start          = None
+    __ea_end            = None
+    __name              = None
+    __is_import         = False
+    __flags             = None
+
+    # TODO: implement RPC functionality
+    __rpc_cache         = False
+    __rpc_uuid          = None
+    __rpc_opcode        = None
+                        
+    # Frame info        
+    __frame_info_cache  = False
+    __saved_reg_size    = 0
+    __frame_size        = 0
+    __ret_size          = 0
+    __local_var_size    = 0
+    __arg_size          = 0
 
     # GHETTO - we want to store the actual function to function edge start address.
-    outbound_eas     = {}
-
-    depth            = None
-    analysis         = None
-    module           = None
-    num_instructions = 0
-
-    id               = None
-    ea_start         = None
-    ea_end           = None
-    name             = None
-    is_import        = False
-    flags            = None
-
-    rpc_uuid         = None
-    rpc_opcode       = None
-
-    saved_reg_size   = 0
-    frame_size       = 0
-    ret_size         = 0
-
-    local_vars       = {}
-    local_var_size   = 0
-    num_local_vars   = 0
-
-    args             = {}
-    arg_size         = 0
-    num_args         = 0
-    chunks           = []
-
-    ext              = {}
+    outbound_eas        = {}
+                        
+    module              = None
+                        
+    id                  = None
+                        
+    local_vars          = {}                       
+    args                = {}
+                        
+    # is this runtime only?
+    chunks              = []
+                       
+    ext                 = {}    
 
     ####################################################################################################################
-    def __init__ (self, ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module=None):
+    def __init__ (self, database_id):
         '''
         Analyze all the function chunks associated with the function starting at ea_start.
         self.fill(ea_start).
@@ -87,190 +83,18 @@ class function (pgraph.graph, pgraph.node):
         @param module:   (Optional, Def=None) Pointer to parent module container
         '''
 
-        # GHETTO - we want to store the actual function to function edge start address.
-        self.outbound_eas     = {}
-
-        self.depth            = depth
-        self.analysis         = analysis
-        self.module           = module
-        self.id               = None
-        self.ea_start         = None
-        self.ea_end           = None
-        self.name             = None
-        self.is_import        = False
-        self.flags            = None
-        self.rpc_uuid         = None
-        self.rpc_opcode       = None
-        self.saved_reg_size   = 0
-        self.frame_size       = 0
-        self.ret_size         = 0
-        self.local_vars       = {}
-        self.local_var_size   = 0
-        self.num_local_vars   = 0
-        self.args             = {}
-        self.arg_size         = 0
-        self.num_args         = 0
-        self.chunks           = []
-        self.ext              = {}
-        self.num_instructions = 0
-
-        # convenience alias.
-        self.basic_blocks = self.nodes
-
-        # grab the ida function and frame structures.
-        func_struct  = get_func(ea_start)
-        frame_struct = get_frame(func_struct)
-
-        # grab the function flags.
-        self.flags = GetFunctionFlags(ea_start)
-
-        # if we're not in a "real" function. set the id and ea_start manually and stop analyzing.
-        if not func_struct or self.flags & FUNC_LIB or self.flags & FUNC_STATIC:
-            pgraph.graph.__init__(self, ea_start)
-            pgraph.node.__init__ (self, ea_start)
-
-            self.id         = ea_start
-            self.ea_start   = ea_start
-            self.ea_end     = ea_start
-            self.name       = get_name(ea_start, ea_start)
-            self.is_import  = True
-
-            return
-
-        # run the parent classes initialization routine first.
-        pgraph.graph.__init__(self, func_struct.startEA)
-        pgraph.node.__init__ (self, func_struct.startEA)
-
-        self.id             = func_struct.startEA
-        self.ea_start       = func_struct.startEA
-        self.ea_end         = PrevAddr(func_struct.endEA)
-        self.name           = GetFunctionName(self.ea_start)
-        self.saved_reg_size = func_struct.frregs
-        self.frame_size     = get_frame_size(func_struct)
-        self.ret_size       = get_frame_retsize(func_struct)
-        self.local_var_size = func_struct.frsize
-        self.chunks         = [(self.ea_start, self.ea_end)]
-
-        self.__init_args_and_local_vars__()
-
-        if self.depth & DEPTH_BASIC_BLOCKS:
-            self.__init_basic_blocks__()
-
+        dbid = database_id
 
     ####################################################################################################################
-    def __init_args_and_local_vars__ (self):
-        '''
-        Calculate the total size of arguments, # of arguments and # of local variables. Update the internal class member
-        variables appropriately.
-        '''
-
-        # grab the ida function and frame structures.
-        func_struct  = get_func(self.ea_start)
-        frame_struct = get_frame(func_struct)
-
-        if not frame_struct:
-            return
-
-        argument_boundary = self.local_var_size + self.saved_reg_size + self.ret_size
-        frame_offset      = 0
-
-        for i in xrange(0, frame_struct.memqty):
-            end_offset = frame_struct.get_member(i).soff
-
-            if i == frame_struct.memqty - 1:
-                begin_offset = frame_struct.get_member(i).eoff
-            else:
-                begin_offset = frame_struct.get_member(i+1).soff
-
-            frame_offset += (begin_offset - end_offset)
-
-            # grab the name of the current local variable or argument.
-            name = get_member_name(frame_struct.get_member(i).id)
-
-            if frame_offset > argument_boundary:
-                self.args[end_offset] = name
-            else:
-                # if the name starts with a space, then ignore it as it is either the stack saved ebp or eip.
-                # XXX - this is a pretty ghetto check.
-                if not name.startswith(" "):
-                    self.local_vars[end_offset] = name
-
-        self.arg_size       = frame_offset - argument_boundary
-        self.num_args       = len(self.args)
-        self.num_local_vars = len(self.local_vars)
-
-
-    ####################################################################################################################
-    def __init_basic_blocks__ (self):
-        '''
-        Enumerate the basic block boundaries for the current function and store them in a graph structure.
-        '''
-
-        self.chunks = self.__init_collect_function_chunks__()
-
-        for (chunk_start, chunk_end) in self.chunks:
-            edges       = []
-            block_start = chunk_start
-
-            # enumerate the nodes.
-            for ea in Heads(chunk_start, chunk_end):
-                # ignore data heads.
-                if not isCode(GetFlags(ea)):
-                    continue
-
-                prev_ea       = PrevNotTail(ea)
-                next_ea       = NextNotTail(ea)
-                branches_to   = self._branches_to(ea)
-                branches_from = self._branches_from(ea)
-
-                # ensure that both prev_ea and next_ea reference code and not data.
-                while not isCode(GetFlags(prev_ea)):
-                    prev_ea = PrevNotTail(prev_ea)
-
-                while not isCode(GetFlags(next_ea)):
-                    next_ea = PrevNotTail(next_ea)
-
-                # if the current instruction is a ret instruction, end the current node at ea.
-                if is_ret_insn(ea):
-                    bb = basic_block(block_start, ea, self.depth, self.analysis, self)
-                    self.add_node(bb)
-
-                    # start a new block at the next ea.
-                    block_start = next_ea
-
-                # if there is a branch to the current instruction, end the current node at previous ea.
-                elif branches_to and block_start != ea:
-                    bb = basic_block(block_start, prev_ea, self.depth, self.analysis, self)
-                    self.add_node(bb)
-
-                    # draw an "implicit" branch.
-                    if not is_ret_insn(prev_ea):
-                        edges.append((block_start, ea, 0x0000FF))
-
-                    # start a new block at ea.
-                    block_start = ea
-
-                # if there is a branch from the current instruction, end the current node at ea.
-                elif branches_from:
-                    bb = basic_block(block_start, ea, self.depth, self.analysis, self)
-                    self.add_node(bb)
-
-                    # make a record of the discovered forward edges.
-                    for branch in branches_from:
-                        if len(branches_from) == 1:  color = 0x0000FF
-                        elif branch == next_ea:      color = 0xFF0000
-                        else:                        color = 0x00FF00
-
-                        edges.append((block_start, branch, color))
-
-                    # start a new block at the next ea.
-                    block_start = next_ea
-
-            # create all the edges.
-            for (src, dst, color) in edges:
-                edge = pgraph.edge.edge(src, dst)
-                edge.color = color
-                self.add_edge(edge)
+    def __load_from_sql(self):
+        ss = sql_singleton()
+        cr = ss.cursor()
+        sql = "SELECT * FROM function WHERE id = %d;" % self.dbid
+        cr.execute(sql)
+        
+        results = cr.fetchall()
+        
+        print results
 
 
     ####################################################################################################################
@@ -295,58 +119,540 @@ class function (pgraph.graph, pgraph.node):
         return chunks
 
 
+  
     ####################################################################################################################
-    def _branches_from (self, ea):
+    # num_instruction
+    
+    def getNumInstructions (self):
         '''
-        Enumerate and return the list of branches from the supplied address, *including* the next logical instruction.
-        Part of the reason why we even need this function is that the "flow" argument to CodeRefsFrom does not appear
-        to be functional.
-
-        @type  ea: DWORD
-        @param ea: Effective address of instruction to enumerate jumps from.
-
-        @rtype:  List
-        @return: List of branches from the specified address.
+        The number of instructions in the function
+        
+        @rtype:  Integer
+        @return: The number of instructions in the function
         '''
-
-        if is_call_insn(ea):
-            return []
-
-        xrefs = CodeRefsFrom(ea, 1)
-
-        # if the only xref from ea is next ea, then return nothing.
-        if len(xrefs) == 1 and xrefs[0] == NextNotTail(ea):
-            xrefs = []
-
-        return xrefs
-
+        
+        ss = sql_singleton()
+        cr = ss.cursor()
+        sql = "SELECT count(*) FROM instruction WHERE function = %d;" % self.dbid
+        cr.execute(sql)
+        
+        try:
+            ret_val = cr.fetchone()[0]
+        except:
+            ret_val = 0
+            
+        return ret_val
+        
+    ####
+    
+    def setNumInstructions (self, value):
+        '''
+        Sets the number of instructions (raises an exception - READ ONLY)
+        
+        @type  value: Integer
+        @param value: The number of instructions in the function
+        '''
+        raise TypeError, "num_instructions is a read-only property"
+        return -1
+    
+    ####
+        
+    def deleteNumInstructions (self):
+        '''
+        destructs the num_instructions
+        '''
+        pass # dynamically generated property value
 
     ####################################################################################################################
-    def _branches_to (self, ea):
+    # ea_start accessors
+    
+    def getEaStart (self):
         '''
-        Enumerate and return the list of branches to the supplied address, *excluding* the previous logical instruction.
-        Part of the reason why we even need this function is that the "flow" argument to CodeRefsTo does not appear to
-        be functional.
-
-        @type  ea: DWORD
-        @param ea: Effective address of instruction to enumerate jumps to.
-
-        @rtype:  List
-        @return: List of branches to the specified address.
+        Gets the starting address of the function.
+        
+        @rtype:  DWORD
+        @return: The starting address of the function
         '''
+        
+        if not self.__cached:
+            self.load_from_sql()            
+            
+        return self.__ea_start
+        
+    ####
+    
+    def setEaStart (self, value):
+        '''
+        Sets the starting address of the function
+        
+        @type  value: DWORD
+        @param value: The starting address of the function
+        '''
+        
+        if self.__cached:
+            self.__ea_start = value
+            
+        ss = sql_singleton()                        
+        ss.cursor().execute("UPDATE function SET start_address=%d where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteEaStart (self):
+        '''
+        destructs the address of the function
+        '''
+        del __ea_start
 
-        xrefs        = []
-        prev_ea      = PrevNotTail(ea)
-        prev_code_ea = prev_ea
+    ####################################################################################################################
+    # ea_end accessors
+    
+    def getEaEnd (self):
+        '''
+        The ending address of the function. This should not be treated as an absolute due to function chunking.
+        
+        @rtype:  DWORD
+        @return: The ending address of the function
+        '''
+        
+        if not self.__cached:
+            self.load_from_sql()
+            
+        return self.__ea_end
+        
+    ####
+    
+    def setEaEnd (self, value):
+        '''
+        Sets the ending address of the function
+        
+        @type  value: DWORD
+        @param value: The ending address of the function
+        '''
+        
+        if self.__cached:
+            self.__ea_end = value
+            
+        ss = sql_singleton()                        
+        ss.cursor().execute("UPDATE function SET end_address=%d where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteEaEnd (self):
+        '''
+        destructs the ending address of the function
+        '''
+        del self.__ea_end
+        
+    ####################################################################################################################
+    # name accessors
+    
+    def getName (self):
+        '''
+        Gets the name of the function.
+        
+        @rtype:  String
+        @return: The name of the function.
+        '''
+        
+        if not self.__cached:
+            self.load_from_sql()
+            
+        return self.__name
+        
+    ####
+    
+    def setName (self, value):
+        '''
+        Sets the name of the function.
+        
+        @type  value: String
+        @param value: The name of the function.
+        '''
+        
+        if self.__cached:
+            self.__name = value
+            
+        ss = sql_singleton()                        
+        ss.cursor().execute("UPDATE function SET name='%s' where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteName (self):
+        '''
+        destructs the name of the function
+        '''
+        del self.__name     
 
-        while not isCode(GetFlags(prev_code_ea)):
-            prev_code_ea = PrevNotTail(prev_code_ea)
+    ####################################################################################################################
+    # is_import accessors
+    
+    def getIsImport (self):
+        '''
+        Gets the indicator if the function is an import.
+        
+        @rtype:  Boolean
+        @return: The indicator if the function is an import.
+        '''
+        
+        if not self.__cached:
+            self.load_from_sql()
+            
+        return __is_import
+        
+    ####
+    
+    def setIsImport (self, value):
+        '''
+        Sets the indicator if the function is an import.
+        
+        @type  value: Boolean
+        @param value: The indicator if the function is an import.
+        '''
+        
+        raise TypeError, "is_import is a read-only property"
+        return -1
+    
+    ####
+        
+    def deleteIsImport (self):
+        '''
+        destructs the indicator if the function is an import
+        '''
+        del __is_import 
+        
+    ####################################################################################################################
+    # flags accessors
+    
+    def getFlags (self):
+        '''
+        Gets the function flags.
+        
+        @rtype:  Unknown
+        @return: The function flags.
+        '''
+        
+        if not self.__cached:
+            self.load_from_sql()
+            
+        return self.__flags
+        
+    ####
+    
+    def setFlags (self, value):
+        '''
+        Sets the function flags.
+        
+        @type  value: Unknown
+        @param value: The function flags.
+        '''
+        
+        if self.__cached:
+            self.__flags = value
+            
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE function SET flags=%d where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteFlags (self):
+        '''
+        destructs the function flags
+        '''
+        del self.__flags 
 
-        for xref in CodeRefsTo(ea, 1):
-            if not is_call_insn(xref) and xref not in [prev_ea, prev_code_ea]:
-                xrefs.append(xref)
+    ####################################################################################################################
+    # saved_reg_size accessors
+    
+    def getSavedRegSize (self):
+        '''
+        Gets the saved register size.
+        
+        @rtype:  Integer
+        @return: The saved register size.
+        '''
+        
+        if not self.__frame_info_cache:            
+            self.load_frame_info_from_sql()
+            
+        return self.__saved_reg_size
+        
+    ####
+    
+    def setSavedRegSize (self, value):
+        '''
+        Sets the saved register size.
+        
+        @type  value: Integer
+        @param value: The saved register size.
+        '''
+        
+        if self.__frame_info_cache:
+            self.__saved_reg_size = value
+            
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE frame_info SET saved_reg_size=%d where function=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteSavedRegSize (self):
+        '''
+        destructs the saved register size
+        '''
+        del self.__saved_reg_size 
+        
+    ####################################################################################################################
+    # frame_size accessors
+    
+    def getFrameSize (self):
+        '''
+        Gets the frame size.
+        
+        @rtype:  Integer
+        @return: The frame size.
+        '''
+        
+        if not self.__frame_info_cache:
+            #TODO: call SQL load
+            pass
+            
+        return self.__frame_size
+        
+    ####
+    
+    def setFrameSize (self, value):
+        '''
+        Sets the frame size.
+        
+        @type  value: Integer
+        @param value: The frame size.
+        '''
+        
+        if self.__frame_info_cache:
+            self.__frame_size = value
+            
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE frame_info SET frame_size=%d where function=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteFrameSize (self):
+        '''
+        destructs the frame size
+        '''
+        del self.__frame_size 
 
-        return xrefs
+    ####################################################################################################################
+    # ret_size accessors
+    
+    def getRetSize (self):
+        '''
+        Gets the return size.
+        
+        @rtype:  Integer
+        @return: The return size.
+        '''
+        
+        if not self.__frame_info_cache:
+            #TODO: call SQL load
+            pass
+            
+        return self.__ret_size
+        
+    ####
+    
+    def setRetSize (self, value):
+        '''
+        Sets the return size.
+        
+        @type  value: Integer
+        @param value: The return size.
+        '''
+        
+        if self.__frame_info_cache:
+            self.__ret_size = value
+            
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE frame_info SET ret_size=%d where function=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteRetSize (self):
+        '''
+        destructs the return size
+        '''
+        del self.__ret_size 
+
+    ####################################################################################################################
+    # local_var_size accessors
+    
+    def getLocalVarSize (self):
+        '''
+        Gets the local variable frame size.
+        
+        @rtype:  Integer
+        @return: The local variable frame size.
+        '''
+        
+        if not self.__frame_info_cache:
+            #TODO: call SQL load
+            pass
+            
+        return self.__local_var_size
+        
+    ####
+    
+    def setLocalVarSize (self, value):
+        '''
+        Sets the local variable frame size.
+        
+        @type  value: Integer
+        @param value: The local variable frame size.
+        '''
+        
+        if self.__frame_info_cache:
+            self.__local_var_size = value
+            
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE frame_info SET local_var_size=%d where function=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteLocalVarSize (self):
+        '''
+        destructs the local variable frame size
+        '''
+        del self.__local_var_size 
+
+    ####################################################################################################################
+    # arg_size accessors
+    
+    def getArgSize (self):
+        '''
+        Gets the argument frame size.
+        
+        @rtype:  Integer
+        @return: The argument frame size.
+        '''
+        
+        if not self.__frame_info_cache:
+            #TODO: call SQL load
+            pass
+            
+        return self.__arg_size
+        
+    ####
+    
+    def setArgSize (self, value):
+        '''
+        Sets the argument frame size.
+        
+        @type  value: Integer
+        @param value: The argument frame size.
+        '''
+        
+        if self.__frame_info_cache:
+            __arg_size = value
+            
+        ss = sql_singleton()                        
+        
+        ss.cursor().execute("UPDATE frame_info SET arg_size=%d where function=%d" % (value, self.dbid))
+        ss.connection().commit()
+    
+    ####
+        
+    def deleteArgSize (self):
+        '''
+        destructs the argument frame size
+        '''
+        del self.__arg_size 
+        
+    ####################################################################################################################
+    # num_local_vars accessors
+    
+    def getNumLocalVars (self):
+        '''
+        Gets the number of local variables.
+        
+        @rtype:  Integer
+        @return: The number of local variables.
+        '''
+        
+        ss = sql_singleton()                        
+        
+        ret_val = ss.cursor().execute("SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0" % (self.dbid, VAR_TYPE_LOCAL)).fetchone()[0]
+              
+        return ret_val
+        
+    ####
+    
+    def setNumLocalVars (self, value):
+        '''
+        Sets the number of local variables. (will raise an exception, this is a READ-ONLY property)
+        
+        @type  value: Integer
+        @param value: The number of local variables.
+        '''
+        
+        raise TypeError, "num_local_vars is a read-only property"
+    
+    ####
+        
+    def deleteNumLocalVars (self):
+        '''
+        destructs the number of local variables
+        '''
+        pass # dynamically generated property value
+        
+    ####################################################################################################################
+    # num_args accessors
+    
+    def getNumArgs (self):
+        '''
+        Gets the number of function arguments.
+        
+        @rtype:  Integer
+        @return: The number of function arguments.
+        '''
+        
+        ss = sql_singleton()                        
+        
+        ret_val = ss.cursor().execute("SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0" % (self.dbid, VAR_TYPE_ARG)).fetchone()[0]
+              
+        return ret_val
+        
+    ####
+    
+    def setNumArgs (self, value):
+        '''
+        Sets the number of function arguments.
+        
+        @type  value: Integer
+        @param value: The number of function arguments.
+        '''
+        
+        raise TypeError, "num_args is a read-only property"
+    
+        
+    ####
+        
+    def deleteNumArgs (self):
+        '''
+        destructs the number of function arguments
+        '''
+        pass # dynamically generated property value 
 
 
     ####################################################################################################################
@@ -481,3 +787,24 @@ class function (pgraph.graph, pgraph.node):
             self.label += "size: %d"   % (self.ea_end - self.ea_start)
 
         return super(function, self).render_node_udraw_update()
+        
+    ####################################################################################################################
+    # PROPERTIES
+    
+    num_instructions = property(getNumInstructions, setNumInstructions, deleteNumInstructions, "num_instructions")
+    ea_start         = property(getEaStart, setEaStart, deleteEaStart, "ea_start")
+    ea_end           = property(getEaEnd, setEaEnd, deleteEaEnd, "ea_end")
+    name             = property(getName, setName, deleteName, "name")
+    is_import        = property(getIsImport, setIsImport, deleteIsImport, "is_import")
+    flags            = property(getFlags, setFlags, deleteFlags, "flags")
+    
+    # Frame info properties
+    
+    saved_reg_size   = property(getSavedRegSize, setSavedRegSize, deleteSavedRegSize, "saved_reg_size")
+    frame_size       = property(getFrameSize, setFrameSize, deleteFrameSize, "frame_size")
+    ret_size         = property(getRetSize, setRetSize, deleteRetSize, "ret_size")
+    local_var_size   = property(getLocalVarSize, setLocalVarSize, deleteLocalVarSize, "local_var_size")
+    arg_size         = property(getArgSize, setArgSize, deleteArgSize, "arg_size")
+
+    num_local_vars   = property(getNumLocalVars, setNumLocalVars, deleteNumLocalVars, "num_local_vars")
+    num_args         = property(getNumArgs, setNumArgs, deleteNumArgs, "num_args")

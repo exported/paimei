@@ -65,8 +65,16 @@ def load (file_name, progress_bar=None):
     if progress_bar:
         progress_bar = progress_bar.lower()
 
-    return load_custom(file_name, progress_bar)
+    # return load_custom(file_name, progress_bar)
+    
+    return load_sqlite(file_name)
 
+########################################################################################################################
+
+def load_sqlite(file_name):
+    newmod = module(file_name)
+    
+    return newmod
 
 ########################################################################################################################
 def dump_custom (file_name, module, progress_bar=None):
@@ -88,6 +96,8 @@ def dump_custom (file_name, module, progress_bar=None):
     @rtype:  Boolean
     @return: True on success, False otherwise.
     '''
+
+
 
     fh = open(file_name, "wb+")
 
@@ -243,6 +253,7 @@ def load_custom (file_name, progress_bar=None):
     @rtype:  Mixed
     @return: Imported module on success, 0 on cancel and -1 on failure.
     '''
+
 
     fh = open(file_name, "rb")
 

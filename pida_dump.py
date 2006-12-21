@@ -26,6 +26,25 @@ import time
 import pida
 from pysqlite2 import dbapi2 as sqlite
 
+DEPTH_FUNCTIONS    = 0x0001
+DEPTH_BASIC_BLOCKS = 0x0002
+DEPTH_INSTRUCTIONS = 0x0004
+DEPTH_FULL         = DEPTH_FUNCTIONS | DEPTH_BASIC_BLOCKS | DEPTH_INSTRUCTIONS
+
+ANALYSIS_NONE      = 0x0000
+ANALYSIS_IMPORTS   = 0x0001
+ANALYSIS_RPC       = 0x0002
+ANALYSIS_FULL      = ANALYSIS_IMPORTS | ANALYSIS_RPC
+
+### XREF TYPES ###
+CODE_TO_CODE_FUNCTION       = 1
+DATA_TO_FUNCTION            = 2
+CODE_TO_CODE_BASIC_BLOCK    = 4
+CODE_TO_CODE_INSTRUCTION    = 8
+
+VAR_TYPE_ARGUMENT   = 1
+VAR_TYPE_LOCAL      = 2
+
 def main():
     depth    = None
     analysis = ANALYSIS_NONE
@@ -728,9 +747,6 @@ def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module=
             return dbid
         ######### END TODO ############
 
-        if dbid == 10:
-            print "ballsack"
-
         ea_start       = func_struct.startEA
         ea_end         = PrevAddr(func_struct.endEA)
         name           = GetFunctionName(ea_start)
@@ -749,31 +765,13 @@ def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module=
         __init_args_and_local_vars__(func_struct, frame_struct, dbid, module)
 
         if depth & DEPTH_BASIC_BLOCKS:
-            if dbid == 10:
-                print "ballsack 2"
             __init_basic_blocks__(ea_start, depth, analysis, dbid, module)
+            
         return dbid
 
 
 
-DEPTH_FUNCTIONS    = 0x0001
-DEPTH_BASIC_BLOCKS = 0x0002
-DEPTH_INSTRUCTIONS = 0x0004
-DEPTH_FULL         = DEPTH_FUNCTIONS | DEPTH_BASIC_BLOCKS | DEPTH_INSTRUCTIONS
 
-ANALYSIS_NONE      = 0x0000
-ANALYSIS_IMPORTS   = 0x0001
-ANALYSIS_RPC       = 0x0002
-ANALYSIS_FULL      = ANALYSIS_IMPORTS | ANALYSIS_RPC
-
-### XREF TYPES ###
-CODE_TO_CODE_FUNCTION       = 1
-DATA_TO_FUNCTION            = 2
-CODE_TO_CODE_BASIC_BLOCK    = 4
-CODE_TO_CODE_INSTRUCTION    = 8
-
-VAR_TYPE_ARGUMENT   = 1
-VAR_TYPE_LOCAL      = 2
 
 
 sql_connection = sqlite.connect(":memory:")

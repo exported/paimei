@@ -34,14 +34,17 @@ class module (pgraph.graph):
     '''
 
     # most of these should be read via properties
-    __name      = None
-    __base      = None
-    __signature = None
+    __name          = None
+    __base          = None
+    __signature     = None
     
-    dbid      = None      # Database ID
+    __nodes         = None
     
-    __cached  = False
-    ext       = {}    
+    dbid            = None      # Database ID
+    database_file   = None
+    
+    __cached        = False
+    ext             = {}    
     ####################################################################################################################
     def __init__ (self, database_file, database_id=1):
         '''
@@ -72,25 +75,16 @@ class module (pgraph.graph):
         # this will need to be fixed
         #super(module, self).__init__(name)
 
-        self.dbid = database_id
-
-    ####################################################################################################################
-    def __create_module_record(self, name, base, version):
         ss = sql_singleton()
-        ss.connection(name)
-        sql = ss.INSERT_MODULE % (name, base, version)        
-         
-        cr = ss.cursor()
+        ss.connection(database_file)
         
-        cr.execute(sql)
-        self.dbid = cr.lastrowid
-               
-        ss.connection(name).commit()   
 
-
+        self.dbid = database_id
+        self.database_file = database_file
+ 
     ####################################################################################################################
     
-    def load_from_sql(host, username, password, id):
+    def load_from_sql(self):
         '''
 	Loads the information about a module from a SQL datastore. (Assumption of MySQL as backend)
 
@@ -104,19 +98,17 @@ class module (pgraph.graph):
 	@param password: The password for authenticating to the SQL datastore
 	'''
         
-    ss = sql_singleton()
-    ss.connection(self.db_filename)
-    sql = ss.LOAD_MODULE % (dbid)        
-     
-    cr = ss.cursor()
-    
-    results = cr.execute(sql).fetchone()
-
-    self.name = results["name"]
-
-    self.__cached = True
-                
-	return
+        ss = sql_singleton()
+        ss.connection(self.db_filename)
+        sql = ss.LOAD_MODULE % (self.dbid)        
+         
+        cr = ss.cursor()
+        
+        results = cr.execute(sql).fetchone()
+        
+        self.name = results["name"]
+        
+        self.__cached = True
 	
     ####################################################################################################################
     # name accessors
@@ -145,7 +137,7 @@ class module (pgraph.graph):
         '''
         
         if self.__cached:
-            __name = value
+            self.__name = value
             
         ss = sql_singleton()                        
         
@@ -158,7 +150,7 @@ class module (pgraph.graph):
         '''
         destructs the name of the module
         '''
-        del __name 
+        del self.__name 
             
     ####################################################################################################################
     # base accessors
@@ -172,10 +164,9 @@ class module (pgraph.graph):
         '''
         
         if not self.__cached:
-            #TODO: Call SQL load
-            pass
+            self.load_from_sql()
             
-        return __base        
+        return self.__base        
         
     def setBase (self, value):
         '''
@@ -186,7 +177,7 @@ class module (pgraph.graph):
         '''
         
         if self.__cached:
-            __base = value
+            self.__base = value
         
         ss = sql_singleton()                        
         
@@ -197,7 +188,7 @@ class module (pgraph.graph):
         '''
         destructs the base address of the module
         '''
-        del __base 
+        del self.__base 
             
     ####################################################################################################################
     # signature accessors
@@ -211,10 +202,9 @@ class module (pgraph.graph):
         '''
         
         if not self.__cached:
-            #TODO: Call SQL load
-            pass
+            self.load_from_sql()
             
-        return __signature
+        return self.__signature
         
     def setSignature (self, value):
         '''
@@ -225,7 +215,7 @@ class module (pgraph.graph):
         '''
         
         if self.__cached:
-            __signature = value
+            self.__signature = value
             
         ss = sql_singleton()
         ss.cursor().execute("UPDATE module SET signature='%s' where id=%d" % (value, self.dbid))
@@ -235,7 +225,93 @@ class module (pgraph.graph):
         '''
         destructs the signature of the module
         '''
-        del __signature 
+        del self.__signature
+    
+    ####################################################################################################################
+    # num_functions
+    
+    def getNumFunctions (self):
+        '''
+        The number of instructions in the function
+        
+        @rtype:  Integer
+        @return: The number of instructions in the function
+        '''
+        
+        ss = sql_singleton()
+        cr = ss.cursor()
+        sql = "SELECT count(*) FROM function WHERE module = %d;" % self.dbid
+        cr.execute(sql)
+        
+        try:
+            ret_val = cr.fetchone()[0]
+        except:
+            ret_val = 0
+            
+        return ret_val
+        
+    ####
+    
+    def setNumFunctions (self, value):
+        '''
+        Sets the number of instructions (raises an exception - READ ONLY)
+        
+        @type  value: Integer
+        @param value: The number of instructions in the function
+        '''
+        raise TypeError, "num_instructions is a read-only property"
+        return -1
+    
+    ####
+        
+    def deleteNumFunctions (self):
+        '''
+        destructs the num_instructions
+        '''
+        pass # dynamically generated property value
+        
+    ####################################################################################################################
+    # nodes accessors
+        
+    def getNodes (self):
+        '''
+        Gets the signature of the module
+        
+        @rtype:  String
+        @return: The signature of the module
+        '''
+        
+        if self.__nodes == None:
+            ret_val = {}
+            ss = sql_singleton()
+            
+            cursor = ss.connection(self.database_file).cursor()
+            
+            results = cursor.execute("SELECT id FROM function WHERE module = %d" % self.dbid).fetchall()
+             
+            for function_id in results:
+                new_function = function(function_id, self.database_file)
+                ret_val[new_function.ea_start] = new_function
+                
+            self.__nodes = ret_val
+            
+        return self.__nodes
+        
+    def setNodes (self, value):
+        '''
+        Sets the nodes of the module. This will generate an error.
+        
+        @type  value: String
+        @param value: The signature of the module.
+        '''
+        
+        raise TypeError, "nodes and functions are not directly writable for modules. This is a read-only property"
+        
+    def deleteNodes (self):
+        '''
+        destructs the signature of the module
+        '''
+        del self.__nodes
             
     ####################################################################################################################
     def find_function (self, ea):
@@ -354,6 +430,8 @@ class module (pgraph.graph):
         # nothing to do.
         if new_base == self.base:
             return
+            
+        # TODO: rewrite for SQL backing
 
         # rebase each function in the module.
         for function in self.nodes.keys():
@@ -441,7 +519,8 @@ class module (pgraph.graph):
     ####################################################################################################################
     # PROPERTIES
     
-    name      = property(getName, setName, deleteName, "name")
-    base      = property(getBase, setBase, deleteBase, "base")
-    signature = property(getSignature, setSignature, deleteSignature, "signature")
-    
+    name            = property(getName, setName, deleteName, "name")
+    base            = property(getBase, setBase, deleteBase, "base")
+    signature       = property(getSignature, setSignature, deleteSignature, "signature")
+    nodes           = property(getNodes, setNodes, deleteNodes, "nodes")
+    num_functions   = property(getNumFunctions, setNumFunctions, deleteNumFunctions, "num_functions")

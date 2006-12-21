@@ -29,6 +29,7 @@ class function (pgraph.graph, pgraph.node):
     '''
     '''
     dbid                = None
+    database_file       = None
     __cached            = False
 
     __ea_start          = None
@@ -49,24 +50,27 @@ class function (pgraph.graph, pgraph.node):
     __ret_size          = 0
     __local_var_size    = 0
     __arg_size          = 0
+    __local_var_cache   = False
+    __local_vars        = {}                       
+    __arg_cache         = False
+    __args              = {}
+
+    __nodes             = None
 
     # GHETTO - we want to store the actual function to function edge start address.
     outbound_eas        = {}
-                        
+    
+    # does not require an accessor                    
     module              = None
                         
-    id                  = None
-                        
-    local_vars          = {}                       
-    args                = {}
                         
     # is this runtime only?
     chunks              = []
-                       
+                           
     ext                 = {}    
 
     ####################################################################################################################
-    def __init__ (self, database_id):
+    def __init__ (self, database_id, database_file):
         '''
         Analyze all the function chunks associated with the function starting at ea_start.
         self.fill(ea_start).
@@ -83,47 +87,123 @@ class function (pgraph.graph, pgraph.node):
         @param module:   (Optional, Def=None) Pointer to parent module container
         '''
 
-        dbid = database_id
+        self.dbid = database_id
+        self.database_file = database_file
 
     ####################################################################################################################
     def __load_from_sql(self):
         ss = sql_singleton()
-        cr = ss.cursor()
-        sql = "SELECT * FROM function WHERE id = %d;" % self.dbid
-        cr.execute(sql)
+        curs = ss.connection(self.database_file).cursor()
+        sql = "SELECT name, module, start_address, end_address FROM function WHERE id = %d;" % self.dbid
+        curs.execute(sql)
+                
+        results = curs.fetchone()
         
-        results = cr.fetchall()
+        if results is None:
+            raise "Function [ID:%d] does not exist in the database" % self.dbid
         
-        print results
+        self.__name     = results[0]
+        self.module     = results[1]        
+        self.__ea_start = results[2]
+        self.__ea_end   = results[3]
+        
+        self.__cached = True
 
+    def __load_frame_info_from_sql(self):
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        sql = "SELECT saved_reg_size, frame_size, ret_size, local_var_size, arg_size FROM frame_info WHERE function = %d;" % self.dbid
+        curs.execute(sql)
+                
+        results = curs.fetchone()        
+        
+        if results is None:
+            raise "Frame information for function [ID:%d] does not exist in the database" % self.dbid
+            
+        self.__saved_reg_size   = results[0]
+        self.__frame_size       = results[1]
+        self.__ret_size         = results[2]
+        self.__local_var_size   = results[3]
+        self.__arg_size         = results[4]
+            
+        self.__frame_info_cache = True
+        
+    def __load_args_from_sql (self):
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        # TODO: discuss with pedram how we want the values filled in
+        sql = "SELECT name FROM function_variables WHERE function = %d AND flags = 1;" % self.dbid
+        curs.execute(sql)
+                
+        results = curs.fetchall()
+        
+        if results:
+            for arg in results:
+                self.__args.append(results[0])
+                
+        self.__arg_cache = True
+                
+    def __load_local_vars_from_sql (self):
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        # TODO: discuss with pedram how we want the values filled in
+        sql = "SELECT name FROM function_variables WHERE function = %d AND flags = 2;" % self.dbid
+        curs.execute(sql)
+                
+        results = curs.fetchall()
+        
+        if results:
+            for localvar in results:
+                self.__local_vars.append(results[0])      
+                
+        self.__local_var_cache = True
 
     ####################################################################################################################
-    def __init_collect_function_chunks__ (self):
+    # nodes accessors
+        
+    def __getNodes (self):
         '''
-        Generate and return the list of function chunks (including the main one) for the current function. Ripped from
-        idb2reml (Ero Carerra).
-
-        @rtype   List
-        @return: List of function chunks (start, end tuples) for the current function.
+        Gets the signature of the module
+        
+        @rtype:  String
+        @return: The signature of the module
         '''
-
-        chunks   = []
-        iterator = func_tail_iterator_t(get_func(self.ea_start))
-        status   = iterator.main()
-
-        while status:
-            chunk = iterator.chunk()
-            chunks.append((chunk.startEA, chunk.endEA))
-            status = iterator.next()
-
-        return chunks
-
-
-  
+        
+        if self.__nodes == None:
+            ret_val = {}
+            ss = sql_singleton()
+            
+            cursor = ss.connection(self.database_file).cursor()
+            
+            results = cursor.execute("SELECT id FROM basic_block WHERE function = %d" % self.dbid).fetchall()
+            
+            for basic_block_id in results:
+                new_basic_block = basic_block(basic_block_id, self.database_file)
+                ret_val[new_basic_block.ea_start] = new_basic_block
+                
+            self.__nodes = ret_val
+        return self.__nodes
+        
+    def __setNodes (self, value):
+        '''
+        Sets the nodes of the module. This will generate an error.
+        
+        @type  value: String
+        @param value: The signature of the module.
+        '''
+        
+        raise TypeError, "nodes and functions are not directly writable for modules. This is a read-only property"
+        
+    def __deleteNodes (self):
+        '''
+        destructs the signature of the module
+        '''
+        pass 
+    
     ####################################################################################################################
     # num_instruction
     
-    def getNumInstructions (self):
+    def __getNumInstructions (self):
         '''
         The number of instructions in the function
         
@@ -132,12 +212,12 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         ss = sql_singleton()
-        cr = ss.cursor()
+        curs = ss.connection(self.database_file).cursor()
         sql = "SELECT count(*) FROM instruction WHERE function = %d;" % self.dbid
-        cr.execute(sql)
+        curs.execute(sql)
         
         try:
-            ret_val = cr.fetchone()[0]
+            ret_val = curs.fetchone()[0]
         except:
             ret_val = 0
             
@@ -145,7 +225,7 @@ class function (pgraph.graph, pgraph.node):
         
     ####
     
-    def setNumInstructions (self, value):
+    def __setNumInstructions (self, value):
         '''
         Sets the number of instructions (raises an exception - READ ONLY)
         
@@ -157,7 +237,7 @@ class function (pgraph.graph, pgraph.node):
     
     ####
         
-    def deleteNumInstructions (self):
+    def __deleteNumInstructions (self):
         '''
         destructs the num_instructions
         '''
@@ -166,7 +246,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # ea_start accessors
     
-    def getEaStart (self):
+    def __getEaStart (self):
         '''
         Gets the starting address of the function.
         
@@ -175,13 +255,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__cached:
-            self.load_from_sql()            
+            self.__load_from_sql()            
             
         return self.__ea_start
         
     ####
     
-    def setEaStart (self, value):
+    def __setEaStart (self, value):
         '''
         Sets the starting address of the function
         
@@ -192,22 +272,23 @@ class function (pgraph.graph, pgraph.node):
         if self.__cached:
             self.__ea_start = value
             
-        ss = sql_singleton()                        
-        ss.cursor().execute("UPDATE function SET start_address=%d where id=%d" % (value, self.dbid))
+        ss = sql_singleton()    
+        curs = ss.connection(self.database_file).cursor()                    
+        curs.execute("UPDATE function SET start_address=%d where id=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteEaStart (self):
+    def __deleteEaStart (self):
         '''
         destructs the address of the function
         '''
-        del __ea_start
+        del self.__ea_start
 
     ####################################################################################################################
     # ea_end accessors
     
-    def getEaEnd (self):
+    def __getEaEnd (self):
         '''
         The ending address of the function. This should not be treated as an absolute due to function chunking.
         
@@ -216,13 +297,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__cached:
-            self.load_from_sql()
+            self.__load_from_sql()
             
         return self.__ea_end
         
     ####
     
-    def setEaEnd (self, value):
+    def __setEaEnd (self, value):
         '''
         Sets the ending address of the function
         
@@ -233,13 +314,14 @@ class function (pgraph.graph, pgraph.node):
         if self.__cached:
             self.__ea_end = value
             
-        ss = sql_singleton()                        
-        ss.cursor().execute("UPDATE function SET end_address=%d where id=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE function SET end_address=%d where id=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteEaEnd (self):
+    def __deleteEaEnd (self):
         '''
         destructs the ending address of the function
         '''
@@ -248,7 +330,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # name accessors
     
-    def getName (self):
+    def __getName (self):
         '''
         Gets the name of the function.
         
@@ -257,13 +339,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__cached:
-            self.load_from_sql()
+            self.__load_from_sql()
             
         return self.__name
         
     ####
     
-    def setName (self, value):
+    def __setName (self, value):
         '''
         Sets the name of the function.
         
@@ -274,13 +356,14 @@ class function (pgraph.graph, pgraph.node):
         if self.__cached:
             self.__name = value
             
-        ss = sql_singleton()                        
-        ss.cursor().execute("UPDATE function SET name='%s' where id=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE function SET name='%s' where id=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteName (self):
+    def __deleteName (self):
         '''
         destructs the name of the function
         '''
@@ -289,7 +372,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # is_import accessors
     
-    def getIsImport (self):
+    def __getIsImport (self):
         '''
         Gets the indicator if the function is an import.
         
@@ -298,13 +381,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__cached:
-            self.load_from_sql()
+            self.__load_from_sql()
             
-        return __is_import
+        return self.__is_import
         
     ####
     
-    def setIsImport (self, value):
+    def __setIsImport (self, value):
         '''
         Sets the indicator if the function is an import.
         
@@ -317,16 +400,16 @@ class function (pgraph.graph, pgraph.node):
     
     ####
         
-    def deleteIsImport (self):
+    def __deleteIsImport (self):
         '''
         destructs the indicator if the function is an import
         '''
-        del __is_import 
+        del self.__is_import 
         
     ####################################################################################################################
     # flags accessors
     
-    def getFlags (self):
+    def __getFlags (self):
         '''
         Gets the function flags.
         
@@ -335,13 +418,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__cached:
-            self.load_from_sql()
+            self.__load_from_sql()
             
         return self.__flags
         
     ####
     
-    def setFlags (self, value):
+    def __setFlags (self, value):
         '''
         Sets the function flags.
         
@@ -352,14 +435,14 @@ class function (pgraph.graph, pgraph.node):
         if self.__cached:
             self.__flags = value
             
-        ss = sql_singleton()                        
-        
-        ss.cursor().execute("UPDATE function SET flags=%d where id=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE function SET flags=%d where id=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteFlags (self):
+    def __deleteFlags (self):
         '''
         destructs the function flags
         '''
@@ -368,7 +451,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # saved_reg_size accessors
     
-    def getSavedRegSize (self):
+    def __getSavedRegSize (self):
         '''
         Gets the saved register size.
         
@@ -377,13 +460,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__frame_info_cache:            
-            self.load_frame_info_from_sql()
+            self.__load_frame_info_from_sql()
             
         return self.__saved_reg_size
         
     ####
     
-    def setSavedRegSize (self, value):
+    def __setSavedRegSize (self, value):
         '''
         Sets the saved register size.
         
@@ -394,14 +477,14 @@ class function (pgraph.graph, pgraph.node):
         if self.__frame_info_cache:
             self.__saved_reg_size = value
             
-        ss = sql_singleton()                        
-        
-        ss.cursor().execute("UPDATE frame_info SET saved_reg_size=%d where function=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE frame_info SET saved_reg_size=%d where function=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteSavedRegSize (self):
+    def __deleteSavedRegSize (self):
         '''
         destructs the saved register size
         '''
@@ -410,7 +493,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # frame_size accessors
     
-    def getFrameSize (self):
+    def __getFrameSize (self):
         '''
         Gets the frame size.
         
@@ -419,14 +502,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__frame_info_cache:
-            #TODO: call SQL load
-            pass
+            self.__load_frame_info_from_sql()
             
         return self.__frame_size
         
     ####
     
-    def setFrameSize (self, value):
+    def __setFrameSize (self, value):
         '''
         Sets the frame size.
         
@@ -437,14 +519,14 @@ class function (pgraph.graph, pgraph.node):
         if self.__frame_info_cache:
             self.__frame_size = value
             
-        ss = sql_singleton()                        
-        
-        ss.cursor().execute("UPDATE frame_info SET frame_size=%d where function=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE frame_info SET frame_size=%d where function=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteFrameSize (self):
+    def __deleteFrameSize (self):
         '''
         destructs the frame size
         '''
@@ -453,7 +535,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # ret_size accessors
     
-    def getRetSize (self):
+    def __getRetSize (self):
         '''
         Gets the return size.
         
@@ -462,14 +544,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__frame_info_cache:
-            #TODO: call SQL load
-            pass
+            self.__load_frame_info_from_sql()
             
         return self.__ret_size
         
     ####
     
-    def setRetSize (self, value):
+    def __setRetSize (self, value):
         '''
         Sets the return size.
         
@@ -480,14 +561,14 @@ class function (pgraph.graph, pgraph.node):
         if self.__frame_info_cache:
             self.__ret_size = value
             
-        ss = sql_singleton()                        
-        
-        ss.cursor().execute("UPDATE frame_info SET ret_size=%d where function=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE frame_info SET ret_size=%d where function=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteRetSize (self):
+    def __deleteRetSize (self):
         '''
         destructs the return size
         '''
@@ -496,7 +577,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # local_var_size accessors
     
-    def getLocalVarSize (self):
+    def __getLocalVarSize (self):
         '''
         Gets the local variable frame size.
         
@@ -505,14 +586,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__frame_info_cache:
-            #TODO: call SQL load
-            pass
+            self.__load_frame_info_from_sql()
             
         return self.__local_var_size
         
     ####
     
-    def setLocalVarSize (self, value):
+    def __setLocalVarSize (self, value):
         '''
         Sets the local variable frame size.
         
@@ -523,14 +603,14 @@ class function (pgraph.graph, pgraph.node):
         if self.__frame_info_cache:
             self.__local_var_size = value
             
-        ss = sql_singleton()                        
-        
-        ss.cursor().execute("UPDATE frame_info SET local_var_size=%d where function=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE frame_info SET local_var_size=%d where function=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteLocalVarSize (self):
+    def __deleteLocalVarSize (self):
         '''
         destructs the local variable frame size
         '''
@@ -539,7 +619,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # arg_size accessors
     
-    def getArgSize (self):
+    def __getArgSize (self):
         '''
         Gets the argument frame size.
         
@@ -548,14 +628,13 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if not self.__frame_info_cache:
-            #TODO: call SQL load
-            pass
+            self.__load_frame_info_from_sql()
             
         return self.__arg_size
         
     ####
     
-    def setArgSize (self, value):
+    def __setArgSize (self, value):
         '''
         Sets the argument frame size.
         
@@ -564,25 +643,114 @@ class function (pgraph.graph, pgraph.node):
         '''
         
         if self.__frame_info_cache:
-            __arg_size = value
+            self.__arg_size = value
             
-        ss = sql_singleton()                        
-        
-        ss.cursor().execute("UPDATE frame_info SET arg_size=%d where function=%d" % (value, self.dbid))
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE frame_info SET arg_size=%d where function=%d" % (value, self.dbid))
         ss.connection().commit()
     
     ####
         
-    def deleteArgSize (self):
+    def __deleteArgSize (self):
         '''
         destructs the argument frame size
         '''
         del self.__arg_size 
+
+    ####################################################################################################################
+    # local_vars accessors
+    
+    def __getLocalVars (self):
+        '''
+        Gets the local variable dictionary.
+        
+        @rtype:  Integer
+        @return: The argument frame size.
+        '''
+        
+        if not self.__local_var_cache:
+            self.__load_local_vars_from_sql()
+            
+        return self.__local_vars
+        
+    ####
+    
+    def __setLocalVars (self, value):
+        '''
+        Sets the argument dictionary.
+        
+        @type  value: Integer
+        @param value: The argument frame size.
+        '''
+        
+        #TODO test how it actually handles a += accessor
+        
+        if self.__local_var_cache:
+            pass
+            
+        #ss = sql_singleton()
+        #curs = ss.connection(self.database_file).cursor()
+        #curs.execute("UPDATE frame_info SET arg_size=%d where function=%d" % (value, self.dbid))
+        #ss.connection().commit()
+    
+    ####
+        
+    def __deleteLocalVars (self):
+        '''
+        destructs the argument dictionary
+        '''
+        del self.__local_vars
+
+
+    ####################################################################################################################
+    # args accessors
+    
+    def __getArgs (self):
+        '''
+        Gets the argument dictionary.
+        
+        @rtype:  Integer
+        @return: The argument frame size.
+        '''
+        
+        if not self.__arg_cache:
+            self.__load_args_from_sql()
+            
+        return self.__args
+        
+    ####
+    
+    def __setArgs (self, value):
+        '''
+        Sets the argument dictionary.
+        
+        @type  value: Integer
+        @param value: The argument frame size.
+        '''
+        
+        #TODO test how it actually handles a += accessor
+        
+        if self.__arg_cache:
+            pass
+            
+        #ss = sql_singleton()
+        #curs = ss.connection(self.database_file).cursor()
+        #curs.execute("UPDATE frame_info SET arg_size=%d where function=%d" % (value, self.dbid))
+        #ss.connection().commit()
+    
+    ####
+        
+    def __deleteArgs (self):
+        '''
+        destructs the argument dictionary
+        '''
+        del self.__args
         
     ####################################################################################################################
     # num_local_vars accessors
     
-    def getNumLocalVars (self):
+    def __getNumLocalVars (self):
         '''
         Gets the number of local variables.
         
@@ -590,15 +758,15 @@ class function (pgraph.graph, pgraph.node):
         @return: The number of local variables.
         '''
         
-        ss = sql_singleton()                        
-        
-        ret_val = ss.cursor().execute("SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0" % (self.dbid, VAR_TYPE_LOCAL)).fetchone()[0]
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        ret_val = curs.execute("SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0" % (self.dbid, VAR_TYPE_LOCAL)).fetchone()[0]
               
         return ret_val
         
     ####
     
-    def setNumLocalVars (self, value):
+    def __setNumLocalVars (self, value):
         '''
         Sets the number of local variables. (will raise an exception, this is a READ-ONLY property)
         
@@ -610,7 +778,7 @@ class function (pgraph.graph, pgraph.node):
     
     ####
         
-    def deleteNumLocalVars (self):
+    def __deleteNumLocalVars (self):
         '''
         destructs the number of local variables
         '''
@@ -619,7 +787,7 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # num_args accessors
     
-    def getNumArgs (self):
+    def __getNumArgs (self):
         '''
         Gets the number of function arguments.
         
@@ -627,15 +795,15 @@ class function (pgraph.graph, pgraph.node):
         @return: The number of function arguments.
         '''
         
-        ss = sql_singleton()                        
-        
-        ret_val = ss.cursor().execute("SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0" % (self.dbid, VAR_TYPE_ARG)).fetchone()[0]
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        ret_val = curs.execute("SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0" % (self.dbid, VAR_TYPE_ARGUMENT)).fetchone()[0]
               
         return ret_val
         
     ####
     
-    def setNumArgs (self, value):
+    def __setNumArgs (self, value):
         '''
         Sets the number of function arguments.
         
@@ -648,7 +816,7 @@ class function (pgraph.graph, pgraph.node):
         
     ####
         
-    def deleteNumArgs (self):
+    def __deleteNumArgs (self):
         '''
         destructs the number of function arguments
         '''
@@ -667,10 +835,13 @@ class function (pgraph.graph, pgraph.node):
         @return: The basic block that contains the given address or None if not found.
         '''
 
-        for bb in self.nodes.values():
-            if bb.ea_start <= ea <= bb.ea_end:
-                return bb
-
+        ss = sql_singleton()                        
+        curs = ss.connection(self.database_file).cursor()
+        results = curs.execute("SELECT id FROM basic_block WHERE function = %d AND start_address <= %d AND end_address >= %d" % (self.dbid, ea, ea)).fetchone()
+        
+        if results:
+            return basic_block(results[0], self.database_file)
+                
         return None
 
 
@@ -791,20 +962,24 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     # PROPERTIES
     
-    num_instructions = property(getNumInstructions, setNumInstructions, deleteNumInstructions, "num_instructions")
-    ea_start         = property(getEaStart, setEaStart, deleteEaStart, "ea_start")
-    ea_end           = property(getEaEnd, setEaEnd, deleteEaEnd, "ea_end")
-    name             = property(getName, setName, deleteName, "name")
-    is_import        = property(getIsImport, setIsImport, deleteIsImport, "is_import")
-    flags            = property(getFlags, setFlags, deleteFlags, "flags")
-    
-    # Frame info properties
-    
-    saved_reg_size   = property(getSavedRegSize, setSavedRegSize, deleteSavedRegSize, "saved_reg_size")
-    frame_size       = property(getFrameSize, setFrameSize, deleteFrameSize, "frame_size")
-    ret_size         = property(getRetSize, setRetSize, deleteRetSize, "ret_size")
-    local_var_size   = property(getLocalVarSize, setLocalVarSize, deleteLocalVarSize, "local_var_size")
-    arg_size         = property(getArgSize, setArgSize, deleteArgSize, "arg_size")
+    num_instructions    = property(__getNumInstructions,    __setNumInstructions,   __deleteNumInstructions, "num_instructions")
+    ea_start            = property(__getEaStart,            __setEaStart,           __deleteEaStart, "ea_start")
+    ea_end              = property(__getEaEnd,              __setEaEnd,             __deleteEaEnd, "ea_end")
+    name                = property(__getName,               __setName,              __deleteName, "name")
+    is_import           = property(__getIsImport,           __setIsImport,          __deleteIsImport, "is_import")
+    flags               = property(__getFlags,              __setFlags,             __deleteFlags, "flags")
+                                                                                    
+    # Frame info properties                                                         
 
-    num_local_vars   = property(getNumLocalVars, setNumLocalVars, deleteNumLocalVars, "num_local_vars")
-    num_args         = property(getNumArgs, setNumArgs, deleteNumArgs, "num_args")
+    saved_reg_size      = property(__getSavedRegSize,       __setSavedRegSize,      __deleteSavedRegSize, "saved_reg_size")
+    frame_size          = property(__getFrameSize,          __setFrameSize,         __deleteFrameSize, "frame_size")
+    ret_size            = property(__getRetSize,            __setRetSize,           __deleteRetSize, "ret_size")
+    local_var_size      = property(__getLocalVarSize,       __setLocalVarSize,      __deleteLocalVarSize, "local_var_size")
+    arg_size            = property(__getArgSize,            __setArgSize,           __deleteArgSize, "arg_size")
+                                                   
+    num_local_vars      = property(__getNumLocalVars,       __setNumLocalVars,      __deleteNumLocalVars, "num_local_vars")
+    num_args            = property(__getNumArgs,            __setNumArgs,           __deleteNumArgs, "num_args")
+                                                                                    
+    nodes               = property(__getNodes,              __setNodes,             __deleteNodes, "nodes")
+    args                = property(__getArgs,               __setArgs,              __deleteArgs, "args")    
+    local_vars          = property(__getLocalVars,          __setLocalVars,         __deleteLocalVars, "local_vars")    

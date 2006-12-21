@@ -48,7 +48,7 @@ class sql_singleton:
             return self.__sql[playground]
             
         def __init_connection(self, playground_name):   
-        
+            
             if self.__active_syntax == "mysql":
                 try:
                     self.__sql[playground_name] = MySQLdb.connect(host=host, user=username, passwd=password, db="pida_" + playground_name)
@@ -60,7 +60,7 @@ class sql_singleton:
                         raise MySQLdb.OperationalError, err
             else: 
                 #sqlite
-                self.__sql[playground_name] = sqlite.connect(":memory:")#playground_name + '.db')
+                self.__sql[playground_name] = sqlite.connect(playground_name)
                 
                 tables =  self.__sql[playground_name].cursor().execute("SELECT name from sqlite_master where type='table';")
                 

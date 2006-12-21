@@ -199,12 +199,12 @@ class ExplorerTreeCtrl (wx.TreeCtrl):
         self.SetItemImage(tree_module, self.icon_folder,      wx.TreeItemIcon_Normal)
         self.SetItemImage(tree_module, self.icon_folder_open, wx.TreeItemIcon_Expanded)
 
-        sorted_functions = [f.id for f in self.top.pida_modules[module_name].nodes.values() if not f.is_import]
+        sorted_functions = [f.ea_start for f in self.top.pida_modules[module_name].nodes.values() if not f.is_import]
         sorted_functions.sort()
 
         for func_key in sorted_functions:
             function = self.top.pida_modules[module_name].nodes[func_key]
-
+            
             tree_function = self.AppendItem(tree_module, "%08x - %s" % (function.ea_start, function.name))
             self.SetPyData(tree_function, self.top.pida_modules[module_name].nodes[func_key])
             self.SetItemImage(tree_function, self.icon_folder,      wx.TreeItemIcon_Normal)

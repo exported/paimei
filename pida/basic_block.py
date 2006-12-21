@@ -20,13 +20,6 @@
 @organization: www.openrce.org
 '''
 
-try:
-    from idaapi     import *
-    from idautils   import *
-    from idc        import *
-except:
-    pass
-
 import pgraph
 from sql_singleton  import *
 from instruction    import *
@@ -36,20 +29,20 @@ class basic_block (pgraph.node):
     '''
     '''
 
-    id               = None
     __cached         = False
     __ea_start       = None
     __ea_end         = None
     function         = None
+    module           = None
     instructions     = {}
     
     dbid             = None     # Database ID
     
     ext              = {}
-
+    database_file    = None
 
     ####################################################################################################################
-    def __init__ (self, database_id):
+    def __init__ (self, database_id, database_file):
         '''
         Analyze the basic block from ea_start to ea_end.
 
@@ -72,11 +65,28 @@ class basic_block (pgraph.node):
         # super(basic_block, self).__init__(ea_start)
 
         self.dbid = database_id
+        self.database_file = database_file
+
+    ####################################################################################################################
+    def __load_from_sql(self):
+        ss = sql_singleton()
+        cr = ss.connection(self.database_file).cursor()
+        sql = "SELECT module, function, start_address, end_address FROM basic_block WHERE id = %d;" % self.dbid
+        cr.execute(sql)
+        
+        results = cr.fetchone()
+        
+        self.module     = results[0]
+        self.function   = results[1]       
+        self.__ea_start = results[2]
+        self.__ea_end   = results[3]
+
+        self.__cached = True
 
     ####################################################################################################################
     # ea_start accessors
     
-    def getEaStart (self):
+    def __getEaStart (self):
         '''
         Gets the starting address of the basic block.
         
@@ -85,14 +95,13 @@ class basic_block (pgraph.node):
         '''
         
         if not self.__cached:
-            #TODO: call SQL load
-            pass
+            self.__load_from_sql()
             
-        return __ea_start
+        return self.__ea_start
         
     ####
     
-    def setEaStart (self, value):
+    def __setEaStart (self, value):
         '''
         Sets the starting address of the basic block.
         
@@ -101,23 +110,25 @@ class basic_block (pgraph.node):
         '''
         
         if self.__cached:
-            __ea_start = value
+            self.__ea_start = value
             
-        #TODO
-        # write to SQL
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE basic_block SET start_address=%d where id=%d" % (value, self.dbid))
+        ss.connection().commit()
     
     ####
         
-    def deleteEaStart (self):
+    def __deleteEaStart (self):
         '''
         destructs the starting address of the basic block
         '''
-        del __ea_start 
+        del self.__ea_start 
 
     ####################################################################################################################
     # ea_end accessors
     
-    def getEaEnd (self):
+    def __getEaEnd (self):
         '''
         Gets the ending address of the basic block.
         
@@ -126,14 +137,13 @@ class basic_block (pgraph.node):
         '''
         
         if not self.__cached:
-            #TODO: call SQL load
-            pass
+            self.__load_from_sql()
             
-        return __ea_end
+        return self.__ea_end
         
     ####
     
-    def setEaEnd (self, value):
+    def __setEaEnd (self, value):
         '''
         Sets the ending address of the basic block.
         
@@ -142,23 +152,25 @@ class basic_block (pgraph.node):
         '''
         
         if self.__cached:
-            __ea_end = value
+            self.__ea_end = value
             
-        #TODO
-        # write to SQL
-    
+        ss = sql_singleton()
+        curs = ss.connection(self.database_file).cursor()
+        curs.execute("UPDATE basic_block SET end_address=%d where id=%d" % (value, self.dbid))
+        ss.connection().commit()
+        
     ####
         
-    def deleteEaEnd (self):
+    def __deleteEaEnd (self):
         '''
         destructs the ending address of the basic block
         '''
-        del __ea_end 
+        del self.__ea_end 
 
     ####################################################################################################################
     # num_instructions accessors
     
-    def getNumInstructions (self):
+    def __getNumInstructions (self):
         '''
         Gets the number of instructions in the basic block.
         
@@ -166,13 +178,21 @@ class basic_block (pgraph.node):
         @return: The number of instructions in the basic block.
         '''
         
-        #TODO: call SQL Query
+        ss = sql_singleton()
+        cr = ss.connection(self.database_file).cursor()
+        sql = "SELECT count(*) FROM instruction WHERE basic_block = %d;" % self.dbid
+        cr.execute(sql)
+        
+        try:
+            ret_val = cr.fetchone()[0]
+        except:
+            ret_val = 0
             
         return ret_val
         
     ####
     
-    def setNumInstructions (self, value):
+    def __setNumInstructions (self, value):
         '''
         Sets the number of instructions in the basic block. (This will raise an exception as this is read-only)
         
@@ -184,7 +204,7 @@ class basic_block (pgraph.node):
         
     ####
         
-    def deleteNumInstructions (self):
+    def __deleteNumInstructions (self):
         '''
         destructs the number of instructions in the basic block
         '''
@@ -208,18 +228,6 @@ class basic_block (pgraph.node):
                 return True
 
         return False
-
-
-    ####################################################################################################################
-    def ordered_instructions(self):
-        '''
-        TODO: deprecated by sorted_instructions().
-        '''
-
-        temp = [key for key in self.instructions.keys()]
-        temp.sort()
-        return [self.instructions[key] for key in temp]
-
 
     ####################################################################################################################
     def render_node_gml (self, graph):
@@ -336,14 +344,22 @@ class basic_block (pgraph.node):
         @return: List of instructions, sorted by id.
         '''
 
-        instruction_keys = self.instructions.keys()
-        instruction_keys.sort()
-
-        return [self.instructions[key] for key in instruction_keys]
+        ret_val = []
+        ss = sql_singleton()
+        
+        cursor = ss.connection(self.database_file).cursor()
+        
+        results = cursor.execute("SELECT id FROM instruction WHERE basic_block = %d" % self.dbid).fetchall()
+        
+        for instruction_id in results:
+            new_instruction = instruction(instruction_id[0], self.database_file)
+            ret_val.append(new_instruction)
+            
+        return ret_val       
         
     ####################################################################################################################
     # PROPERTIES
     
-    num_instructions = property(getNumInstructions, setNumInstructions, deleteNumInstructions, "num_instructions")
-    ea_start         = property(getEaStart, setEaStart, deleteEaStart, "ea_start")
-    ea_end           = property(getEaEnd, setEaEnd, deleteEaEnd, "ea_end")
+    num_instructions = property(__getNumInstructions,   __setNumInstructions,   __deleteNumInstructions,    "num_instructions")
+    ea_start         = property(__getEaStart,           __setEaStart,           __deleteEaStart,            "ea_start")
+    ea_end           = property(__getEaEnd,             __setEaEnd,             __deleteEaEnd,              "ea_end")

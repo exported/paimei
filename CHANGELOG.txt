@@ -1,12 +1,24 @@
 xx.xx.2006 [REV ]
+    docs:
+        - Updated library, module and developer documentation to reflect new additions.
+    gui.console:
+        - Extended status bar to contain connection information.
+        - Added notion of "current user".
+        - Added menu option to save current connection settings / options.
+    gui.peek:
+        - New GUI module. Essentially the next version of proc peek (cmd line version now obsoleted).
     gui.pstalker:
         - Added timestamp column.
         - Made columns sortable.
     pgraph:
         - Set default depth for graph_down() and graph_up() to infinite.
+        - Added logic to correctly handle newlines in node/edge labels during uDraw rendering.
+        - Added 'image' and 'info' (mouse over popup) support to uDraw rendering.
     pydbg:
         - Improved detection of system breakpoints by resolving ntdll!DbgBreakPoint.
         - Added logic for compatability with DebugBreakProcess() API.
+        - Bug fix in context dump (EBP was being resolved as ESI).
+        - Added MSR read/write support: read_msr(), write_msr().
 
 
 09.13.2006 [REV 122]

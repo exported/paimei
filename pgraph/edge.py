@@ -144,6 +144,9 @@ class edge (object):
         if not src or not dst:
             return ""
 
+        # translate newlines for uDraw.
+        self.label = self.label.replace("\n", "\\n")
+
         udraw  = 'l("%08x->%08x",'                  % (self.src, self.dst)
         udraw +=   'e("",'                          # open edge
         udraw +=     '['                            # open attributes
@@ -165,6 +168,9 @@ class edge (object):
         @rtype:  String
         @return: GML edge update description
         '''
+
+        # translate newlines for uDraw.
+        self.label = self.label.replace("\n", "\\n")
 
         udraw  = 'new_edge("%08x->%08x","",'      % (self.src, self.dst)
         udraw +=   '['

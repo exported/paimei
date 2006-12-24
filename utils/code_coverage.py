@@ -172,6 +172,7 @@ class code_coverage:
             print sql
             print
 
+        cursor.close()
         return self
 
 
@@ -282,6 +283,7 @@ class code_coverage:
                     print sql
                     print
 
+        cursor.close()
         return self
 
 
@@ -377,6 +379,7 @@ class code_coverage:
             self.hits[ccs.eip].append(ccs)
             self.num += 1
 
+        hits.close()
         return self
 
 

@@ -30,6 +30,7 @@ from defines    import *
 from windows_h  import *
 from system_dll import *
 
+ntdll    = windll.ntdll
 kernel32 = windll.kernel32
 advapi32 = windll.advapi32
 
@@ -973,14 +974,42 @@ class pydbg_core(object):
 
 
     ####################################################################################################################
+    def read_msr (self, address):
+        '''
+        Read data from the specified MSR address.
+
+        @see: write_msr
+
+        @type  address: DWORD
+        @param address: MSR address to read from.
+
+        @rtype:  tuple
+        @return: (read status, msr structure)
+        '''
+
+        msr         = SYSDBG_MSR()
+        msr.Address = 0x1D9
+        msr.Data    = 0xFF  # must initialize this value.
+
+        status = ntdll.NtSystemDebugControl(SysDbgReadMsr,
+                                            byref(msr),
+                                            sizeof(SYSDBG_MSR),
+                                            byref(msr),
+                                            sizeof(SYSDBG_MSR),
+                                            0);
+
+        return (status, msr)
+
+
+    ####################################################################################################################
     def read_process_memory (self, address, length):
         '''
         Read from the debuggee process space.
 
         @type  address: DWORD
-        @param address: Address to read from
+        @param address: Address to read from.
         @type  length:  Integer
-        @param length:  Length, in bytes, of data to read
+        @param length:  Length, in bytes, of data to read.
 
         @raise pdx: An exception is raised on failure.
         @rtype:     Raw
@@ -1041,7 +1070,7 @@ class pydbg_core(object):
         Resume the specified thread.
 
         @type  thread_id: DWORD
-        @param thread_id: ID of thread to resume
+        @param thread_id: ID of thread to resume.
 
         @raise pdx: An exception is raised on failure.
         @rtype:     pydbg_core
@@ -1442,6 +1471,36 @@ class pydbg_core(object):
         '''
 
         return self.write_process_memory(address, data, length)
+
+
+    ####################################################################################################################
+    def write_msr (self, address, data):
+        '''
+        Write data to the specified MSR address.
+
+        @see: read_msr
+
+        @type  address: DWORD
+        @param address: MSR address to write to.
+        @type  data:    QWORD
+        @param data:    Data to write to MSR address.
+
+        @rtype:  tuple
+        @return: (read status, msr structure)
+        '''
+
+        msr         = SYSDBG_MSR()
+        msr.Address = address
+        msr.Data    = data
+
+        status = ntdll.NtSystemDebugControl(SysDbgWriteMsr,
+                                            byref(msr),
+                                            sizeof(SYSDBG_MSR),
+                                            0,
+                                            0,
+                                            0);
+
+        return status
 
 
     ####################################################################################################################

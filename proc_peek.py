@@ -238,10 +238,17 @@ def handler_breakpoint (dbg):
             wsock_recv     = dbg.func_resolve("wsock32", "recv")
             wsock_recvfrom = dbg.func_resolve("wsock32", "recvfrom")
 
-            dbg.bp_set(ws2_recv)
-            dbg.bp_set(ws2_recvfrom)
-            dbg.bp_set(wsock_recv)
-            dbg.bp_set(wsock_recvfrom)
+            try:    dbg.bp_set(ws2_recv)
+            except: pass
+            
+            try:    dbg.bp_set(ws2_recvfrom)
+            except: pass
+            
+            try:    dbg.bp_set(wsock_recv)
+            except: pass
+            
+            try:    dbg.bp_set(wsock_recvfrom)
+            except: pass
 
         return DBG_CONTINUE
 

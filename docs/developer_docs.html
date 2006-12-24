@@ -17,6 +17,7 @@
         <li><a href="#working_with_the_libraries">Working with the Libraries</a>
         <li><a href="#creating_gui_modules">Creating GUI Modules</a>
     </ul>
+    <li><a href="authors_and_contributors.html">Authors and Contributors</a></li>
 </ol>
 
 <a name="working_with_the_libraries"></a><h2>Working with the Libraries</h2>
@@ -70,7 +71,7 @@ Support files for your module should be placed under a subdirectory within modul
 
 <h3>WxGlade</h3>
 
-I recommend using WxGlade to build the basic structure / layout of your GUI module. Recall that the module you are creating must be implemented as a WxPanel. Launch WxGlade and create a new panel, naming both the panel and class 'PAIMEI[module_name]'. Select the option "Separate file for each class" and generate the Python code for your module. The panel you created will be implemented in 'PAIMEI[module name].py'. This is the file you will be editing / adding to. I've included the WxGlade project used to create some of the GUI panels and controls distributed with the first release of PaiMei in the top level docs directory, named <a href="PAIMEIwxglade.wxg">PAIMEIwxglade.wxg</a>.
+I recommend using WxGlade to build the basic structure / layout of your GUI module. Recall that the module you are creating must be implemented as a WxPanel. Launch WxGlade and create a new panel, naming both the panel and class 'PAIMEI[module_name]'. Select the option "Separate file for each class" and generate the Python code for your module. The panel you created will be implemented in 'PAIMEI[module name].py'. This is the file you will be editing / adding to. I've included the WxGlade project used to create some of the GUI panels and controls distributed with PaiMei in the top level docs directory, named <a href="PAIMEIwxglade.wxg">PAIMEIwxglade.wxg</a>. The "generic_frame" entry contains the skeleton structure for creating a two-paned window with an appropriately named log control. Duplicate this frame for a good start.
 
 <h3>Functions and Variables</h3>
 
@@ -93,7 +94,7 @@ These handles are necessary for accessing the namespace of other modules and, mo
 
 <h3>Interacting with the Status Bar</h3>
 
-The PaiMei status bar is split into two halves. The left half is reserved for the framework, the right half is for you to use freely for your module. Utilization of the status bar is optional, the method for interacting with the status bar is not. To begin, you must define two routines in your module:
+The PaiMei status bar is split into multiple sections. Most are reserved for the framework, the second position (index 1) is for you to use freely for your module. Utilization of the status bar is optional, the method for interacting with the status bar is not. To begin, you must define two routines in your module:
 
 <pre>
     <I><FONT COLOR="#B22222">####################################################################################################################

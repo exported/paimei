@@ -12,6 +12,9 @@ Cameron Hotchkies <nummish@0x90.org>
     - PIDA enhancements.
     - General ideas, beta testing and morale support.
 
+Charlie Miller <charlesamiller@hotmail.com>
+    - Bug fix in PyDbg context dump (EBP was being resolved as ESI).
+
 Gerardo Richarte <gera@corest.com>
     - Ideas, bug reports and fixes.
     - Generally being a funny guy.

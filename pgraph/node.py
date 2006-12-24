@@ -42,6 +42,10 @@ class node (object):
     gml_type        = "rectangle"
     gml_width_shape = 1.0
 
+    # udraw relevant attributes.
+    udraw_image     = None
+    udraw_info      = ""
+
     ####################################################################################################################
     def __init__ (self, id=None):
         '''
@@ -161,13 +165,25 @@ class node (object):
         @return: uDraw node description.
         '''
 
+        # translate newlines for uDraw.
+        self.label = self.label.replace("\n", "\\n")
+
+        # if an image was specified for this node, update the shape and include the image tag.
+        if self.udraw_image:
+            self.shape  = "image"
+            udraw_image = 'a("IMAGE","%s"),' % self.udraw_image
+        else:
+            udraw_image = ""
+
         udraw  = 'l("%08x",'                            % self.id
         udraw +=   'n("",'                              # open node
         udraw +=     '['                                # open attributes
+        udraw +=       udraw_image
         udraw +=       'a("_GO","%s"),'                 % self.shape
         udraw +=       'a("COLOR","#%06x"),'            % self.color
         udraw +=       'a("OBJECT","%s"),'              % self.label
         udraw +=       'a("FONTFAMILY","courier"),'
+        udraw +=       'a("INFO","%s"),'                % self.udraw_info
         udraw +=       'a("BORDER","none")'
         udraw +=     '],'                               # close attributes
         udraw +=     '['                                # open edges
@@ -195,12 +211,24 @@ class node (object):
         @return: uDraw node update description.
         '''
 
+        # translate newlines for uDraw.
+        self.label = self.label.replace("\n", "\\n")
+
+        # if an image was specified for this node, update the shape and include the image tag.
+        if self.udraw_image:
+            self.shape  = "image"
+            udraw_image = 'a("IMAGE","%s"),' % self.udraw_image
+        else:
+            udraw_image = ""
+
         udraw  = 'new_node("%08x","",'                % self.id
         udraw +=   '['
+        udraw +=     udraw_image
         udraw +=     'a("_GO","%s"),'                 % self.shape
         udraw +=     'a("COLOR","#%06x"),'            % self.color
         udraw +=     'a("OBJECT","%s"),'              % self.label
         udraw +=     'a("FONTFAMILY","courier"),'
+        udraw +=     'a("INFO","%s"),'                % self.udraw_info
         udraw +=     'a("BORDER","none")'
         udraw +=   ']'
         udraw += ')'

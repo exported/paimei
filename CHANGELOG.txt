@@ -19,6 +19,7 @@ xx.xx.2006 [REV ]
         - Added logic for compatability with DebugBreakProcess() API.
         - Bug fix in context dump (EBP was being resolved as ESI).
         - Added MSR read/write support: read_msr(), write_msr().
+        - Added optional 'hex_dump' flag to smart_dereference to return hex dump in place of undetected strings.
 
 
 09.13.2006 [REV 122]

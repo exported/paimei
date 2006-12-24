@@ -88,6 +88,10 @@ class PAIMEIpeek(wx.Panel):
         # log window bindings.
         self.Bind(wx.EVT_TEXT_MAXLEN, self.on_log_max_length_reached, self.log)
 
+        # hide the ID and depth columns (oh yeah, very ollydbg-ish).
+        self.recon.SetColumnWidth(0, 0)
+        self.recon.SetColumnWidth(2, 0)
+
         # button bindings
         self.Bind(wx.EVT_BUTTON, self.on_button_select_module,   self.select_module)
         self.Bind(wx.EVT_BUTTON, self.on_button_add_recon_point, self.add_recon_point)
@@ -236,7 +240,7 @@ class PAIMEIpeek(wx.Panel):
             # XXX - need to add a notion of stack depth.
             self.msg(dbg.dump_context(stack_depth=5, print_dots=False))
 
-        context_list = dbg.dump_context_list(stack_depth=4, print_dots=True)
+        context_list = dbg.dump_context_list(stack_depth=4, hex_dump=True)
 
         sql  = " INSERT INTO pp_hits"
         sql += " SET recon_id     = '%d'," % self.addr_to_id[dbg.context.Eip]
@@ -280,7 +284,9 @@ class PAIMEIpeek(wx.Panel):
         '''
         '''
 
-        wx.Yield()
+        # we try/except this as sometimes there is a recursion error that we don't care about.
+        try:    wx.Yield()
+        except: pass
 
         if self.detach:
             self.detach = False
@@ -315,6 +321,9 @@ class PAIMEIpeek(wx.Panel):
         if self.attach_detach.GetLabel() == "Stop":
             self.detach = True
             self.attach_detach.SetLabel("Peek!")
+
+            # refresh the list.
+            self.recon.load(self.module["id"])
             return
 
         #
@@ -394,30 +403,41 @@ class PAIMEIpeek(wx.Panel):
 
 
     ####################################################################################################################
-    def on_hit_list_select (self, event):
+    def on_hit_list_select (self, event, id=None):
         '''
         A line item in the hit list control was selected, load the details for the hit.
         '''
 
-        hit_id = event.GetClientData()
+        if not id:
+            hit_id = event.GetClientData()
+        else:
+            hit_id = id
+
         cursor = self.main_frame.mysql.cursor(MySQLdb.cursors.DictCursor)
 
-        cursor.execute("SELECT * FROM pp_hits WHERE id = '%d'" % hit_id)
-        hit = cursor.fetchone()
+        try:
+            cursor.execute("SELECT * FROM pp_hits WHERE id = '%d'" % hit_id)
+            hit = cursor.fetchone()
+        except:
+            self.err("MySQL query failed.")
+            return
 
-        context_dump  = "EAX: %08x (%10d) -> %s\n" % (hit["eax"], hit["eax"], hit["eax_deref"])
-        context_dump += "EBX: %08x (%10d) -> %s\n" % (hit["ebx"], hit["ebx"], hit["ebx_deref"])
-        context_dump += "ECX: %08x (%10d) -> %s\n" % (hit["ecx"], hit["ecx"], hit["ecx_deref"])
-        context_dump += "EDX: %08x (%10d) -> %s\n" % (hit["edx"], hit["edx"], hit["edx_deref"])
-        context_dump += "EDI: %08x (%10d) -> %s\n" % (hit["edi"], hit["edi"], hit["edi_deref"])
-        context_dump += "ESI: %08x (%10d) -> %s\n" % (hit["esi"], hit["esi"], hit["esi_deref"])
-        context_dump += "EBP: %08x (%10d) -> %s\n" % (hit["ebp"], hit["ebp"], hit["ebp_deref"])
-        context_dump += "ESP: %08x (%10d) -> %s\n" % (hit["esp"], hit["esp"], hit["esp_deref"])
+        separator = "-" * 72
 
-        context_dump += "+04: %08x (%10d) -> %s\n" % (hit["esp_4"],  hit["esp_4"],  hit["esp_4_deref"])
-        context_dump += "+08: %08x (%10d) -> %s\n" % (hit["esp_8"],  hit["esp_8"],  hit["esp_8_deref"])
-        context_dump += "+0C: %08x (%10d) -> %s\n" % (hit["esp_c"],  hit["esp_c"],  hit["esp_c_deref"])
-        context_dump += "+10: %08x (%10d) -> %s\n" % (hit["esp_10"], hit["esp_10"], hit["esp_10_deref"])
+        context_dump  = "ID: %04x\n\n" % hit["id"]
+        context_dump += "%s\nEAX: %08x (%10d)\n\n%s\n\n" % (separator, hit["eax"], hit["eax"], hit["eax_deref"])
+        context_dump += "%s\nEBX: %08x (%10d)\n\n%s\n\n" % (separator, hit["ebx"], hit["ebx"], hit["ebx_deref"])
+        context_dump += "%s\nECX: %08x (%10d)\n\n%s\n\n" % (separator, hit["ecx"], hit["ecx"], hit["ecx_deref"])
+        context_dump += "%s\nEDX: %08x (%10d)\n\n%s\n\n" % (separator, hit["edx"], hit["edx"], hit["edx_deref"])
+        context_dump += "%s\nEDI: %08x (%10d)\n\n%s\n\n" % (separator, hit["edi"], hit["edi"], hit["edi_deref"])
+        context_dump += "%s\nESI: %08x (%10d)\n\n%s\n\n" % (separator, hit["esi"], hit["esi"], hit["esi_deref"])
+        context_dump += "%s\nEBP: %08x (%10d)\n\n%s\n\n" % (separator, hit["ebp"], hit["ebp"], hit["ebp_deref"])
+        context_dump += "%s\nESP: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp"], hit["esp"], hit["esp_deref"])
+
+        context_dump += "%s\nESP +04: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_4"],  hit["esp_4"],  hit["esp_4_deref"])
+        context_dump += "%s\nESP +08: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_8"],  hit["esp_8"],  hit["esp_8_deref"])
+        context_dump += "%s\nESP +0C: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_c"],  hit["esp_c"],  hit["esp_c_deref"])
+        context_dump += "%s\nESP +10: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_10"], hit["esp_10"], hit["esp_10_deref"])
 
         self.peek_data.SetValue(context_dump)
 

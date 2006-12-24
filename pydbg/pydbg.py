@@ -853,7 +853,7 @@ class pydbg(pydbg_core):
 
 
     ####################################################################################################################
-    def dump_context_list (self, context=None, stack_depth=5, print_dots=True):
+    def dump_context_list (self, context=None, stack_depth=5, print_dots=True, hex_dump=False):
         '''
         Return an informational list of items describing the CPU context of the current thread. Information includes:
             - Disassembly at current EIP
@@ -868,6 +868,8 @@ class pydbg(pydbg_core):
         @param stack_depth: (Optional, def:5) Number of dwords to dereference off of the stack (not including ESP)
         @type  print_dots:  Bool
         @param print_dots:  (Optional, def:True) Controls suppression of dot in place of non-printable
+        @type  hex_dump:   Bool
+        @param hex_dump:   (Optional, def=False) Return a hex dump in the absense of string detection
 
         @rtype:  Dictionary
         @return: Dictionary of information about current thread context.
@@ -880,21 +882,21 @@ class pydbg(pydbg_core):
         context_list = {}
 
         context_list["eip"] = self.disasm(context.Eip)
-        context_list["eax"] = self.smart_dereference(context.Eax, print_dots)
-        context_list["ebx"] = self.smart_dereference(context.Ebx, print_dots)
-        context_list["ecx"] = self.smart_dereference(context.Ecx, print_dots)
-        context_list["edx"] = self.smart_dereference(context.Edx, print_dots)
-        context_list["edi"] = self.smart_dereference(context.Edi, print_dots)
-        context_list["esi"] = self.smart_dereference(context.Esi, print_dots)
-        context_list["ebp"] = self.smart_dereference(context.Ebp, print_dots)
-        context_list["esp"] = self.smart_dereference(context.Esp, print_dots)
+        context_list["eax"] = self.smart_dereference(context.Eax, print_dots, hex_dump)
+        context_list["ebx"] = self.smart_dereference(context.Ebx, print_dots, hex_dump)
+        context_list["ecx"] = self.smart_dereference(context.Ecx, print_dots, hex_dump)
+        context_list["edx"] = self.smart_dereference(context.Edx, print_dots, hex_dump)
+        context_list["edi"] = self.smart_dereference(context.Edi, print_dots, hex_dump)
+        context_list["esi"] = self.smart_dereference(context.Esi, print_dots, hex_dump)
+        context_list["ebp"] = self.smart_dereference(context.Ebp, print_dots, hex_dump)
+        context_list["esp"] = self.smart_dereference(context.Esp, print_dots, hex_dump)
 
         for offset in xrange(0, stack_depth + 1):
             # no try/except here because ESP *should* always be readable and i'd really like to know if it's not.
             esp = self.flip_endian_dword(self.read_process_memory(context.Esp + offset * 4, 4))
             context_list["esp+%02x"%(offset*4)]          = {}
             context_list["esp+%02x"%(offset*4)]["value"] = esp
-            context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots)
+            context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots, hex_dump)
 
         return context_list
 
@@ -1856,7 +1858,7 @@ class pydbg(pydbg_core):
 
 
     ####################################################################################################################
-    def smart_dereference (self, address, print_dots=True):
+    def smart_dereference (self, address, print_dots=True, hex_dump=False):
         '''
         "Intelligently" discover data behind an address. The address is dereferenced and explored in search of an ASCII
         or Unicode string. In the absense of a string the printable characters are returned with non-printables
@@ -1867,6 +1869,8 @@ class pydbg(pydbg_core):
         @param address:    Address to smart dereference
         @type  print_dots: Bool
         @param print_dots: (Optional, def:True) Controls suppression of dot in place of non-printable
+        @type  hex_dump:   Bool
+        @param hex_dump:   (Optional, def=False) Return a hex dump in the absense of string detection
 
         @rtype:  String
         @return: String of data discovered behind dereference.
@@ -1911,10 +1915,16 @@ class pydbg(pydbg_core):
         if not explored_string:
             explored_string = self.get_unicode_string(explored)
 
+        if not explored_string and hex_dump:
+            explored_string = self.hex_dump(explored)
+
         if not explored_string:
             explored_string = self.get_printable_string(explored, print_dots)
 
-        return "%s (%s)" % (explored_string, location)
+        if hex_dump:
+            return "%s --> %s" % (explored_string, location)
+        else:
+            return "%s (%s)" % (explored_string, location)
 
 
     ####################################################################################################################

@@ -263,11 +263,12 @@ class ReconListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
         # select DESC so when we insert it re-sorts to ASC.
         try:
             cursor = self.top.main_frame.mysql.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute("SELECT id, timestamp FROM pp_hits WHERE recon_id = '%d' ORDER BY timestamp DESC" % recon_id)
+            cursor.execute("SELECT id, timestamp FROM pp_hits WHERE recon_id = '%d' ORDER BY timestamp, id DESC" % recon_id)
         except:
             self.top.err("MySQL query failed. Connection dropped?")
             return
 
+        hit = False
         for hit in cursor.fetchall():
             timestamp = time.strftime("%m/%d/%Y %H:%M.%S", time.localtime(hit["timestamp"]))
 
@@ -276,3 +277,10 @@ class ReconListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
 
             # associate the needed ID with this inserted item.
             self.top.hit_list.SetClientData(0, hit["id"])
+
+        # select the first entry in the hit list.
+        if hit:
+            self.top.on_hit_list_select(None, hit["id"])
+            self.top.hit_list.Select(0)
+        else:
+            self.top.peek_data.SetValue("")

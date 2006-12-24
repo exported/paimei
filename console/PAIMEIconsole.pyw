@@ -204,7 +204,6 @@ class PAIMEIframe (wx.Frame):
         # if the username was restored, show that in the status bar.
         self.status_bar.SetStatusText("User: %s" % self.username, 5)
 
-
         connect_menu = wx.Menu()
         connect_menu.Append(101, "&MySQL Connect",        "Connect to MySQL server.")
         connect_menu.Append(102, "&PyDbg Locale",         "Set PyDbg locale.")
@@ -492,7 +491,7 @@ class PAIMEIstatusbar (wx.StatusBar):
         self.SetFieldsCount(6)
 
         # set the fields to have relative widths.
-        self.SetStatusWidths([-5, -6, -1, -1, -1, -1])
+        self.SetStatusWidths([-3, -4, -1, -1, -1, -1])
 
         # set the default status fields.
         self.SetStatusText("PaiMei ... Hayai!", 1)

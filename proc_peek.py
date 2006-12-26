@@ -1,6 +1,6 @@
 #!c:\python\python.exe
 
-# 
+#
 # Proc Peek
 #
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
@@ -240,13 +240,13 @@ def handler_breakpoint (dbg):
 
             try:    dbg.bp_set(ws2_recv)
             except: pass
-            
+
             try:    dbg.bp_set(ws2_recvfrom)
             except: pass
-            
+
             try:    dbg.bp_set(wsock_recv)
             except: pass
-            
+
             try:    dbg.bp_set(wsock_recvfrom)
             except: pass
 

@@ -175,21 +175,23 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
 
         hit = self.hits_by_index[self.GetItemData(self.selected.GetId())]
 
-        context_dump  = "%s\n" % time.ctime(hit["timestamp"])
-        context_dump += "EIP: %08x\n" % hit["eip"]
-        context_dump += "EAX: %08x (%10d) -> %s\n" % (hit["eax"], hit["eax"], hit["eax_deref"])
-        context_dump += "EBX: %08x (%10d) -> %s\n" % (hit["ebx"], hit["ebx"], hit["ebx_deref"])
-        context_dump += "ECX: %08x (%10d) -> %s\n" % (hit["ecx"], hit["ecx"], hit["ecx_deref"])
-        context_dump += "EDX: %08x (%10d) -> %s\n" % (hit["edx"], hit["edx"], hit["edx_deref"])
-        context_dump += "EDI: %08x (%10d) -> %s\n" % (hit["edi"], hit["edi"], hit["edi_deref"])
-        context_dump += "ESI: %08x (%10d) -> %s\n" % (hit["esi"], hit["esi"], hit["esi_deref"])
-        context_dump += "EBP: %08x (%10d) -> %s\n" % (hit["ebp"], hit["ebp"], hit["ebp_deref"])
-        context_dump += "ESP: %08x (%10d) -> %s\n" % (hit["esp"], hit["esp"], hit["esp_deref"])
+        separator = "-" * 72
 
-        context_dump += "+04: %08x (%10d) -> %s\n" % (hit["esp_4"],  hit["esp_4"],  hit["esp_4_deref"])
-        context_dump += "+08: %08x (%10d) -> %s\n" % (hit["esp_8"],  hit["esp_8"],  hit["esp_8_deref"])
-        context_dump += "+0C: %08x (%10d) -> %s\n" % (hit["esp_c"],  hit["esp_c"],  hit["esp_c_deref"])
-        context_dump += "+10: %08x (%10d) -> %s\n" % (hit["esp_10"], hit["esp_10"], hit["esp_10_deref"])
+        context_dump  = "%s\n" % time.ctime(hit["timestamp"])
+        context_dump += "EIP: %08x\n\n" % hit["eip"]
+        context_dump += "%s\nEAX: %08x (%10d)\n%s\n\n" % (separator, hit["eax"], hit["eax"], hit["eax_deref"])
+        context_dump += "%s\nEBX: %08x (%10d)\n%s\n\n" % (separator, hit["ebx"], hit["ebx"], hit["ebx_deref"])
+        context_dump += "%s\nECX: %08x (%10d)\n%s\n\n" % (separator, hit["ecx"], hit["ecx"], hit["ecx_deref"])
+        context_dump += "%s\nEDX: %08x (%10d)\n%s\n\n" % (separator, hit["edx"], hit["edx"], hit["edx_deref"])
+        context_dump += "%s\nEDI: %08x (%10d)\n%s\n\n" % (separator, hit["edi"], hit["edi"], hit["edi_deref"])
+        context_dump += "%s\nESI: %08x (%10d)\n%s\n\n" % (separator, hit["esi"], hit["esi"], hit["esi_deref"])
+        context_dump += "%s\nEBP: %08x (%10d)\n%s\n\n" % (separator, hit["ebp"], hit["ebp"], hit["ebp_deref"])
+        context_dump += "%s\nESP: %08x (%10d)\n%s\n\n" % (separator, hit["esp"], hit["esp"], hit["esp_deref"])
+
+        context_dump += "%s\nESP +04: %08x (%10d)\n%s\n\n" % (separator, hit["esp_4"],  hit["esp_4"],  hit["esp_4_deref"])
+        context_dump += "%s\nESP +08: %08x (%10d)\n%s\n\n" % (separator, hit["esp_8"],  hit["esp_8"],  hit["esp_8_deref"])
+        context_dump += "%s\nESP +0C: %08x (%10d)\n%s\n\n" % (separator, hit["esp_c"],  hit["esp_c"],  hit["esp_c_deref"])
+        context_dump += "%s\nESP +10: %08x (%10d)\n%s\n\n" % (separator, hit["esp_10"], hit["esp_10"], hit["esp_10_deref"])
 
         self.top.hit_details.SetValue(context_dump)
 

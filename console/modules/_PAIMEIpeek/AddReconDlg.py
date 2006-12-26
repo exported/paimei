@@ -93,12 +93,14 @@ class AddReconDlg (wx.Dialog):
             address = long(self.address.GetLineText(0), 16)
         except:
             dlg = wx.MessageDialog(self, "Invalid 'address' value, expecting a DWORD. Ex: 0xdeadbeef", "Error", wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
             return
 
         try:
             stack_depth = int(self.stack_depth.GetValue())
         except:
             dlg = wx.MessageDialog(self, "Must specify an integer for 'stack depth'.", "Error", wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
             return
 
         reason = self.reason.GetLineText(0)
@@ -107,6 +109,7 @@ class AddReconDlg (wx.Dialog):
         # must at least have a reason. notes are optional.
         if not reason:
             dlg = wx.MessageDialog(self, "Must specify a 'reason'.", "Error", wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
             return
 
         sql  = " INSERT INTO pp_recon"

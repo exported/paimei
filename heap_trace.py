@@ -49,7 +49,7 @@ def dll_load_handler (dbg):
         hooks.add(dbg, addrRtlAllocateHeap,   3, None, RtlAllocateHeap)
         hooks.add(dbg, addrRtlFreeHeap,       3, None, RtlFreeHeap)
         hooks.add(dbg, addrRtlReAllocateHeap, 4, None, RtlReAllocateHeap)
-    
+
         print "rtl heap manipulation routines successfully hooked"
 
     return DBG_CONTINUE
@@ -107,15 +107,15 @@ def monitor_add (dbg, address, size):
     alloc.size       = size
     alloc.call_stack = dbg.stack_unwind()
     allocs[address]  = alloc
-    
+
     dbg.bp_set_mem(address+size+1, 1, handler=monitor_bp)
 
 
 def monitor_bp (dbg):
     global allocs
-    
+
     print "heap bound exceeded at %08x by %08x" % (dbg.violation_address, dbg.exception_address)
-    
+
     for call in dbg.stack_unwind():
         print "\t%08x" % call
 
@@ -124,16 +124,16 @@ def monitor_bp (dbg):
         if addr + alloc.size < dbg.violation_address < addr + alloc.size + 4:
             violated_chunk = addr
             break
-        
+
     print "violated chunk:"
-    
+
     print "0x%08x: %d" % (violated_chunk, allocs[violated_chunk].size)
 
     for call in allocs[violated_chunk].call_stack:
         print "\t%08x" % call
 
     raw_input("")
-    
+
     # XXX - add check for Rtl addresses in call stack and ignore
 
 

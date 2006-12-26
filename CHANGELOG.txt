@@ -5,6 +5,7 @@ xx.xx.2006 [REV ]
         - Extended status bar to contain connection information.
         - Added notion of "current user".
         - Added menu option to save current connection settings / options.
+        - Added menu option to easily restore all saved connection settings.
     gui.peek:
         - New GUI module. Essentially the next version of proc peek (cmd line version now obsoleted).
     gui.pstalker:

@@ -107,12 +107,14 @@ class EditReconDlg(wx.Dialog):
             address = long(self.address.GetLineText(0), 16)
         except:
             dlg = wx.MessageDialog(self, "Invalid 'address' value, expecting a DWORD. Ex: 0xdeadbeef", "Error", wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
             return
 
         try:
             stack_depth = int(self.stack_depth.GetValue())
         except:
             dlg = wx.MessageDialog(self, "Must specify an integer for 'stack depth'.", "Error", wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
             return
 
         status   = self.choices[self.status.GetSelection()]
@@ -123,6 +125,7 @@ class EditReconDlg(wx.Dialog):
         # must at least have a reason. notes are optional.
         if not reason:
             dlg = wx.MessageDialog(self, "Must specify a 'reason'.", "Error", wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
             return
 
         sql  = " UPDATE pp_recon"

@@ -87,4 +87,10 @@ class PyDbgDlg(wx.Dialog):
         self.parent.load = self.load_target.GetValue()
         self.parent.pid  = self.process_list.selected_pid
         self.parent.proc = self.process_list.selected_proc
+        
+        if not self.parent.load and not self.parent.pid and not self.parent.proc:
+            dlg = wx.MessageDialog(self, "You haven't selected a process to load or attach to.", "Error", wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
+            return
+
         self.Destroy()

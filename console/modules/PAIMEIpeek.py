@@ -68,7 +68,7 @@ class PAIMEIpeek(wx.Panel):
         self.top_window                    = wx.Panel(self.log_splitter, -1)
         self.hit_list_column_staticbox     = wx.StaticBox(self.top_window, -1, "Hits")
         self.peek_data_container_staticbox = wx.StaticBox(self.top_window, -1, "Peek Point Data")
-        self.recon_column_staticbox        = wx.StaticBox(self.top_window, -1, "Recon")
+        self.recon_column_staticbox        = wx.StaticBox(self.top_window, -1, "RECON")
         self.select_module                 = wx.Button(self.top_window, -1, "Select Module")
         self.add_recon_point               = wx.Button(self.top_window, -1, "Add Recon Point")
         self.set_options                   = wx.Button(self.top_window, -1, "Options")
@@ -77,6 +77,8 @@ class PAIMEIpeek(wx.Panel):
         self.hit_list                      = wx.ListBox(self.top_window, -1, choices=[])
         self.peek_data                     = wx.TextCtrl(self.top_window, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_LINEWRAP)
         self.log                           = wx.TextCtrl(self.log_window, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_LINEWRAP)
+        self.percent_analyzed_static       = wx.StaticText(self.top_window, -1, "RECON Points Reviewed:")
+        self.percent_analyzed              = wx.Gauge(self.top_window, -1, 100, style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
 
         self.__set_properties()
         self.__do_layout()
@@ -122,6 +124,8 @@ class PAIMEIpeek(wx.Panel):
         self.recon.SetFont(wx.Font(8, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "MS Shell Dlg 2"))
         self.peek_data.SetFont(wx.Font(8, wx.MODERN, wx.NORMAL, wx.NORMAL, 0, "Lucida Console"))
         self.log.SetFont(wx.Font(8, wx.MODERN, wx.NORMAL, wx.NORMAL, 0, "Lucida Console"))
+        self.percent_analyzed_static.SetFont(wx.Font(8, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "MS Shell Dlg 2"))
+        self.percent_analyzed.SetFont(wx.Font(8, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "MS Shell Dlg 2"))
         # end wxGlade
 
 
@@ -141,6 +145,8 @@ class PAIMEIpeek(wx.Panel):
         button_row.Add(self.attach_detach, 0, wx.EXPAND|wx.ADJUST_MINSIZE, 0)
         recon_column.Add(button_row, 0, wx.EXPAND, 0)
         recon_column.Add(self.recon, 1, wx.EXPAND, 0)
+        recon_column.Add(self.percent_analyzed_static, 0, wx.EXPAND, 0)
+        recon_column.Add(self.percent_analyzed, 0, wx.EXPAND, 0)
         columns.Add(recon_column, 1, wx.EXPAND, 0)
         hit_list_column.Add(self.hit_list, 0, wx.EXPAND|wx.ADJUST_MINSIZE, 0)
         columns.Add(hit_list_column, 0, wx.EXPAND, 0)
@@ -207,6 +213,8 @@ class PAIMEIpeek(wx.Panel):
     ####################################################################################################################
     def handler_breakpoint (self, dbg):
         '''
+        On the first breakpoint set all the other breakpoints on the recon points. If track_recg is enabled then
+        establish hooks on the winsock functions. On subsequent breakpoints, record them appropriately.
         '''
 
         #
@@ -216,34 +224,87 @@ class PAIMEIpeek(wx.Panel):
         if dbg.first_breakpoint:
             if self.track_recv:
                 self.hooks = utils.hook_container()
-                # xxx - complete track recv shit.
-                #hooks.add
+
+                # ESP                 +4         +8       +C        +10
+                # int recv     (SOCKET s, char *buf, int len, int flags)
+                # int recvfrom (SOCKET s, char *buf, int len, int flags, struct sockaddr *from, int *fromlen)
+                # we want these:                ^^^      ^^^
+
+                try:
+                    ws2_recv = dbg.func_resolve("ws2_32",  "recv")
+                    self.hooks.add(dbg, ws2_recv, 4, None, self.socket_logger_ws2_recv)
+                except:
+                    pass
+
+                try:
+                    ws2_recvfrom = dbg.func_resolve("ws2_32",  "recvfrom")
+                    self.hooks.add(dbg, ws2_recvfrom, 4, None, self.socket_logger_ws2_recvfrom)
+                except:
+                    pass
+
+                try:
+                    wsock_recv = dbg.func_resolve("wsock32", "recv")
+                    self.hooks.add(dbg, wsock_recv, 4, None, self.socket_logger_wsock_recv)
+                except:
+                    pass
+
+                try:
+                    wsock_recvfrom = dbg.func_resolve("wsock32", "recvfrom")
+                    self.hooks.add(dbg, wsock_recvfrom, 4, None, self.socket_logger_wsock_recvfrom)
+                except:
+                    pass
 
             # retrieve list of recon points.
             cursor = self.main_frame.mysql.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute("SELECT id, offset FROM pp_recon WHERE module_id = '%d'" % self.module["id"])
+            cursor.execute("SELECT id, offset, stack_depth FROM pp_recon WHERE module_id = '%d'" % self.module["id"])
 
-            self.addr_to_id = {}
+            # create a mapping of addresses to recon MySQL objects.
+            self.addr_to_recon = {}
             for row in cursor.fetchall():
-                self.addr_to_id[self.module["base"] + row["offset"]] = row["id"]
+                self.addr_to_recon[self.module["base"] + row["offset"]] = row
 
+            # set breakpoints at each recon point.
+            self.dbg.bp_set(self.addr_to_recon.keys())
+            self.msg("Watching %d points" % len(self.addr_to_recon))
+
+            # close the MySQL cursor and continue execution.
             cursor.close()
-            self.dbg.bp_set(self.addr_to_id.keys())
-            self.msg("Watching %d points" % len(self.addr_to_id))
             return DBG_CONTINUE
 
         #
         # subsequent breakpoints are recon hits ... export to db.
         #
 
-        if not self.quiet:
-            # XXX - need to add a notion of stack depth.
-            self.msg(dbg.dump_context(stack_depth=5, print_dots=False))
+        # grab the current context.
+        context_dump = dbg.dump_context(stack_depth=self.addr_to_recon[dbg.context.Eip]["stack_depth"], print_dots=False)
 
+        # display the context if the 'quiet' option is not enabled.
+        if not self.quiet:
+            self.msg(context_dump)
+
+        # no boron tag match by default.
+        boron_found = ""
+
+        # if it was specified, search for the boron tag in the current context.
+        if self.boron_tag:
+            if context_dump.lower().find(self.boron_tag.lower()) != -1:
+                boron_found = self.boron_tag
+
+                # update the boron tag field of the pp_recon table to reflect that a hit was made.
+                cursor = self.main_frame.mysql.cursor()
+                cursor.execute("UPDATE pp_recon SET boron_tag='%s' WHERE id='%d'" % (boron_found, self.addr_to_recon[dbg.context.Eip]["id"]))
+                cursor.close()
+
+                if not self.quiet:
+                    self.msg(">>>>>>>>>>>>>>>>>>>> BORON TAG FOUND IN ABOVE CONTEXT DUMP <<<<<<<<<<<<<<<<<<<<")
+
+
+        # retrieve the context list with 'hex_dump' enabled to store in the database.
         context_list = dbg.dump_context_list(stack_depth=4, hex_dump=True)
 
         sql  = " INSERT INTO pp_hits"
-        sql += " SET recon_id     = '%d'," % self.addr_to_id[dbg.context.Eip]
+        sql += " SET recon_id     = '%d'," % self.addr_to_recon[dbg.context.Eip]["id"]
+        sql += "     module_id    = '%d'," % self.module["id"]
         sql += "     timestamp    = '%d'," % int(time.time())
         sql += "     tid          = '%d'," % dbg.dbg.dwThreadId
         sql += "     eax          = '%d'," % dbg.context.Eax
@@ -270,6 +331,7 @@ class PAIMEIpeek(wx.Panel):
         sql += "     esp_8_deref  = '%s'," % context_list["esp+08"]["desc"].replace("\\", "\\\\").replace("'", "\\'")
         sql += "     esp_c_deref  = '%s'," % context_list["esp+0c"]["desc"].replace("\\", "\\\\").replace("'", "\\'")
         sql += "     esp_10_deref = '%s'," % context_list["esp+10"]["desc"].replace("\\", "\\\\").replace("'", "\\'")
+        sql += "     boron_tag    = '%s'," % boron_found
         sql += "     base         = '%d' " % self.module["base"]
 
         cursor = self.main_frame.mysql.cursor()
@@ -424,20 +486,25 @@ class PAIMEIpeek(wx.Panel):
 
         separator = "-" * 72
 
-        context_dump  = "ID: %04x\n\n" % hit["id"]
-        context_dump += "%s\nEAX: %08x (%10d)\n\n%s\n\n" % (separator, hit["eax"], hit["eax"], hit["eax_deref"])
-        context_dump += "%s\nEBX: %08x (%10d)\n\n%s\n\n" % (separator, hit["ebx"], hit["ebx"], hit["ebx_deref"])
-        context_dump += "%s\nECX: %08x (%10d)\n\n%s\n\n" % (separator, hit["ecx"], hit["ecx"], hit["ecx_deref"])
-        context_dump += "%s\nEDX: %08x (%10d)\n\n%s\n\n" % (separator, hit["edx"], hit["edx"], hit["edx_deref"])
-        context_dump += "%s\nEDI: %08x (%10d)\n\n%s\n\n" % (separator, hit["edi"], hit["edi"], hit["edi_deref"])
-        context_dump += "%s\nESI: %08x (%10d)\n\n%s\n\n" % (separator, hit["esi"], hit["esi"], hit["esi_deref"])
-        context_dump += "%s\nEBP: %08x (%10d)\n\n%s\n\n" % (separator, hit["ebp"], hit["ebp"], hit["ebp_deref"])
-        context_dump += "%s\nESP: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp"], hit["esp"], hit["esp_deref"])
+        context_dump  = "ID: %04x\n" % hit["id"]
 
-        context_dump += "%s\nESP +04: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_4"],  hit["esp_4"],  hit["esp_4_deref"])
-        context_dump += "%s\nESP +08: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_8"],  hit["esp_8"],  hit["esp_8_deref"])
-        context_dump += "%s\nESP +0C: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_c"],  hit["esp_c"],  hit["esp_c_deref"])
-        context_dump += "%s\nESP +10: %08x (%10d)\n\n%s\n\n" % (separator, hit["esp_10"], hit["esp_10"], hit["esp_10_deref"])
+        if hit["boron_tag"]:
+            context_dump += ">>>>>>>>>> BORON TAG HIT: %s\n" % hit["boron_tag"]
+
+        context_dump += "\n"
+        context_dump += "%s\nEAX: %08x (%10d)\n%s\n\n" % (separator, hit["eax"], hit["eax"], hit["eax_deref"])
+        context_dump += "%s\nEBX: %08x (%10d)\n%s\n\n" % (separator, hit["ebx"], hit["ebx"], hit["ebx_deref"])
+        context_dump += "%s\nECX: %08x (%10d)\n%s\n\n" % (separator, hit["ecx"], hit["ecx"], hit["ecx_deref"])
+        context_dump += "%s\nEDX: %08x (%10d)\n%s\n\n" % (separator, hit["edx"], hit["edx"], hit["edx_deref"])
+        context_dump += "%s\nEDI: %08x (%10d)\n%s\n\n" % (separator, hit["edi"], hit["edi"], hit["edi_deref"])
+        context_dump += "%s\nESI: %08x (%10d)\n%s\n\n" % (separator, hit["esi"], hit["esi"], hit["esi_deref"])
+        context_dump += "%s\nEBP: %08x (%10d)\n%s\n\n" % (separator, hit["ebp"], hit["ebp"], hit["ebp_deref"])
+        context_dump += "%s\nESP: %08x (%10d)\n%s\n\n" % (separator, hit["esp"], hit["esp"], hit["esp_deref"])
+
+        context_dump += "%s\nESP +04: %08x (%10d)\n%s\n\n" % (separator, hit["esp_4"],  hit["esp_4"],  hit["esp_4_deref"])
+        context_dump += "%s\nESP +08: %08x (%10d)\n%s\n\n" % (separator, hit["esp_8"],  hit["esp_8"],  hit["esp_8_deref"])
+        context_dump += "%s\nESP +0C: %08x (%10d)\n%s\n\n" % (separator, hit["esp_c"],  hit["esp_c"],  hit["esp_c_deref"])
+        context_dump += "%s\nESP +10: %08x (%10d)\n%s\n\n" % (separator, hit["esp_10"], hit["esp_10"], hit["esp_10_deref"])
 
         self.peek_data.SetValue(context_dump)
 
@@ -451,3 +518,47 @@ class PAIMEIpeek(wx.Panel):
         '''
 
         self.log.SetValue("")
+
+
+    ####################################################################################################################
+    def socket_logger_ws2_recv (self, dbg, args, ret):
+        '''
+        Hook container call back.
+        '''
+
+        self.msg("ws2_32.recv(buf=%08x, len=%d)" % (args[1], args[2]))
+        self.msg("Actually received %d bytes:" % ret)
+        self.msg(dbg.hex_dump(dbg.read(args[1], ret)))
+
+
+    ####################################################################################################################
+    def socket_logger_ws2_recvfrom (self, dbg, args, ret):
+        '''
+        Hook container call back.
+        '''
+
+        self.msg("ws2_32.recvfrom(buf=%08x, len=%d)" % (args[1], args[2]))
+        self.msg("Actually received %d bytes:" % ret)
+        self.msg(dbg.hex_dump(dbg.read(args[1], ret)))
+
+
+    ####################################################################################################################
+    def socket_logger_wsock_recv (self, dbg, args, ret):
+        '''
+        Hook container call back.
+        '''
+
+        self.msg("wsock32.recv(buf=%08x, len=%d)" % (args[1], args[2]))
+        self.msg("Actually received %d bytes:" % ret)
+        self.msg(dbg.hex_dump(dbg.read(args[1], ret)))
+
+
+    ####################################################################################################################
+    def socket_logger_wsock_recvfrom (self, dbg, args, ret):
+        '''
+        Hook container call back.
+        '''
+
+        self.msg("wsock32.recvfrom(buf=%08x, len=%d)" % (args[1], args[2]))
+        self.msg("Actually received %d bytes:" % ret)
+        self.msg(dbg.hex_dump(dbg.read(args[1], ret)))

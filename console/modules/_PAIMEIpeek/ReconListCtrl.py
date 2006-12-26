@@ -44,7 +44,7 @@ class ReconListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
         self.items_sort_map = {}
         self.itemDataMap    = self.items_sort_map
 
-        ColumnSorterMixin.__init__(self, 7)
+        ColumnSorterMixin.__init__(self, 8)
 
         self.InsertColumn(0, "ID")
         self.InsertColumn(1, "Address")
@@ -52,7 +52,8 @@ class ReconListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
         self.InsertColumn(3, "Status")
         self.InsertColumn(4, "Username")
         self.InsertColumn(5, "# Hits")
-        self.InsertColumn(6, "Reason")
+        self.InsertColumn(6, "Boron Tag")
+        self.InsertColumn(7, "Reason")
 
 
     ####################################################################################################################
@@ -74,8 +75,11 @@ class ReconListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
             self.top.err("No available connection to MySQL server.")
             return
 
-        busy = wx.BusyInfo("Loading... please wait.")
-        wx.Yield()
+        try:
+            busy = wx.BusyInfo("Loading... please wait.")
+            wx.Yield()
+        except:
+            pass
 
         # instantiate a mysql cursor.
         cursor = mysql.cursor(MySQLdb.cursors.DictCursor)
@@ -90,7 +94,7 @@ class ReconListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
         # step through the recon entries for this module id.
         cursor.execute("SELECT * FROM pp_recon WHERE module_id = '%d' ORDER BY offset ASC" % id)
 
-        idx = 0
+        idx = reviewed = 0
         for recon in cursor.fetchall():
             address = module["base"] + recon["offset"]
 
@@ -107,13 +111,22 @@ class ReconListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
             self.SetStringItem(idx, 3, recon["status"])
             self.SetStringItem(idx, 4, recon["username"])
             self.SetStringItem(idx, 5, "%d" % num_hits)
-            self.SetStringItem(idx, 6, recon["reason"])
+            self.SetStringItem(idx, 6, recon["boron_tag"])
+            self.SetStringItem(idx, 7, recon["reason"])
 
             # create an entry for the column sort map.
             self.SetItemData(idx, idx)
-            self.items_sort_map[idx] = (recon["id"], address, recon["stack_depth"], recon["status"], recon["username"], num_hits, recon["reason"])
+            self.items_sort_map[idx] = (recon["id"], address, recon["stack_depth"], recon["status"], recon["username"], num_hits, recon["boron_tag"], recon["reason"])
+
+            if recon["status"] in ["uncontrollable", "clear", "vulnerable"]:
+                reviewed += 1
 
             idx += 1
+
+        # update % coverage gauge.
+        self.top.percent_analyzed_static.SetLabel("%d of %d RECON Points Reviewed:" % (reviewed, idx))
+        percent = int((float(reviewed) / float(idx)) * 100)
+        self.top.percent_analyzed.SetValue(percent)
 
         cursor.close()
 

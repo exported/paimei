@@ -720,13 +720,22 @@ class pydbg(pydbg_core):
 
         # update our internal member variables.
         self.instruction = pydasm.get_instruction(data, pydasm.MODE_32)
-        self.mnemonic    = pydasm.get_mnemonic_string(self.instruction, pydasm.FORMAT_INTEL)
-        self.op1         = pydasm.get_operand_string(self.instruction, 0, pydasm.FORMAT_INTEL, address)
-        self.op2         = pydasm.get_operand_string(self.instruction, 1, pydasm.FORMAT_INTEL, address)
-        self.op3         = pydasm.get_operand_string(self.instruction, 2, pydasm.FORMAT_INTEL, address)
 
-        # the rstrip() is for removing extraneous trailing whitespace that libdasm sometimes leaves.
-        return pydasm.get_instruction_string(self.instruction, pydasm.FORMAT_INTEL, address).rstrip(" ")
+        if not self.instruction:
+            self.mnemonic = "[UNKNOWN]"
+            self.op1      = ""
+            self.op2      = ""
+            self.op3      = ""
+
+            return "[UNKNOWN]"
+        else:
+            self.mnemonic = pydasm.get_mnemonic_string(self.instruction, pydasm.FORMAT_INTEL)
+            self.op1      = pydasm.get_operand_string(self.instruction, 0, pydasm.FORMAT_INTEL, address)
+            self.op2      = pydasm.get_operand_string(self.instruction, 1, pydasm.FORMAT_INTEL, address)
+            self.op3      = pydasm.get_operand_string(self.instruction, 2, pydasm.FORMAT_INTEL, address)
+
+            # the rstrip() is for removing extraneous trailing whitespace that libdasm sometimes leaves.
+            return pydasm.get_instruction_string(self.instruction, pydasm.FORMAT_INTEL, address).rstrip(" ")
 
 
     ####################################################################################################################
@@ -1446,6 +1455,42 @@ class pydbg(pydbg_core):
                 discovered += "."
 
         return discovered
+
+
+    ####################################################################################################################
+    def get_register (self, register):
+        '''
+        Get the value of a register in the debuggee within the context of the self.h_thread.
+
+        @type  register: Register
+        @param register: One of EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP, EIP
+
+        @raise pdx: An exception is raised on failure.
+        @rtype:     DWORD
+        @return:    Value of specified register.
+        '''
+
+        self.pydbg_log("getting %s in thread id %d" % (register, self.dbg.dwThreadId))
+
+        register = register.upper()
+        if register not in ("EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "ESP", "EBP", "EIP"):
+            raise pdx("invalid register specified")
+
+        # ensure we have an up to date thread context.
+        context = self.get_thread_context(self.h_thread)
+
+        if   register == "EAX": return context.Eax
+        elif register == "EBX": return context.Ebx
+        elif register == "ECX": return context.Ecx
+        elif register == "EDX": return context.Edx
+        elif register == "ESI": return context.Esi
+        elif register == "EDI": return context.Edi
+        elif register == "ESP": return context.Esp
+        elif register == "EBP": return context.Ebp
+        elif register == "EIP": return context.Eip
+
+        # this shouldn't ever really be reached.
+        return 0
 
 
     ####################################################################################################################

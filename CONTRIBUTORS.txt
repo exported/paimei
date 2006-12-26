@@ -22,6 +22,11 @@ Gerardo Richarte <gera@corest.com>
 Igor Skochinsky <http://www.openrce.org/profile/view/igorsk>
     - Various bug reports, patches and support.
 
+Matthew Mastracci <matthew@mastracci.com>
+    - pydasm memory leak fix.
+    - PyDbg get_register() addition.
+    - Robustness improvements to PyDbg.disasm().
+
 Mathew Murphy <mmurphy@tippingpoint.com>
     - Memory and handle leak fixes.
     - Windows API wizardry.

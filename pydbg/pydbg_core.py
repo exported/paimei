@@ -96,6 +96,7 @@ class pydbg_core(object):
 
         # control debug/error logging.
         self.core_log = lambda msg: None
+        #self.core_log = lambda msg: sys.stderr.write("CORE_LOG> " + msg + "\n")
         self.core_err = lambda msg: sys.stderr.write("CORE_ERR> " + msg + "\n")
 
         # determine the system page size.
@@ -309,7 +310,6 @@ class pydbg_core(object):
             self.close_handle(self.h_thread)
             kernel32.ContinueDebugEvent(dbg.dwProcessId, dbg.dwThreadId, continue_status)
 
-
     ####################################################################################################################
     def debug_event_loop (self):
         '''
@@ -323,6 +323,7 @@ class pydbg_core(object):
         debuggee quiting.
         '''
 
+        print ">>>>>>>>>>>> %s" % self.debugger_active
         while self.debugger_active:
             # don't let the user interrupt us in the midst of handling a debug event.
             try:
@@ -338,8 +339,9 @@ class pydbg_core(object):
                 self.callbacks[USER_CALLBACK_DEBUG_EVENT](self)
 
             # iterate through a debug event.
-            self.debug_event_iteration()
 
+            self.debug_event_iteration()
+            
             # resume keyboard interruptability.
             if def_sigint_handler:
                 signal.signal(signal.SIGINT, def_sigint_handler)
@@ -535,6 +537,8 @@ class pydbg_core(object):
 
         @raise pdx: An exception is raised to denote process exit.
         '''
+
+        print "exit process"
 
         self.set_debugger_active(False)
         self.close_handle(self.h_process)
@@ -735,8 +739,6 @@ class pydbg_core(object):
         @rtype:     CONTEXT
         @return:    Thread CONTEXT on success.
         '''
-
-        self.core_log("get_thread_context()")
 
         context = CONTEXT()
         context.ContextFlags = CONTEXT_FULL | CONTEXT_DEBUG_REGISTERS
@@ -1318,6 +1320,8 @@ class pydbg_core(object):
 
         @raise pdx: An exception is raised on failure.
         '''
+
+        print "terminate_process()"
 
         self.set_debugger_active(False)
 

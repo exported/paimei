@@ -33,7 +33,8 @@ import utils
 from pydbg import *
 from pydbg.defines import *
 
-USAGE = "USAGE: proc_peek.py "                                                              \
+USAGE = "DEPRECATED: See PAIMEIpeek\n"                                                      \
+        "\nUSAGE: proc_peek.py "                                                            \
         "\n    <-r|--recon RECON FILE> name of proc_peek_recon output file"                 \
         "\n    [-p|--pid PID]          pid to attach to (must specify this or watch)"       \
         "\n    [-w|--watch PROC]       target name to watch for and attach to"              \

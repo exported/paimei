@@ -70,7 +70,7 @@ class PAIMEIpeek(wx.Panel):
         self.peek_data_container_staticbox = wx.StaticBox(self.top_window, -1, "Peek Point Data")
         self.recon_column_staticbox        = wx.StaticBox(self.top_window, -1, "RECON")
         self.select_module                 = wx.Button(self.top_window, -1, "Select Module")
-        self.add_recon_point               = wx.Button(self.top_window, -1, "Add Recon Point")
+        self.add_recon_point               = wx.Button(self.top_window, -1, "Add RECON Point")
         self.set_options                   = wx.Button(self.top_window, -1, "Options")
         self.attach_detach                 = wx.Button(self.top_window, -1, "Peek!")
         self.recon                         = _PAIMEIpeek.ReconListCtrl.ReconListCtrl(self.top_window, -1, style=wx.LC_REPORT|wx.LC_SINGLE_SEL|wx.LC_HRULES|wx.SUNKEN_BORDER, top=self)
@@ -86,6 +86,9 @@ class PAIMEIpeek(wx.Panel):
 
         self.list_book  = kwds["parent"]             # handle to list book.
         self.main_frame = self.list_book.top         # handle to top most frame.
+
+        # move the log splitter sash down.
+        self.log_splitter.SetSashPosition(-200, redraw=True)
 
         # log window bindings.
         self.Bind(wx.EVT_TEXT_MAXLEN, self.on_log_max_length_reached, self.log)

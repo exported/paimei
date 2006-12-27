@@ -102,14 +102,30 @@ The file fuzz module is intended to demonstrate the use of the PaiMei framework 
 </ol>
 
 <a name="PAIMEIpeek"></a><h2>PAIMEIpeek</h2>
-The peek module is intended to replace the earlier command line version that turned out to be usable only by its author. There are three phases to using the peek tool. First
+The peek module is intended to replace the earlier command line version that turned out to be usable only by its author. The primary usage of this tool is for locating "low hanging fruit" vulnerabilities in closed-source Windows software. There are three phases to using the peek tool:
 
 <h3>Reconnaissance</h3>
-<h3>Capture</h3>
+You must begin by first running the <i>proc_peek_recon_db.py</i> IDA Python script, <b>after</b> IDA has finished its auto-analysis. The script asks for your MySQL server information and then determines / transfers a list of various potentially interesting locations within the binary (I call these "RECON points"). Example locations include discovered inline memcpy()'s, calls to various routines that take format strings <b>and</b> are passed a <i>%s</i> format string token as well as calls to potentially dangerous API such as strcat, strcpy and the like. For the full list, see the source code. It's by no means an exhaustive list in the current release.
 
-http://www.informit.com/articles/printerfriendly.asp?p=353553&rl=1
-Boron tagging is a term coined by Greg Hoglund.
+<h3>Capture</h3>
+With the RECON data in place, load the PAIMEIpeek module, hit "Select Module" and choose the appropriate module name. The list of discovered points will be enumerated in the list control. You can manually add to this list by hitting the "Add RECON Point" button.
+<br><br>
+The "Options" button pops up a dialog where you can specify the same options that the original command line version of this tool provided. The first check box controls whether or not to display context dumps in the log window at run-time. The next check box controls whether or not to hook and log the contents of the packets received by the Winsock recv() and recv_from() API. The next option allows you to specify an output file to store a copy of all log messages to. Finally, the Boron tag field allows you to specify a string to search all context dumps for. Boron tagging is a term coined by Greg Hoglund, you can read more about this concept in the sample chapter <a href="http://www.informit.com/articles/printerfriendly.asp?p=353553&rl=1">Reverse Engineering and Program Understanding</a> from his book <a href="http://www.amazon.com/exec/obidos/redirect?path=ASIN/0201786958&link_code=as2&camp=1789&tag=openreverseco-20&creative=9325">Exploiting Software</a>.
+<br><br>
+With your options set you are now ready to hit the "Peek!" button to select an existing process to attach to or a new process to load. PyDbg is then used to set breakpoints on each of the RECON points and monitor the output. When you are satisfied detach PyDbg from the target by hitting "Stop" (the Peek! button toggles back and forth depending on status). Your captured data is now refreshed into the list control and you are ready for analysis.
+
 <h3>Analysis</h3>
+Selecting a row from the list control fills the "Hits" columns with an entry for every time the selected RECON point was hit. Select one of the entries in the hits column to display the captured data in the "Peek Point Data" text control. Use the TAB, SHIFT-TAB, UP, DOWN, PAGE-UP and PAGE-DOWN keys to quickly navigate the interface.
+<br><br>
+The right-click context menu on the RECON list control allows you to edit, delete or self-assign an individual RECON point. In the edit dialog use the "Status" dropdown to set the state of the selected point. The states are as follows:
+<ul>
+    <li> new: No one has looked at this point yet.
+    <li> uncontrollable: According to empirical data, we can't influence the data at this point.
+    <li> clear: The point was examined thoroughly and determined that no vulnerability was present.
+    <li> unsure: More research on this point is necessary.
+    <li> vulnerable: This RECON point is in some way involved in an exposed vulnerability.
+</ul>
+The states "uncontrollable", "clear" and "vulnerable" are <b>CLOSED</b> states. The states "new" and "unsure" are <b>OPEN</b> states. The progress bar under the RECON list control shows how many RECON points have been closed out. As the progress bar begins to fill, your chances of discovering a "low hanging fruit" vulnerability starts to diminish.
 
 <a name="PAIMEIpstalker"></a><h2>PAIMEIpstalker</h2>
 The pstalker module is intended to replace the earlier developed <a href="http://www.openrce.org/downloads/details/171/Process_Stalker">Process Stalker</a> code coverage tool. While the currently exposed feature set is not as robust at what was previously possible using the various command line utilities, one of the biggest improvements to Process Stalker is the storage of metadata to MySQL as opposed to multiple files that can quickly get disorganized and confusing.

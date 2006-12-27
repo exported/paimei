@@ -96,7 +96,6 @@ class pydbg_core(object):
 
         # control debug/error logging.
         self.core_log = lambda msg: None
-        #self.core_log = lambda msg: sys.stderr.write("CORE_LOG> " + msg + "\n")
         self.core_err = lambda msg: sys.stderr.write("CORE_ERR> " + msg + "\n")
 
         # determine the system page size.
@@ -323,7 +322,6 @@ class pydbg_core(object):
         debuggee quiting.
         '''
 
-        print ">>>>>>>>>>>> %s" % self.debugger_active
         while self.debugger_active:
             # don't let the user interrupt us in the midst of handling a debug event.
             try:
@@ -341,7 +339,7 @@ class pydbg_core(object):
             # iterate through a debug event.
 
             self.debug_event_iteration()
-            
+
             # resume keyboard interruptability.
             if def_sigint_handler:
                 signal.signal(signal.SIGINT, def_sigint_handler)
@@ -537,8 +535,6 @@ class pydbg_core(object):
 
         @raise pdx: An exception is raised to denote process exit.
         '''
-
-        print "exit process"
 
         self.set_debugger_active(False)
         self.close_handle(self.h_process)
@@ -1320,8 +1316,6 @@ class pydbg_core(object):
 
         @raise pdx: An exception is raised on failure.
         '''
-
-        print "terminate_process()"
 
         self.set_debugger_active(False)
 

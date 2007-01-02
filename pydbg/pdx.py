@@ -23,7 +23,11 @@
 from my_ctypes import *
 from defines   import *
 
-kernel32 = windll.kernel32
+# macos compatability.
+try:
+    kernel32 = windll.kernel32
+except:
+    kernel32 = CDLL("libmacdll.dylib")
 
 class pdx (Exception):
     '''

@@ -1,6 +1,7 @@
 xx.xx.2006 [REV ]
     docs:
         - Updated library, module and developer documentation to reflect new additions.
+        - Updated generate_epydocs batch file for compatability with epydoc 3.x.
     gui.console:
         - Extended status bar to contain connection information.
         - Added notion of "current user".
@@ -15,6 +16,8 @@ xx.xx.2006 [REV ]
         - Set default depth for graph_down() and graph_up() to infinite.
         - Added logic to correctly handle newlines in node/edge labels during uDraw rendering.
         - Added 'image' and 'info' (mouse over popup) support to uDraw rendering.
+    pstalker:
+        - Fixed handle leak in usage of iterate_modules().
     pydbg:
         - Improved detection of system breakpoints by resolving ntdll!DbgBreakPoint.
         - Added logic for compatability with DebugBreakProcess() API.
@@ -23,6 +26,8 @@ xx.xx.2006 [REV ]
         - Added optional 'hex_dump' flag to smart_dereference to return hex dump in place of undetected strings.
         - .disasm() routine now returns "[UNKNOWN]" when unable to process instruction.
         - Added get_register() routine to compliment set_register().
+        - Fixed handle leak in addr_to_module().
+        - Added warning about handle leaks when break-ing out of iterate_xxx() routines.
     pydasm:
         - Bundled new version of pydasm which manually fixes a memory leak that was affecting PaiMei.
 

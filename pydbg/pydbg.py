@@ -30,7 +30,11 @@ from my_ctypes import *
 from defines   import *
 from windows_h import *
 
-kernel32 = windll.kernel32
+# macos compatability.
+try:
+    kernel32 = windll.kernel32
+except:
+    kernel32 = CDLL("libmacdll.dylib")
 
 from breakpoint              import *
 from hardware_breakpoint     import *
@@ -1217,6 +1221,12 @@ class pydbg(pydbg_core):
         elif self._restore_breakpoint:
             continue_status = DBG_CONTINUE
 
+            # macos compatability.
+            # need to clear TRAP flag for MacOS. this doesn't hurt Windows aside from a negligible speed hit.
+            context         = self.get_thread_context(self.h_thread)
+            context.EFlags &= ~EFLAGS_TRAP
+            self.set_thread_context(mycontext)
+
         else:
             continue_status = DBG_EXCEPTION_NOT_HANDLED
 
@@ -1927,10 +1937,11 @@ class pydbg(pydbg_core):
             return "N/A"
 
         # if the address doesn't point into writable memory (stack or heap), then bail.
-        # XXX - there are writable pages above 0x70000000 that aren't going to be stack/heap related, so we ignore them.
-        #       this is a cheap hack, there has to be a better way of doing it. maybe look into NtQuerySystemInformation
-        #       possibly check for MEM_IMAGE as we don't care about those pages even if they are writeable.
-        if not mbi.Protect & PAGE_READWRITE or address > 0x70000000:
+        if not mbi.Protect & PAGE_READWRITE:
+            return "N/A"
+
+        # if the address does point to writeable memory, ensure it doesn't sit on the PEB or any of the TEBs.
+        if mbi.BaseAddress == self.peb or mbi.BaseAddress in self.tebs.values():
             return "N/A"
 
         try:

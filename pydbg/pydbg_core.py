@@ -24,15 +24,21 @@
 
 import sys
 import signal
+import struct
 
 from my_ctypes  import *
 from defines    import *
 from windows_h  import *
 from system_dll import *
 
-ntdll    = windll.ntdll
-kernel32 = windll.kernel32
-advapi32 = windll.advapi32
+# macos compatability.
+try:
+    kernel32 = windll.kernel32
+    advapi32 = windll.advapi32
+    ntdll    = windll.ntdll
+except:
+    kernel32 = CDLL("libmacdll.dylib")
+    advapi32 = kernel32
 
 from pdx import *
 
@@ -59,6 +65,8 @@ class pydbg_core(object):
     system_dlls       = []         # list of loaded system dlls
     dirty             = False      # flag specifying that the memory space of the debuggee was modified
     system_break      = None       # the address at which initial and forced breakpoints occur at
+    peb               = None       # process environment block address
+    tebs              = {}         # dictionary of thread IDs and their thread environment block addresses
 
     # internal variables specific to the last triggered exception.
     context           = None       # thread context of offending thread
@@ -86,6 +94,8 @@ class pydbg_core(object):
         self.callbacks         = {}         # exception callback handler dictionary
         self.system_dlls       = []         # list of loaded system dlls
         self.dirty             = False      # flag specifying that the memory space of the debuggee was modified
+        self.peb               = None       # process environment block address
+        self.tebs              = {}         # dictionary of thread IDs and their thread environment block addresses
 
         # internal variables specific to the last triggered exception.
         self.context           = None       # thread context of offending thread
@@ -141,11 +151,13 @@ class pydbg_core(object):
         @return: MODULEENTRY32 strucutre that contains the address specified or None if not found.
         '''
 
+        found = None
+
         for module in self.iterate_modules():
             if module.modBaseAddr < address < module.modBaseAddr + module.modBaseSize:
-                return module
+                found = module
 
-        return None
+        return found
 
 
     ####################################################################################################################
@@ -177,6 +189,28 @@ class pydbg_core(object):
             self.debug_set_process_kill_on_exit(False)
         except:
             pass
+
+        # enumerate the TEBs and add them to the internal dictionary.
+        for thread_id in self.enumerate_threads():
+            thread_handle  = self.open_thread(thread_id)
+            thread_context = self.get_thread_context(thread_handle)
+            selector_entry = LDT_ENTRY()
+
+            if not kernel32.GetThreadSelectorEntry(thread_handle, thread_context.SegFs, byref(selector_entry)):
+                self.win32_error("GetThreadSelectorEntry()")
+
+            self.close_handle(thread_handle)
+
+            teb  = selector_entry.BaseLow
+            teb += (selector_entry.HighWord.Bits.BaseMid << 16) + (selector_entry.HighWord.Bits.BaseHi << 24)
+
+            # add this TEB to the internal dictionary.
+            self.tebs[thread_id] = teb
+
+            # if the PEB has not been set yet, do so now.
+            if not self.peb:
+                self.peb = self.read_process_memory(teb + 0x30, 4)
+                self.peb = struct.unpack("<L", self.peb)[0]
 
         return self.ret_self()
 
@@ -525,6 +559,24 @@ class pydbg_core(object):
         @return: Debug event continue status.
         '''
 
+        # resolve the newly created threads TEB and add it to the internal dictionary.
+        thread_id      = self.dbg.dwThreadId
+        thread_handle  = self.open_thread(thread_id)
+        thread_context = self.get_thread_context(thread_handle)
+        selector_entry = LDT_ENTRY()
+
+        if not kernel32.GetThreadSelectorEntry(thread_handle, thread_context.SegFs, byref(selector_entry)):
+            self.win32_error("GetThreadSelectorEntry()")
+
+        # done with the opened thread handle.
+        self.close_handle(thread_handle)
+
+        teb  = selector_entry.BaseLow
+        teb += (selector_entry.HighWord.Bits.BaseMid << 16) + (selector_entry.HighWord.Bits.BaseHi << 24)
+
+        # add this TEB to the internal dictionary.
+        self.tebs[thread_id] = teb
+
         return DBG_CONTINUE
 
 
@@ -552,6 +604,9 @@ class pydbg_core(object):
         @rtype:  DWORD
         @return: Debug event continue status.
         '''
+
+        # remove the TEB entry for the exiting thread id.
+        del(self.tebs[self.dbg.dwThreadId])
 
         return DBG_CONTINUE
 
@@ -761,8 +816,9 @@ class pydbg_core(object):
         A simple iterator function that can be used to iterate through all modules the target process has mapped in its
         address space. Yielded objects are of type MODULEENTRY32.
 
-        @author: Otto Ebeling
-        @see:    enumerate_modules()
+        @author:  Otto Ebeling
+        @see:     enumerate_modules()
+        @warning: break-ing out of loops over this routine will cause a handle leak.
 
         @rtype:  MODULEENTRY32
         @return: Iterated module entries.
@@ -788,6 +844,7 @@ class pydbg_core(object):
             if not kernel32.Module32Next(snapshot, byref(current_entry)):
                 break
 
+        # if the above loop is "broken" out of, then this handle leaks.
         kernel32.CloseHandle(snapshot)
 
 
@@ -797,7 +854,8 @@ class pydbg_core(object):
         A simple iterator function that can be used to iterate through all running processes. Yielded objects are of
         type PROCESSENTRY32.
 
-        @see: enumerate_processes()
+        @see:     enumerate_processes()
+        @warning: break-ing out of loops over this routine will cause a handle leak.
 
         @rtype:  PROCESSENTRY32
         @return: Iterated process entries.
@@ -823,6 +881,7 @@ class pydbg_core(object):
             if not kernel32.Process32Next(snapshot, byref(pe)):
                 break
 
+        # if the above loop is "broken" out of, then this handle leaks.
         kernel32.CloseHandle(snapshot)
 
 
@@ -832,7 +891,8 @@ class pydbg_core(object):
         A simple iterator function that can be used to iterate through all running processes. Yielded objects are of
         type PROCESSENTRY32.
 
-        @see: enumerate_threads()
+        @see:     enumerate_threads()
+        @warning: break-ing out of loops over this routine will cause a handle leak.
 
         @rtype:  PROCESSENTRY32
         @return: Iterated process entries.
@@ -859,6 +919,7 @@ class pydbg_core(object):
             if not kernel32.Thread32Next(snapshot, byref(thread_entry)):
                 break
 
+        # if the above loop is "broken" out of, then this handle leaks.
         kernel32.CloseHandle(snapshot)
 
 
@@ -912,10 +973,24 @@ class pydbg_core(object):
         except:
             pass
 
-        '''
-        If the function succeeds, be sure to call the CloseHandle function to close the hProcess and hThread handles when you are finished with them. -bill gates
-        '''
+        # resolve the PEB address.
+        selector_entry = LDT_ENTRY()
+        thread_context = self.get_thread_context(pi.hThread)
 
+        if not kernel32.GetThreadSelectorEntry(pi.hThread, thread_context.SegFs, byref(selector_entry)):
+            self.win32_error("GetThreadSelectorEntry()")
+
+        teb  = selector_entry.BaseLow
+        teb += (selector_entry.HighWord.Bits.BaseMid << 16) + (selector_entry.HighWord.Bits.BaseHi << 24)
+
+        # add this TEB to the internal dictionary.
+        self.tebs[pi.dwThreadID] = teb
+
+        self.peb = self.read_process_memory(teb + 0x30, 4)
+        self.peb = struct.unpack("<L", self.peb)[0]
+
+        # if the function (CreateProcess) succeeds, be sure to call the CloseHandle function to close the hProcess and
+        # hThread handles when you are finished with them. -bill gates
         self.close_handle(pi.hThread)
 
         self.pid       = pi.dwProcessId

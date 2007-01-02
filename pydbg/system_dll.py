@@ -24,8 +24,13 @@ from my_ctypes import *
 from defines   import *
 from windows_h import *
 
-kernel32 = windll.kernel32
-psapi    = windll.psapi
+# macos compatability.
+try:
+    kernel32 = windll.kernel32
+    psapi    = windll.psapi
+except:
+    kernel32 = CDLL("libmacdll.dylib")
+    psapi    = kernel32
 
 from pdx import *
 

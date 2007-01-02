@@ -22,6 +22,9 @@ Gerardo Richarte <gera@corest.com>
 Igor Skochinsky <http://www.openrce.org/profile/view/igorsk>
     - Various bug reports, patches and support.
 
+Jared DeMott <jdemott@appliedsec.com>
+    - Helped locate and fix some handle leaks in pstalker.
+
 Matthew Mastracci <matthew@mastracci.com>
     - pydasm memory leak fix.
     - PyDbg get_register() addition.

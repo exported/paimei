@@ -242,7 +242,6 @@ class process_stalker:
                 for mod32 in self.pydbg.iterate_modules():
                     if mod32.szModule.lower() == module.lower():
                         self.pida_modules[module].rebase(mod32.modBaseAddr)
-                        break
 
             #
             # function level tracking.

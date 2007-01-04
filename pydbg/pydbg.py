@@ -1225,7 +1225,7 @@ class pydbg(pydbg_core):
             # need to clear TRAP flag for MacOS. this doesn't hurt Windows aside from a negligible speed hit.
             context         = self.get_thread_context(self.h_thread)
             context.EFlags &= ~EFLAGS_TRAP
-            self.set_thread_context(mycontext)
+            self.set_thread_context(context)
 
         else:
             continue_status = DBG_EXCEPTION_NOT_HANDLED

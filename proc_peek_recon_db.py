@@ -106,7 +106,8 @@ def add_recon (mysql, module_id, offset, stack_depth, reason, status):
     sql += "     offset      = '%d'," % offset
     sql += "     stack_depth = '%d'," % stack_depth
     sql += "     reason      = '%s'," % reason
-    sql += "     status      = '%s'"  % status
+    sql += "     status      = '%s',"  % status
+    sql += "     notes       = ''"
 
     cursor = mysql.cursor()
 
@@ -137,7 +138,7 @@ def meat_and_potatoes (mysql):
     cursor = mysql.cursor()
 
     try:
-        cursor.execute("INSERT INTO pp_modules SET name = '%s', base = '%d'" % (GetInputFile(), base_address))
+        cursor.execute("INSERT INTO pp_modules SET name = '%s', base = '%d', notes = ''" % (GetInputFile(), base_address))
     except MySQLdb.Error, e:
         ida_log("MySQL error %d: %s" % (e.args[0], e.args[1]))
         ida_log(sql)

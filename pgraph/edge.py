@@ -38,7 +38,7 @@ class edge (object):
     gml_line_width  = 1.0
 
     ####################################################################################################################
-    def __init__ (self, src=None, dst=None):
+    def __init__ (self, src, dst):
         '''
         Class constructor.
 

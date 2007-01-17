@@ -25,6 +25,7 @@
 import sys
 import signal
 import struct
+import copy
 
 from my_ctypes  import *
 from defines    import *
@@ -155,7 +156,11 @@ class pydbg_core(object):
 
         for module in self.iterate_modules():
             if module.modBaseAddr < address < module.modBaseAddr + module.modBaseSize:
-                found = module
+                # we have to make a copy of the 'module' since it is an iterator and will be blown away.
+                # the reason we can't "break" out of the loop is because there will be a handle leak.
+                # and we can't use enumerate_modules() because we need the entire module structure.
+                # so there...
+                found = copy.copy(module)
 
         return found
 

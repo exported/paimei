@@ -32,20 +32,29 @@ class graph (object):
     @todo: Potentially swap node list with a node dictionary for increased performance
     '''
 
+    # I think these have been fucking it all up
     id       = None
-    clusters = []
-    edges    = {}
-    nodes    = {}
+    clusters = None
+    edges    = None
+    nodes    = None
 
     ####################################################################################################################
     def __init__ (self, id=None):
         '''
         '''
 
-        self.id       = id
+        try:
+            self.id       = id
+        except AttributeError:
+            #ignore this
+            pass
         self.clusters = []
         self.edges    = {}
-        self.nodes    = {}
+        try:
+            self.nodes    = {}
+        except NotImplementedError:
+            #ignore this, used by some inherited values
+            pass
 
 
     ####################################################################################################################
@@ -203,7 +212,6 @@ class graph (object):
         @rtype:  List
         @return: List of edges from the specified node
         '''
-
         return [edge for edge in self.edges.values() if edge.src == id]
 
 
@@ -344,20 +352,21 @@ class graph (object):
 
 
     ####################################################################################################################
-    def graph_down (self, from_node_id, max_depth):
+    def graph_down (self, from_node_id, max_depth=-1):
         '''
         Create a new graph, looking down, from the specified node id to the specified depth.
 
         @type  from_node_id: pgraph.node
         @param from_node_id: Node to use as start of down graph
         @type  max_depth:    Integer
-        @param max_depth:    Number of levels to include in down graph (-1 for infinite)
+        @param max_depth:    (Optional, Def=-1) Number of levels to include in down graph (-1 for infinite)
 
         @rtype:  pgraph.graph
         @return: Down graph around specified node.
         '''
 
         down_graph = graph()
+
         from_node  = self.find_node("id", from_node_id)
 
         if not from_node:
@@ -379,12 +388,14 @@ class graph (object):
                 down_graph.add_node(copy.copy(node))
 
                 for edge in self.edges_from(node.id):
+
                     to_add = self.find_node("id", edge.dst)
 
                     if not down_graph.find_node("id", edge.dst):
                         next_level.append(to_add)
 
                     down_graph.add_node(copy.copy(to_add))
+
                     down_graph.add_edge(copy.copy(edge))
 
             if next_level:
@@ -461,14 +472,14 @@ class graph (object):
 
 
     ####################################################################################################################
-    def graph_up (self, from_node_id, max_depth):
+    def graph_up (self, from_node_id, max_depth=-1):
         '''
         Create a new graph, looking up, from the specified node id to the specified depth.
 
         @type  from_node_id: pgraph.node
         @param from_node_id: Node to use as start of up graph
         @type  max_depth:    Integer
-        @param max_depth:    Number of levels to include in up graph (-1 for infinite)
+        @param max_depth:    (Optional, Def=-1) Number of levels to include in up graph (-1 for infinite)
 
         @rtype:  pgraph.graph
         @return: Up graph to the specified node.
@@ -481,6 +492,9 @@ class graph (object):
         current_depth     = 1
 
         levels_to_process.append([from_node])
+
+        if not self.nodes:
+            print "Error: nodes == null"
 
         for level in levels_to_process:
             next_level = []

@@ -5,6 +5,8 @@ __all__ = \
     "function",
     "instruction",
     "module",
+    "sql_singleton",
+    "sqlite_queries"
 ]
 
 from basic_block import *
@@ -12,6 +14,7 @@ from defines     import *
 from function    import *
 from instruction import *
 from module      import *
+from sql_singleton import *
 
 # we don't want to make wx an required module for PIDA.
 try:    import wx
@@ -66,14 +69,14 @@ def load (file_name, progress_bar=None):
         progress_bar = progress_bar.lower()
 
     # return load_custom(file_name, progress_bar)
-    
+
     return load_sqlite(file_name)
 
 ########################################################################################################################
 
 def load_sqlite(file_name):
     newmod = module(file_name)
-    
+
     return newmod
 
 ########################################################################################################################

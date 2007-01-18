@@ -1,8 +1,9 @@
 #
-# IDA Python PIDA Database Generation Script
-# Dumps the current IDB into a .PIDA file.
+# IDA Python Open Binary Database Generation Script
+# Dumps the current IDB into a .obd file.
 #
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
+# Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
@@ -16,9 +17,9 @@
 #
 
 '''
-@author:       Pedram Amini, Cameron Hotchkies
+@author:       Cameron Hotchkies, Pedram Amini
 @license:      GNU General Public License 2.0 or later
-@contact:      pedram.amini@gmail.com
+@contact:      chotchkies@tippingpoint.com
 @organization: www.openrce.org
 '''
 
@@ -36,6 +37,8 @@ ANALYSIS_IMPORTS   = 0x0001
 ANALYSIS_RPC       = 0x0002
 ANALYSIS_FULL      = ANALYSIS_IMPORTS | ANALYSIS_RPC
 
+
+################################ TODO - Pull these from defines.py #####################################
 ### XREF TYPES ###
 CODE_TO_CODE_FUNCTION       = 1
 DATA_TO_FUNCTION            = 2
@@ -44,40 +47,21 @@ CODE_TO_CODE_INSTRUCTION    = 8
 
 VAR_TYPE_ARGUMENT   = 1
 VAR_TYPE_LOCAL      = 2
+################################ END TODO ##############################################################
 
 def main():
     depth    = None
     analysis = ANALYSIS_NONE
-    
-    while not depth:
-        depth = DEPTH_FULL
-        #depth = AskStr("full", "Depth to analyze? (full, functions|func, basic blocks|bb)")
-        #
-        #if depth:
-        #    depth = depth.lower()
-        #
-        #if   depth in ["full"]:                depth = DEPTH_FULL
-        #elif depth in ["functions", "func"]:   depth = DEPTH_FUNCTIONS
-        #elif depth in ["basic blocks", "bb"]:  depth = DEPTH_BASIC_BLOCKS
-        #else:
-        #    Warning("Unsupported depth: %s\n\nValid options include:\n\t- full\n\t- functions\n\t- basic blocks" % depth)
-        #    depth = None
-        #
-    #choice = AskYN(1, "Propogate nodes and edges for API calls (imports)?")
-    choice = 1
-    if choice == 1:
-        analysis |= ANALYSIS_IMPORTS
-    
-    #choice = AskYN(1, "Enumerate RPC interfaces and dispatch routines?")
-    choice = 1
-    if choice == 1:
-        analysis |= ANALYSIS_RPC
-    
-    
-    #output_file = AskFile(1, GetInputFile() + ".pida", "Save PIDA file to?")
-    output_file = GetInputFile() + ".pida"
-    
-    
+
+    depth = DEPTH_FULL
+    analysis |= ANALYSIS_IMPORTS
+
+    analysis |= ANALYSIS_RPC
+
+
+    output_file = AskFile(1, GetInputFile() + ".obdf", "Save OBDF file to?")
+
+
     if not output_file:
         Warning("Cancelled.")
     else:
@@ -86,23 +70,57 @@ def main():
 
         print "Analyzing IDB..."
         start = time.time()
-    
+
         try:
             signature = pida.signature(GetInputFilePath())
         except:
-            print "PIDA.DUMP> Could not calculate signature for %s, perhaps the file was moved?" % GetInputFilePath()
+            print "OBDF.DUMP> Could not calculate signature for %s, perhaps the file was moved?" % GetInputFilePath()
             signature = ""
-    
+
         create_module(GetInputFile(), signature, depth, analysis)
-    
+
+        print "Storing cross-references..."
+
+        set_up_cross_references()
+
         print "Saving to file...",
-    
-        copy_from_memory(GetInputFile())
-        
+
+        copy_from_memory(output_file)
+
         print "Done. Completed in %f seconds.\n" % round(time.time() - start, 3)
-            
+
+def find_bb_by_instruction(instruction_id):
+    res = curs.execute("SELECT basic_block FROM instruction WHERE id = %d;" % instruction_id).fetchone()
+
+    return res[0]
+
+def set_up_cross_references():
+    function_added = {}
+    basic_block_added = {}
+
+    for xref in global_branches.keys():
+        try:
+            id_tuple_source = instruction_address_lookup[xref[0]]
+            id_tuple_dest   = instruction_address_lookup[xref[1]]
+            curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 8);" % (id_tuple_source[0], id_tuple_dest[0]))
+
+            if not basic_block_added.has_key((id_tuple_source[1], id_tuple_dest[1])):
+                if id_tuple_source[1] == 50:
+                    print "saving %d to %d" % (50, id_tuple_dest[1])
+                curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 4);" % (id_tuple_source[1], id_tuple_dest[1]))
+                basic_block_added[(id_tuple_source[1], id_tuple_dest[1])] = 1
+
+                if id_tuple_source[2] != id_tuple_dest[2] and not function_added.has_key((id_tuple_source[2], id_tuple_dest[2])):
+                    curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 1);" % (id_tuple_source[2], id_tuple_dest[2]))
+                    function_added[(id_tuple_source[2], id_tuple_dest[2])] = 1
+
+        except KeyError, details:
+            # TODO pick up all this lost code
+            print "Missing instruction for 0x%08x / 0x%08x - It's probably not in a defined function. Skipping." % xref
+    sql_connection.commit()
+
 def copy_from_memory(filename):
-    outfile = filename + ".db"
+    outfile = filename
 
     if os.path.exists(outfile):
         os.remove(outfile)
@@ -111,18 +129,18 @@ def copy_from_memory(filename):
 
     for tbl in pida.SQLITE_CREATE_PIDA_SCHEMA:
         tb2 = tbl.replace("TABLE ", "TABLE extern.")
-        
+
         curs.execute(tb2)
-        
+
         tblname = tb2.split("extern.")[1].split(' ')[0]
-    
+
         sql = "INSERT INTO extern.%s SELECT * FROM %s;" % (tblname, tblname)
         curs.execute(sql)
-        
+
     sql_connection.commit()
-    
-    print "closing the database"
-    
+
+    print "closing the database [%s]" % outfile
+
     sql_connection.close()
 
 ####################################################################################################################
@@ -256,6 +274,43 @@ def _get_var_ref (ea):
 
 
 ####################################################################################################################
+def get_string_reference (ea):
+    '''
+    If the specified instruction references a string, get and return the contents of that string.
+    Currently supports:
+
+    @todo: XXX - Add more supported string types.
+
+    @type  ea: DWORD
+    @param ea: Effective address of instruction to analyze
+
+    @rtype:  Mixed
+    @return: ASCII representation of string referenced from ea if found, None otherwise.
+    '''
+
+    # TODO: move to dump script
+
+    dref = Dfirst(ea)
+    s    = ""
+
+    if dref == BADADDR:
+        return None
+
+    string_type = GetStringType(dref)
+
+    if string_type == ASCSTR_C:
+        while True:
+            byte = Byte(dref)
+
+            if byte == 0 or byte < 32 or byte > 126:
+                break
+
+            s    += chr(byte)
+            dref += 1
+
+    return s
+
+####################################################################################################################
 def create_instruction (ea, basic_block_id, function_id, module_id):
     '''
     Analyze the instruction at ea.
@@ -276,9 +331,17 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
     bytes = ""
 
     for address in xrange(ea, ItemEnd(ea)):
-        bytes += hex(Byte(address))[2:]
+        temp_byte = hex(Byte(address))[2:]
+        if len(temp_byte) < 2:
+            temp_byte = "0" + temp_byte
+        bytes += temp_byte
 
-    dbid = __create_instruction(ea, basic_block_id, function_id, module_id, GetMnem(ea), bytes)
+    sql = ss.INSERT_INSTRUCTION % (ea, basic_block_id, function_id, module_id, GetMnem(ea), bytes)
+
+    curs.execute(sql)
+    dbid = curs.lastrowid
+
+    instruction_address_lookup[ea] = (dbid, basic_block_id, function_id)
 
     comment = Comment(ea)
     if comment != None:
@@ -294,8 +357,8 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
             op3  = GetOpnd(ea, 2)
             if op3 != None and op3 != "":
                 curs.execute(ss.UPDATE_INSTRUCTION_OPERAND3 % (op3.replace("'", "''"), dbid))
-    
-    
+
+
     #TODO process these last?
     # XXX - this is a dirty hack to determine if and any API reference.
     xref  = Dfirst(ea)
@@ -304,7 +367,7 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
     # TODO This isn't in the schema.. do we need it?
     #curs.execute(ss.UPDATE_INSTRUCTION_FLAGS % (flags, dbid))
 
-    
+
     if xref == BADADDR:
         xref  = get_first_cref_from(ea)
         flags = GetFunctionFlags(xref)
@@ -315,30 +378,10 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
         if name and get_name_ea(BADADDR, name) != BADADDR:
             refs_api = (get_name_ea(BADADDR, name), name)
 
-    refs_string   = None
+    refs_string   = get_string_reference(ea)
     refs_arg      = _get_arg_ref(ea)
     refs_constant = _get_constant_ref(ea)
     refs_var      = _get_var_ref(ea)
-
-    return dbid
-
-####################################################################################################################
-def __create_instruction (address, basic_block_id, function_id, module_id, mnemonic, bytes):
-    sql = ss.INSERT_INSTRUCTION % (address, basic_block_id, function_id, module_id, mnemonic, bytes)
-
-    curs.execute(sql)
-    dbid = curs.lastrowid
-
-    return dbid
-
-####################################################################################################################
-def __create_module_record(name, base, version):
-    sql = ss.INSERT_MODULE % (name, base, version)
-
-    curs.execute(sql)
-    dbid = curs.lastrowid
-
-    sql_connection.commit()
 
     return dbid
 
@@ -384,29 +427,20 @@ def create_basic_block (ea_start, ea_end, depth, analysis, function_id, module_i
 
     heads = [head for head in Heads(ea_start, ea_end + 1) if isCode(GetFlags(head))]
 
-    dbid = __create_basic_block_record(module_id, function_id, ea_start, ea_end)
-
-    id               = ea_start
-    ea_start         = ea_start
-    ea_end           = ea_end
-    instructions     = {}
-    ext              = {}
-
-    if depth & DEPTH_INSTRUCTIONS:
-        for ea in heads:
-            instructions[ea] = create_instruction(ea, dbid, function_id, module_id)
-        sql_connection.commit()
-
-####################################################################################################################
-def __create_basic_block_record(module_id, function_id, start_address, end_address):
-    sql = ss.INSERT_BASIC_BLOCK % ( start_address, end_address, function_id, module_id)
+    sql = ss.INSERT_BASIC_BLOCK % ( ea_start, ea_end, function_id, module_id)
 
     curs.execute(sql)
     dbid = curs.lastrowid
 
     sql_connection.commit()
 
-    return dbid
+    ea_start         = ea_start
+    ea_end           = ea_end
+
+    if depth & DEPTH_INSTRUCTIONS:
+        for ea in heads:
+            create_instruction(ea, dbid, function_id, module_id)
+        sql_connection.commit()
 
 ##################################################################################################################
 def branches_from (ea):
@@ -422,14 +456,22 @@ def branches_from (ea):
     @return: List of branches from the specified address.
     '''
 
-    if is_call_insn(ea):
-        return []
+#    if is_call_insn(ea):
+#        return []
 
     xrefs = CodeRefsFrom(ea, 1)
+
+    if ea == 0x411a2a:
+        print "JJJ"
+        print xrefs
 
     # if the only xref from ea is next ea, then return nothing.
     if len(xrefs) == 1 and xrefs[0] == NextNotTail(ea):
         xrefs = []
+
+    for xr in xrefs:
+        global_branches_from[ea] = xr
+        global_branches[(ea, xr)] = 1
 
     return xrefs
 
@@ -456,8 +498,10 @@ def branches_to (ea):
         prev_code_ea = PrevNotTail(prev_code_ea)
 
     for xref in CodeRefsTo(ea, 1):
-        if not is_call_insn(xref) and xref not in [prev_ea, prev_code_ea]:
+        if xref not in [prev_ea, prev_code_ea]: # not is_call_insn(xref) and
             xrefs.append(xref)
+            #global_branches_from[xref] = ea
+            global_branches[(xref, ea)] = 1
 
     return xrefs
 
@@ -528,7 +572,7 @@ def __init_enumerate_rpc__ (module_id):
                         break
 
                 function_id = curs.execute("SELECT id FROM function WHERE start_address=%d AND module = %d;" % (addr, module_id)).fetchone()[0]
-                
+
                 if function_id:
                     curs.execute("INSERT INTO rpc_data (function, module, uuid, opcode) VALUES (%d, %d, '%s', %d);" % (function_id, module_id, uuid_bin_to_string(uuid), opcode))
                 else:
@@ -595,14 +639,14 @@ def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
                 block_start = next_ea
             else:
                 # TODO find a way to catch imports
-                pass                
+                pass
 ####################################################################################################################
 def __init_args_and_local_vars__ (func_struct, frame_struct, function_id, module_id):
     '''
     Calculate the total size of arguments, # of arguments and # of local variables. Update the internal class member
     variables appropriately.
     '''
-    
+
     if not frame_struct:
         return
 
@@ -644,10 +688,15 @@ def __init_args_and_local_vars__ (func_struct, frame_struct, function_id, module
 
     arg_size = frame_offset - argument_boundary
     curs.execute(ss.UPDATE_FUNCTION_ARG_SIZE % (arg_size, function_id))
-    
+
 
 def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE):
-    module_id = __create_module_record(name, MinEA() - 0x1000, "0")
+    sql = ss.INSERT_MODULE % (name, MinEA() - 0x1000, "0")
+
+    curs.execute(sql)
+    module_id = curs.lastrowid
+
+    sql_connection.commit()
 
     log = True
 
@@ -677,58 +726,17 @@ def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE
         print "Enumerating intramodular cross references..."
 
     # TODO do data xrefs as well (this may clear up imports not being stored)
-    
-    functions = curs.execute("SELECT id, start_address FROM function;").fetchall()
-    
-    for func in functions:
-        code_xrefs_to = CodeRefsTo(func[1], 0)
-        data_xrefs_to = DataRefsTo(func[1])
-        
-        for ref in code_xrefs_to:
-            src_func = get_func(ref)
-            
-            if src_func:
-                src_address = src_func.startEA
-                
-                # If it's not in a function, I guess we ignore it
-                if src_address:
-                    src_id = curs.execute("SELECT id FROM function WHERE start_address = %d AND module = %d;" % (src_address, module_id)).fetchone()[0]
-                    
-                    curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, %d);" % (src_id, func[0], CODE_TO_CODE_FUNCTION))                
-                
-        if depth & DEPTH_INSTRUCTIONS:                    
-            dest = curs.execute("SELECT id FROM instruction WHERE address = %d;" % func[1]).fetchone()
-            if not dest:
-                print "0x%x: bad code ref dest" % func[1]
-            else:
-                dest_id = dest[0]
-                         
-                if len(code_xrefs_to) > 0:
-                    for ref in code_xrefs_to:
-                        src = curs.execute ("SELECT id FROM instruction WHERE address = %d;" % ref).fetchone()
-                        if not src:
-                            print "0x%x: bad code ref source" % ref
-                        else:
-                            src_id = src[0]
-                    
-                            curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, %d);" % (src_id, dest_id, CODE_TO_CODE_INSTRUCTION))
-    
 
-def create_function_record(module_id, start_address, end_address, name):
-    ss = pida.sql_singleton()
-
-    sql = ss.INSERT_FUNCTION % (module_id, start_address, end_address, name)
-
-    curs.execute(sql)
-    dbid = curs.lastrowid
-
-    sql_connection.commit()
-    return dbid
-
-def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module=0):
+def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module_id=0):
         ss = pida.sql_singleton()
 
-        dbid = create_function_record(module, ea_start, ea_start, "")
+        # The end address is the same as the start address for the insertion
+        sql = ss.INSERT_FUNCTION % (module_id, ea_start, ea_start, "")
+
+        curs.execute(sql)
+        dbid = curs.lastrowid
+
+        sql_connection.commit()
 
         # grab the ida function and frame structures.
         func_struct  = get_func(ea_start)
@@ -750,32 +758,34 @@ def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module=
         ea_start       = func_struct.startEA
         ea_end         = PrevAddr(func_struct.endEA)
         name           = GetFunctionName(ea_start)
-        
+
         curs.execute("UPDATE function SET start_address=%d, end_address=%d, name='%s' WHERE id = %d;" % (ea_start, ea_end, name.replace("'","''"), dbid))
-        
+
         saved_reg_size = func_struct.frregs
         frame_size     = get_frame_size(func_struct)
         ret_size       = get_frame_retsize(func_struct)
         local_var_size = func_struct.frsize
-        
+
         curs.execute("INSERT INTO frame_info (function, saved_reg_size, frame_size, ret_size, local_var_size) VALUES (%d, %d, %d, %d, %d);" % (dbid, saved_reg_size, frame_size, ret_size, local_var_size))
-        
+
         chunks         = [(ea_start, ea_end)]
 
-        __init_args_and_local_vars__(func_struct, frame_struct, dbid, module)
+        __init_args_and_local_vars__(func_struct, frame_struct, dbid, module_id)
 
         if depth & DEPTH_BASIC_BLOCKS:
-            __init_basic_blocks__(ea_start, depth, analysis, dbid, module)
-            
+            __init_basic_blocks__(ea_start, depth, analysis, dbid, module_id)
+
         return dbid
-
-
-
-
 
 
 sql_connection = sqlite.connect(":memory:")
 ss = pida.sql_singleton()
 curs = sql_connection.cursor()
-    
+
+# Initialize global BB edges list
+global_branches_from = {}
+global_branches = {}
+instruction_address_lookup = {}
+
+
 main()

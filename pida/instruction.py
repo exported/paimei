@@ -1,6 +1,7 @@
 #
 # PIDA Instruction
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
+# Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
@@ -13,13 +14,6 @@
 # Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
-'''
-@author:       Pedram Amini, Cameron Hotchkies
-@license:      GNU General Public License 2.0 or later
-@contact:      pedram.amini@gmail.com
-@organization: www.openrce.org
-'''
-
 import struct
 import binascii
 
@@ -28,85 +22,105 @@ from sql_singleton  import *
 
 class instruction:
     '''
+    @author:       Cameron Hotchkies, Pedram Amini
+    @license:      GNU General Public License 2.0 or later
+    @contact:      chotchkies@tippingpoint.com
+    @organization: www.openrce.org
+    
+    @cvar dbid:    Database Identifier
+    @type dbid:    Integer
+    @cvar DSN:     Database location
+    @type DSN:     String
+    
+    @type ea:       DWORD
+    @type comment:  String
+    @type bytes:    List
+    @type mnem:     String
+    @type disasm:   String
+    @type op1:      String
+    @deprecated: This will be replaced by a list of operands, allowing for more flexibility.
+    
+    @type op2:      String
+    @deprecated op2: This will be replaced by a list of operands, allowing for more flexibility.
+    
+    @type op3:      String
+    @deprecated op3: This will be replaced by a list of operands, allowing for more flexibility.   
     '''
 
-    __ea           = None                          # effective address of instruction
-    __comment      = ""                            # comment at instruction EA
-    __bytes        = []                            # instruction raw bytes, mnemonic and operands
-    __mnem         = None                          # the mnemonic of the instruction
-    __op1          = None                          # the first operand (optional)
-    __op2          = None                          # the second operand (optional)
-    __op3          = None                          # the third operand (optional)
+    __ea            = None                      # effective address of instruction
+    __comment       = ""                        # comment at instruction EA
+    __bytes         = []                        # instruction raw bytes, mnemonic and operands
+    __mnem          = None                      # the mnemonic of the instruction
+    __op1           = None                      # the first operand (optional)
+    __op2           = None                      # the second operand (optional)
+    __op3           = None                      # the third operand (optional)
 
-    dbid         = None                          # Database ID
-    database_file   = None
+    dbid            = None                      # Database ID
+    DSN   = None
+    basic_block     = None                      # parent basic_block id
 
-    __cached       = False    
-    basic_block    = None                          # pointer to parent container
-    
-    refs_string    = None                          # string, if any, that this instruction references
-    refs_api       = None                          # known API, if any, that this instruction references
-    refs_arg       = None                          # argument, if any, that this instruction references
-    refs_constant  = None                          # constant value, if any, that this instruction references
-    refs_var       = None                          # local variable, if any, that this instruction references
+    __cached        = False
 
-    ext            = {}    
+    refs_string     = None                      # string, if any, that this instruction references
+    refs_api        = None                      # known API, if any, that this instruction references
+    refs_arg        = None                      # argument, if any, that this instruction references
+    refs_constant   = None                      # constant value, if any, that this instruction references
+    refs_var        = None                      # local variable, if any, that this instruction references
+
+    ext             = {}
 
     ####################################################################################################################
-    def __init__ (self, database_id, database_file):
+    def __init__ (self, DSN, database_id):
         '''
-        Analyze the instruction at ea.
+        Initializes an instruction object.
 
-        @see: defines.py
-
-        @type  ea:          DWORD
-        @param ea:          Effective address of instruction to analyze
-        @type  analysis:    Integer
-        @param analysis:    (Optional, Def=ANALYSIS_NONE) Which extra analysis options to enable
-        @type  basic_block: pgraph.basic_block
-        @param basic_block: (Optional, Def=None) Pointer to parent basic block container
+        @type  database_id: Integer
+        @param database_id: The id of the instruction in the database
+        @type  DSN:         String
+        @param DSN:         The filename for the database to read from.
         '''
-        
+
         self.dbid = database_id
-        self.database_file = database_file
         self.__cached = False
-        
+
     ####################################################################################################################
-    def __load_from_sql(self):        
+    def __load_from_sql(self):
         ss = sql_singleton()
-        cr = ss.connection(self.database_file).cursor()
-        sql = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;" % self.dbid
+        cr = ss.connection(self.DSN).cursor()
+        sql = ss.SELECT_INSTRUCTION % self.dbid
         cr.execute(sql)
-        
+
         results = cr.fetchone()
-        
-        if results:            
+
+        if results:
             self.__ea       = results[0]
             self.__mnem     = results[1]
-            self.__op1      = results[2]        
+            self.__op1      = results[2]
             self.__op2      = results[3]
             self.__op3      = results[4]
             self.__comment  = results[5]
-            
+
             bytes = []
-            
-            for byte in binascii.a2b_hex(results[6]):
-                bytes.append(struct.unpack('B', byte)[0])
-            
+
+            try:
+
+                for byte in binascii.a2b_hex(results[6]):
+                    bytes.append(struct.unpack('B', byte)[0])
+            except:
+                print "Errored out on %s on address %x" % (results[6], self.__ea)
+
             self.__bytes = bytes
-            
+
             self.basic_block = results[7]
-            
+
             self.__cached = True
         else:
-            raise "Error loading instruction [ID:%d] from database [FILE:%s]" % (self.dbid, self.database_file)
-        
+            raise "Error loading instruction [ID:%d] from database [FILE:%s]" % (self.dbid, self.DSN)
+
     ####################################################################################################################
     def flag_dependency (first_instruction, second_instruction):
         '''
         Determine if one instruction can affect flags used by the other instruction.
-
-        @author: Cameron Hotchkies
 
         @type   first_instruction:  instruction
         @param  first_instruction:  The first instruction to check
@@ -117,22 +131,22 @@ class instruction:
         @return: 0 for no effect, 1 for first affects second, 2 for second affects first, 3 for both can affect
         '''
 
-        if first_instruction.mnem in instruction.FLAGGED_OPCODES and second_instruction.mnem in instruction.FLAGGED_OPCODES:
+        if first_instruction.mnem in instruction.__FLAGGED_OPCODES and second_instruction.mnem in instruction.__FLAGGED_OPCODES:
             ret_val = 0
 
             # if neither opcodes set any flags, they can be ignored
-            if instruction.FLAGGED_OPCODES[first_instruction.mnem]  & instruction.__SET_MASK > 0 and \
-               instruction.FLAGGED_OPCODES[second_instruction.mnem] & instruction.__SET_MASK > 0:
+            if instruction.__FLAGGED_OPCODES[first_instruction.mnem]  & instruction.__SET_MASK > 0 and \
+               instruction.__FLAGGED_OPCODES[second_instruction.mnem] & instruction.__SET_MASK > 0:
                 return 0
 
-            setter = instruction.FLAGGED_OPCODES[first_instruction.mnem]  & instruction.__SET_MASK
-            tester = instruction.FLAGGED_OPCODES[second_instruction.mnem] & instruction.__TEST_MASK
+            setter = instruction.__FLAGGED_OPCODES[first_instruction.mnem]  & instruction.__SET_MASK
+            tester = instruction.__FLAGGED_OPCODES[second_instruction.mnem] & instruction.__TEST_MASK
 
             if setter & (tester << 16) > 0:
                 ret_val += 1
 
-            setter = instruction.FLAGGED_OPCODES[second_instruction.mnem] & instruction.__SET_MASK
-            tester = instruction.FLAGGED_OPCODES[first_instruction.mnem]  & instruction.__TEST_MASK
+            setter = instruction.__FLAGGED_OPCODES[second_instruction.mnem] & instruction.__SET_MASK
+            tester = instruction.__FLAGGED_OPCODES[first_instruction.mnem]  & instruction.__TEST_MASK
 
             if setter & (tester << 16) > 0:
                 ret_val += 2
@@ -143,384 +157,347 @@ class instruction:
 
     ####################################################################################################################
     # ea accessors
-    
+
     def __getAddress (self):
         '''
         The address of the instruction
-        
+
         @rtype:  DWORD
         @return: The address of the instruction
         '''
-        
+
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__ea
-        
+
     ####
-    
+
     def __setAddress (self, value):
         '''
         Sets the address of the instruction.
-        
+
         @type  value: DWORD
         @param value: The address of the instruction.
         '''
-        
+
         if self.__cached:
             self.__ea = value
-            
+
         ss = sql_singleton()
-        curs = ss.connection(self.database_file).cursor()
-        curs.execute("UPDATE instruction SET address=%d where id=%d" % (value, self.dbid))
+        curs = ss.connection(self.DSN).cursor()
+        curs.execute(ss.UPDATE_INSTRUCTION_ADDRESS % (value, self.dbid))
         ss.connection().commit()
-    
+
     ####
-        
+
     def __deleteAddress (self):
         '''
         Clears the name of the module
         '''
-        del self.__ea  
-    
+        del self.__ea
+
     ####################################################################################################################
     # comment accessors
-    
+
     def __getComment (self):
         '''
         The instruction comment.
-        
+
         @rtype:  String
         @return: The instruction comment
         '''
-        
+
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__comment
-        
+
     ####
-    
+
     def __setComment (self, value):
         '''
         Sets the instruction comment.
-        
+
         @type  value: String
         @param value: The instruction comment.
         '''
-        
+
         if self.__cached:
             self.__comment = value
-            
+
         ss = sql_singleton()
-        curs = ss.connection(self.database_file).cursor()
-        curs.execute("UPDATE instruction SET comment='%s' where id=%d" % (value.replace("'", "''"), self.dbid))
+        curs = ss.connection(self.DSN).cursor()
+        curs.execute(ss.UPDATE_INSTRUCTION_COMMENT % (value.replace("'", "''"), self.dbid))
         ss.connection().commit()
-    
+
     ####
-        
+
     def __deleteComment (self):
         '''
         destructs the instruction comment
         '''
-        
+
         del self.__comment
-            
-            
+
+
     ####################################################################################################################
     # bytes accessors
-    
+
     def __getBytes (self):
         '''
         The raw bytes of the instruction
-        
+
         @rtype:  [Integers]
         @return: The raw bytes of the instruction
         '''
-        
+
         if not self.__cached:
             self.__load_from_sql()
             pass
-            
+
         return self.__bytes
-        
+
     ####
-    
+
     def __setBytes (self, value):
         '''
         Sets the name of the module.
-        
+
         @type  value: [Integer]
         @param value: The raw bytes of the instruction
         '''
-        
+
         if self.__cached:
             self.__bytes = value
 
         for byte in value:
             bytes += hex(byte)[2:]
-            
+
         ss = sql_singleton()
-        curs = ss.connection(self.database_file).cursor()
-        curs.execute("UPDATE instruction SET bytes='%s' where id=%d" % (bytes, self.dbid))
+        curs = ss.connection(self.DSN).cursor()
+        curs.execute(ss.UPDATE_INSTRUCTION_BYTES % (bytes, self.dbid))
         ss.connection().commit()
-    
+
     ####
-        
+
     def __deleteBytes (self):
         '''
         destructs the raw bytes of the instruction
         '''
-        
+
         del self.__bytes
-            
-    
+
+
     ####################################################################################################################
     # mnem accessors
-    
+
     def __getMnemonic (self):
         '''
         The instruction mnemonic.
-        
+
         @rtype:  String
         @return: The instruction mnemonic
         '''
-        
+
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__mnem
-        
+
     ####
-    
+
     def __setMnemonic (self, value):
         '''
         Sets the instruction mnemonic.
-        
+
         @type  value: String
         @param value: The instuction mnemonic.
         '''
-        
+
         if self.__cached:
             self.__mnem = value
-            
+
         ss = sql_singleton()
-        curs = ss.connection(self.database_file).cursor()
-        curs.execute("UPDATE instruction SET mnemonic='%s' where id=%d" % (value.replace("'", "''"), self.dbid))
+        curs = ss.connection(self.DSN).cursor()
+        curs.execute(ss.UPDATE_INSTRUCTION_MNEMONIC % (value.replace("'", "''"), self.dbid))
         ss.connection().commit()
-    
+
     ####
-        
+
     def __deleteMnemonic (self):
         '''
         destructs the instuction mnemonic
         '''
-        
-        del self.__mnem 
-        
+
+        del self.__mnem
+
     ####################################################################################################################
     # op1 accessors
-    
+
     def __getOperand1 (self):
         '''
         Sets the first operand of the instruction
-        
+
         @rtype:  String
         @return: The first operand of the instruction
         '''
-        
+
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__op1
-        
+
     ####
-    
+
     def __setOperand1 (self, value):
         '''
         Sets the first operand of the instruction
-        
+
         @type  value: String
         @param value: The first operand of the instruction
         '''
-        
+
         if self.__cached:
             self.__op1 = value
-            
+
         ss = sql_singleton()
-        curs = ss.connection(self.database_file).cursor()
-        curs.execute("UPDATE instruction SET operand1='%s' where id=%d" % (value.replace("'", "''"), self.dbid))
+        curs = ss.connection(self.DSN).cursor()
+        curs.execute(ss.UPATE_INSTRUCTION_OPERAND1 % (value.replace("'", "''"), self.dbid))
         ss.connection().commit()
-    
+
     ####
-        
+
     def __deleteOperand1 (self):
         '''
         destructs the first operand of the instruction
         '''
         del self.__op1
-            
+
     ####################################################################################################################
     # op2 accessors
-    
+
     def __getOperand2 (self):
         '''
         Sets the second operand of the instruction
-        
+
         @rtype:  String
         @return: The second operand of the instruction
         '''
-        
+
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__op2
-        
+
     ####
-    
+
     def __setOperand2 (self, value):
         '''
         Sets the second operand of the instruction
-        
+
         @type  value: String
         @param value: The second operand of the instruction
         '''
-        
+
         if self.__cached:
             self.__op2 = value
-            
+
         ss = sql_singleton()
-        curs = ss.connection(self.database_file).cursor()
-        curs.execute("UPDATE instruction SET operand2='%s' where id=%d" % (value.replace("'", "''"), self.dbid))
+        curs = ss.connection(self.DSN).cursor()
+        curs.execute(ss.UPDATE_INSTRUCTION_OPERAND2 % (value.replace("'", "''"), self.dbid))
         ss.connection().commit()
-    
+
     ####
-        
+
     def __deleteOperand2 (self):
         '''
         destructs the second operand of the instruction
         '''
         del self.__op2
-            
+
 
     ####################################################################################################################
     # op1 accessors
-    
+
     def __getOperand3 (self):
         '''
         Sets the third operand of the instruction
-        
+
         @rtype:  String
         @return: The third operand of the instruction
         '''
-        
+
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__op3
-        
+
     ####
-    
+
     def __setOperand3 (self, value):
         '''
         Sets the third operand of the instruction
-        
+
         @type  value: String
         @param value: The third operand of the instruction
         '''
-        
+
         if self.__cached:
             self.__op3 = value
-            
+
         ss = sql_singleton()
-        curs = ss.connection(self.database_file).cursor()
-        curs.execute("UPDATE instruction SET operand3='%s' where id=%d" % (value.replace("'", "''"), self.dbid))
+        curs = ss.connection(self.DSN).cursor()
+        curs.execute(ss.UPDATE_INSTRUCTION_OPERAND3 % (value.replace("'", "''"), self.dbid))
         ss.connection().commit()
-    
+
     ####
-        
+
     def __deleteOperand3 (self):
         '''
         destructor for the first operand of the instruction
         '''
-        
+
         del self.__op3
-            
-    
+
+
     ####################################################################################################################
     # disasm accessors
-    
+
     def __getDisasm (self):
         '''
         Returns the disassembly view of the instruction.
-        
+
         @rtype:   String
         @returns: The disassembly view of the instruction.
         '''
-        
+
         ret_val = self.mnem
 
         if self.op1 != None:
             ret_val += " " + self.op1
-            
+
             if self.op2 != None:
                 ret_val += ", " + self.op2
-                
+
                 if self.op3 != None:
                     ret_val += ", " + self.op3
-                    
+
         return ret_val
-        
+
     def __setDisasm (self, value):
-        
-        raise TypeError, "disasm is a read-only property"
-        
+
+        raise NotImplementedError, "disasm is a read-only property"
+
     def __deleteDisasm (self):
         # nothing to destroy
         pass
-
-    ####################################################################################################################
-    def get_string_reference (self, ea):
-        '''
-        If the specified instruction references a string, get and return the contents of that string.
-        Currently supports:
-
-        @todo: XXX - Add more supported string types.
-
-        @type  ea: DWORD
-        @param ea: Effective address of instruction to analyze
-
-        @rtype:  Mixed
-        @return: ASCII representation of string referenced from ea if found, None otherwise.
-        '''
-
-        dref = Dfirst(ea)
-        s    = ""
-
-        if dref == BADADDR:
-            return None
-
-        string_type = GetStringType(dref)
-
-        if string_type == ASCSTR_C:
-            while True:
-                byte = Byte(dref)
-
-                if byte == 0 or byte < 32 or byte > 126:
-                    break
-
-                s    += chr(byte)
-                dref += 1
-
-        return s
 
 
     ####################################################################################################################
     def is_conditional_branch (self):
         '''
         Check if the instruction is a conditional branch. (x86 specific)
-
-        @author: Cameron Hotchkies
 
         @rtype:  Boolean
         @return: True if the instruction is a conditional branch, False otherwise.
@@ -539,8 +516,6 @@ class instruction:
         '''
         Indicates if the given register is modified by this instruction. This does not check for all modifications,
         just lea, mov and pop into the specific register.
-
-        @author: Cameron Hotchkies
 
         @type   register: String
         @param  register: The text representation of the register
@@ -608,7 +583,7 @@ class instruction:
     ### flag-using instructions in a dictionary (ripped from bastard)
     ###
 
-    FLAGGED_OPCODES = \
+    __FLAGGED_OPCODES = \
     {
         "add"      : __SET_ALL,
         "or"       : __SET_ALL,
@@ -707,15 +682,15 @@ class instruction:
         "fcomi"    : __SET_CARRY | __SET_ZERO | __SET_PARITY,
         "fcomip"   : __SET_CARRY | __SET_ZERO | __SET_PARITY
     }
-    
+
     ####################################################################################################################
     # PROPERTIES
-    
-    ea      = property(__getAddress,    __setAddress,   __deleteAddress,    "ea")
-    comment = property(__getComment,    __setComment,   __deleteComment,    "comment")
-    bytes   = property(__getBytes,      __setBytes,     __deleteBytes,      "bytes")
-    mnem    = property(__getMnemonic,   __setMnemonic,  __deleteMnemonic,   "mnem")
-    op1     = property(__getOperand1,   __setOperand1,  __deleteOperand1,   "op1")
-    op2     = property(__getOperand2,   __setOperand2,  __deleteOperand2,   "op2")
-    op3     = property(__getOperand3,   __setOperand3,  __deleteOperand3,   "op3")
-    disasm  = property(__getDisasm,     __setDisasm,    __deleteDisasm,     "disasm")
+    ea      = property(__getAddress,    __setAddress,   __deleteAddress,    "The address of the instruction.")
+    comment = property(__getComment,    __setComment,   __deleteComment,    "The instruction comment.")
+    bytes   = property(__getBytes,      __setBytes,     __deleteBytes,      "The raw bytes of the instruction.")
+    mnem    = property(__getMnemonic,   __setMnemonic,  __deleteMnemonic,   "The instruction mnemonic.")    
+    op1     = property(__getOperand1,   __setOperand1,  __deleteOperand1,   "The first operand.")
+    op2     = property(__getOperand2,   __setOperand2,  __deleteOperand2,   "The second operand.")
+    op3     = property(__getOperand3,   __setOperand3,  __deleteOperand3,   "The third operand.")
+    disasm  = property(__getDisasm,     __setDisasm,    __deleteDisasm,     "The textual disassembly of the instruction.")
+    id      = property(__getAddress,    __setAddress,   __deleteAddress,    "The identifier for the class (internal use only).")

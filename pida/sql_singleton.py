@@ -16,6 +16,7 @@
 import MySQLdb
 from pysqlite2 import dbapi2 as sqlite
 from sqlite_queries import *
+import pida
 
 class sql_singleton:
     '''
@@ -39,6 +40,18 @@ class sql_singleton:
         __sql               = {}
         __active_DSN = None
         __active_syntax     = "sqlite"
+        
+        def isNumber(value):
+            '''
+            Checks to see if a value is a number.
+            '''
+            try:
+                # Use float, because int doesn't allow for decimals
+                x = float(value)
+                return True
+            except ValueError:
+                return False
+
 
         INSERT_INSTRUCTION                     = cINSERT_INSTRUCTION
         INSERT_MODULE                          = cINSERT_MODULE
@@ -47,60 +60,465 @@ class sql_singleton:
 
         ## INSTRUCTION ###
 
-        SELECT_INSTRUCTION                     = cSELECT_INSTRUCTION
+        def select_instruction(self, DSN, instruction_id):
+            ret_val = {}
+        
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_BASIC_BLOCK % basic_block_id).fetchone()
+                ret_val = {'address':results[0], 'mnemonic':results[1], 'operand1':results[2], 'operand2':results[3], 'operand3':results[4], 'comment'results[5], 'bytes':results[6], 'basic_block':results[7]}
+                                
+            return ret_val  
 
-        UPDATE_INSTRUCTION_MNEMONIC            = cUPDATE_INSTRUCTION_MNEMONIC
-        UPDATE_INSTRUCTION_COMMENT             = cUPDATE_INSTRUCTION_COMMENT
-        UPDATE_INSTRUCTION_OPERAND1            = cUPDATE_INSTRUCTION_OPERAND1
-        UPDATE_INSTRUCTION_OPERAND2            = cUPDATE_INSTRUCTION_OPERAND2
-        UPDATE_INSTRUCTION_OPERAND3            = cUPDATE_INSTRUCTION_OPERAND3
-        UPDATE_INSTRUCTION_FLAGS               = cUPDATE_INSTRUCTION_FLAGS
-        UPDATE_INSTRUCTION_ADDRESS             = cUPDATE_INSTRUCTION_ADDRESS
-        UPDATE_INSTRUCTION_COMMENT             = cUPDATE_INSTRUCTION_COMMENT
-        UPDATE_INSTRUCTION_BYTES               = cUPDATE_INSTRUCTION_BYTES
+        def update_instruction_mnemonic(self, DSN, instruction_id, mnemonic):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                
+                if value:
+                    mnemonic = "'" + mnemonic.replace("'",  "''") + "'"
+                else:
+                    mnemonic = "NULL"
+                
+                curs.execute(pida.sqlite_queries.cUPDATE_INSTRUCTION_MNEMONIC % (mnemonic, basic_block_id))
+                
+                curs.commit()
+        
+        def update_instruction_comment(self, DSN, instruction_id, comment):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                
+                if value:
+                    comment = "'" + comment.replace("'",  "''") + "'"
+                else:
+                    comment = "NULL"
+                
+                curs.execute(pida.sqlite_queries.cUPDATE_INSTRUCTION_COMMENT % (comment, basic_block_id))
+                
+                curs.commit()
+                
+        
+        def update_instruction_operand(self, DSN, instruction_id, operand_seq, value):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                
+                if value:
+                    value = "'" + value.replace("'",  "''") + "'"
+                else:
+                    value = "NULL"
+                if operand_seq == 1:
+                    sql = pida.sqlite_queries.cUPDATE_INSTRUCTION_OPERAND1
+                elif operand_seq == 2:
+                    sql = pida.sqlite_queries.cUPDATE_INSTRUCTION_OPERAND2
+                elif operand_seq == 3:
+                    sql = pida.sqlite_queries.cUPDATE_INSTRUCTION_OPERAND3
+                    
+                curs.execute(sql % (value, instruction_id))
+                
+                curs.commit()                
+        
+        def update_instruction_flags(self, DSN, instruction_id, flags):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_INSTRUCTION_FLAGS % (flags, instruction_id))
+                curs.commit()             
+        
+        def update_instruction_address(self, DSN, instruction_id, address):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_INSTRUCTION_ADDRESS % (address, instruction_id))
+                curs.commit()             
+        
+        def update_instruction_comment(self, DSN, instruction_id, comment):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                
+                if value:
+                    comment = "'" + comment.replace("'",  "''") + "'"
+                else:
+                    comment = "NULL"
+                
+                curs.execute(pida.sqlite_queries.cUPDATE_INSTRUCTION_COMMENT % (comment, basic_block_id))
+                
+                curs.commit() 
+                
+        def update_instruction_bytes(self, DSN, instruction_id, byte_string):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                
+                if value:
+                    byte_string = "'" + byte_string.replace("'",  "''") + "'"
+                else:
+                    byte_string = "NULL"
+                
+                curs.execute(pida.sqlite_queries.cUPDATE_INSTRUCTION_BYTES % (byte_string, basic_block_id))
+                
+                curs.commit() 
 
         ## BASIC BLOCK ###
 
-        SELECT_BASIC_BLOCK                     = cSELECT_BASIC_BLOCK
-        SELECT_NUM_INSTRUCTIONS                = cSELECT_NUM_INSTRUCTIONS
-        SELECT_SORTED_INSTRUCTIONS             = cSELECT_SORTED_INSTRUCTIONS
+        def select_basic_block(self, DSN, basic_block_id):
+            ret_val = {}
+        
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_BASIC_BLOCK % basic_block_id).fetchone()
+                ret_val = {'module':results[0], 'function':results[1], 'start_address':results[2], 'end_address':results[3]}
+                                
+            return ret_val    
+        
+        def select_basic_block_num_instructions(self, DSN, basic_block_id):
+            ret_val = 0
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_BASIC_BLOCK_NUM_INSTRUCTIONS % basic_block_id).fetchone()
+                ret_val = results[0]
 
-        UPDATE_START_ADDRESS                   = cUPDATE_START_ADDRESS
-        UPDATE_END_ADDRESS                     = cUPDATE_END_ADDRESS
+            return ret_val        
+        
+        def select_basic_block_sorted_instructions(self, DSN, basic_block_id):
+            ret_val = []
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_BASIC_BLOCK_SORTED_INSTRUCTIONS % basic_block_id).fetchall()
+
+                for result_id in results:
+                    ret_val += result_id
+
+            return ret_val             
+
+        def update_basic_block_start_address(self, DSN, basic_block_id, address):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_BASIC_BLOCK_START_ADDRESS % (address, basic_block_id))
+                curs.commit()  
+
+        def update_basic_block_end_address(self, DSN, basic_block_id, address):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_BASIC_BLOCK_END_ADDRESS % (address, basic_block_id))
+                curs.commit()  
 
         ## FUNCTION ###
 
-        SELECT_FUNCTION                        = cSELECT_FUNCTION
-        SELECT_FRAME_INFO                      = cSELECT_FRAME_INFO
-        SELECT_ARGS                            = cSELECT_ARGS
-        SELECT_LOCAL_VARS                      = cSELECT_LOCAL_VARS
-        SELECT_FUNCTION_BASIC_BLOCKS           = cSELECT_FUNCTION_BASIC_BLOCKS
-        SELECT_FUNCTION_NUM_INSTRUCTIONS       = cSELECT_FUNCTION_NUM_INSTRUCTIONS
-        SELECT_FUNCTION_NUM_VARS               = cSELECT_FUNCTION_NUM_VARS
-        SELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS = cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS
+        def select_function(self, DSN, function_id):
+            ret_val = {}
+        
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_FUNCTION % function_id).fetchone()
+                ret_val = {'name':results[0], 'module':results[1], 'start_address':results[2], 'end_address':results[3]}
+                                
+            return ret_val    
+            
+        def select_frame_info(self, DSN, function_id):
+            ret_val = {}
+        
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_FRAME_INFO % function_id).fetchone()
+                
+                ret_val = {'saved_reg_size':results[0], 'frame_size':results[1], 'ret_size':results[2], 'local_var_size': results[3], 'arg_size':results[4]}
+                                
+            return ret_val             
+        
+        def select_args(self, DSN, function_id):
+            ret_val = []
 
-        SELECT_FUNCTION_BASIC_BLOCK_REFERENCES = cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES
-        SELECT_MODULE_FUNCTION_REFERENCES      = cSELECT_MODULE_FUNCTION_REFERENCES
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_ARGS % function_id).fetchall()
+                
+                for result_row in results:
+                    ret_val += {'name':result_row[0]}
 
-        UPDATE_FUNCTION_START_ADDRESS          = cUPDATE_FUNCTION_START_ADDRESS
-        UPDATE_FUNCTION_END_ADDRESS            = cUPDATE_FUNCTION_END_ADDRESS
-        UPDATE_FUNCTION_FLAGS                  = cUPDATE_FUNCTION_FLAGS
-        UPDATE_FUNCTION_ARG_SIZE               = cUPDATE_FUNCTION_ARG_SIZE
-        UPDATE_FUNCTION_NAME                   = cUPDATE_FUNCTION_NAME
-        UPDATE_FUNCTION_SAVED_REG_SIZE         = cUPDATE_FUNCTION_SAVED_REG_SIZE
-        UPDATE_FUNCTION_FRAME_SIZE             = cUPDATE_FUNCTION_FRAME_SIZE
-        UPDATE_FUNCTION_RET_SIZE               = cUPDATE_FUNCTION_RET_SIZE
-        UPDATE_FUNCTION_LOCAL_VAR_SIZE         = cUPDATE_FUNCTION_LOCAL_VAR_SIZE
+            return ret_val             
+        
+        
+        def select_local_vars(self, DSN, function_id):
+            ret_val = []
+
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_LOCAL_VARS % function_id).fetchall()
+                
+                for result_row in results:
+                    ret_val += {'name':result_row[0]}
+
+            return ret_val             
+        
+        def select_function_basic_blocks(self, DSN, function_id):
+            ret_val = []
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCKS % function_id).fetchall()
+                
+                for result_row in results:
+                    ret_val += result_row[0]
+
+            return ret_val             
+        
+        def select_function_num_instructions(self, DSN, function_id):
+            ret_val = 0
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_FUNCTION_NUM_INSTRUCTIONS % function_id).fetchone()
+                ret_val = results[0]
+
+            return ret_val            
+            
+        def select_function_num_vars(self, DSN, function_id, var_type):
+            ret_val = 0
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_FUNCTION_NUM_VARS % (function_id, var_type)).fetchone()
+                ret_val = results[0]
+
+            return ret_val
+        
+        def select_function_basic_block_by_address(self, DSN, function_id, address):
+            ret_val = None
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                result = curs.execute(pida.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS % (function_id, address, address)).fetchone()
+                if result:
+                    ret_val = result[0]
+
+            return ret_val   
+
+        def select_function_basic_block_references(self, DSN, function_id):
+            '''
+            Returns a list of tuples consisting of the source basic block address and the destination basic block address.
+            '''
+            ret_val = []
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES % (function_id, function_id)).fetchall()
+                for result_row in results:
+                    ret_val += (result_row[0], result_row[1])
+
+            return ret_val   
+        
+        def update_function_start_address(self, DSN, function_id, address):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_START_ADDRESS % (address, function_id))
+                curs.commit()             
+        
+        def update_function_end_address(self, DSN, function_id, address):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_END_ADDRESS % (address, function_id))
+                curs.commit()             
+        
+        def update_function_flags(self, DSN, function_id, flags):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_FLAGS % (size, function_id))
+                curs.commit()             
+                
+        def update_function_arg_size(self, DSN, function_id, size):        
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_ARG_SIZE % (size, function_id))
+                curs.commit()                    
+        
+        def update_function_name(self, DSN, function_id, name):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                if name:
+                    name = "'" + name.replace("'",  "''") + "'"
+                else:
+                    name = "NULL"
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_NAME % (name, function_id))
+                curs.commit()            
+        
+        def update_function_saved_reg_size(self, DSN, function_id, size):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_SAVED_REG_SIZE % (size, function_id))
+                curs.commit()            
+
+        def update_function_frame_size(self, DSN, function_id, size):        
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_FRAME_SIZE % (size, function_id))
+                curs.commit()            
+        
+        def update_function_ret_size(self, DSN, function_id, size):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_RET_SIZE % (size, function_id))
+                curs.commit()            
+
+        
+        def update_function_local_var_size(self, DSN, function_id, size):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_FUNCTION_LOCAL_VAR_SIZE % (size, function_id))
+                curs.commit()            
 
         ## MODULE ###
+        
+        def select_module(self, DSN, module_id):
+            ret_val = {}
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_MODULE % module_id).fetchone()
+                
+                ret_val["name"]         = results[0]
+                ret_val["base"]         = results[1]
+                ret_val["signature"]    = results[2]
+            
+            return ret_val
+            
+        def select_module_function_references(self, DSN, module_id):
+            '''
+            Returns a list of tuples consisting of the source function address and the destination function address.
+            '''
+            ret_val = []
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_MODULE_FUNCTION_REFERENCES % (module_id, module_id)).fetchall()
+                for result_row in results:
+                    ret_val += (result_row[0], result_row[1])
 
-        SELECT_MODULE_NUM_FUNCTIONS            = cSELECT_MODULE_NUM_FUNCTIONS
-        SELECT_MODULE_FUNCTIONS                = cSELECT_MODULE_FUNCTIONS
+            return ret_val                    
 
-        UPDATE_MODULE_NAME                     = cUPDATE_MODULE_NAME
-        UPDATE_MODULE_BASE                     = cUPDATE_MODULE_BASE
-        UPDATE_MODULE_SIGNATURE                = cUPDATE_MODULE_SIGNATURE
+        def select_module_num_functions(self, DSN, module_id):
+            ret_val = 0
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_MODULE_NUM_FUNCTIONS % module_id).fetchone()
+                ret_val = results[0]
 
+            return ret_val            
+        
+        def select_module_functions(self, DSN, module_id):
+            ret_val = []
+            
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                results = curs.execute(pida.sqlite_queries.cSELECT_MODULE_FUNCTIONS % module_id).fetchall()
+                
+                for result_row in results:
+                    ret_val += result_row[0]
+
+            return ret_val
+
+        def update_module_name(self, DSN, module_id, name):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                if name:
+                    name = "'" + name.replace("'",  "''") + "'"
+                else:
+                    name = "NULL"
+                curs.execute(pida.sqlite_queries.cUPDATE_MODULE_NAME % (name, module_id))
+                curs.commit()                
+        
+        
+        def update_module_base(self, DSN, module_id, base):
+            if not isNumber(base):
+                base = "NULL"
+                
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(pida.sqlite_queries.cUPDATE_MODULE_BASE % (base, module_id))
+                curs.commit()    
+
+        def update_module_signature(self, DSN, module_id, signature):
+            if DSN[:6] == "mysql:":
+                pass
+            else: #sqlite
+                curs = self.connection(DSN)
+                if signature:
+                    signature = "'" + signature.replace("'",  "''") + "'"
+                else:
+                    signature = "NULL"
+                curs.execute(pida.sqlite_queries.cUPDATE_MODULE_SIGNATURE % (signature, module_id))
+                curs.commit()                
 
         def connection(self, DSN=None):
             '''
@@ -108,14 +526,19 @@ class sql_singleton:
             '''
 
             if DSN == None:
+                print "DSN missing"
+                raise "wtf is the DSN?"
                 DSN = self.__active_DSN
 
             if not self.__sql.has_key(DSN):
+                "Connection missing"
                 self.__init_connection(DSN)
 
             return self.__sql[DSN]
 
         def __init_connection(self, DSN_name):
+
+            print "initing"
 
             if self.__active_syntax == "mysql":
                 try:
@@ -134,12 +557,11 @@ class sql_singleton:
 
                 if len(tables.fetchall()) == 0:
                     self.create_pida_database(DSN_name)
-
-
+                    
             self.__active_DSN = DSN_name  #TEMP
 
         def create_pida_database(self, DSN):
-            #self.__sql[DSN] = MySQLdb.connect(host=host, user=username, passwd=password)
+            #self.connection(DSN) = MySQLdb.connect(host=host, user=username, passwd=password)
             #cursor = self.__sql[DSN].cursor()
             #
             ## create db

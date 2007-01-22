@@ -121,67 +121,68 @@ SQLITE_CREATE_PIDA_SCHEMA = ("""
         value           text
         )""")
 
-cINSERT_INSTRUCTION                     = "INSERT INTO instruction (address, basic_block, function, module, mnemonic, bytes) VALUES (%d, %d, %d, %d, '%s', '%s');"
-cINSERT_MODULE                          = "INSERT INTO module (name, base, version) VALUES ('%s', %d, '%s');"
-cINSERT_FUNCTION                        = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, '%s');"
-cINSERT_BASIC_BLOCK                     = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);"
-
-### INSTRUCTION ###
-
-cSELECT_INSTRUCTION                     = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;"
-
-cUPDATE_INSTRUCTION_MNEMONIC            = "UPDATE instruction SET mnemonic='%s' where id=%d"
-cUPDATE_INSTRUCTION_COMMENT             = "UPDATE instruction SET comment='%s' WHERE id=%d;"
-cUPDATE_INSTRUCTION_OPERAND1            = "UPDATE instruction SET operand1='%s' WHERE id=%d;"
-cUPDATE_INSTRUCTION_OPERAND2            = "UPDATE instruction SET operand2='%s' WHERE id=%d;"
-cUPDATE_INSTRUCTION_OPERAND3            = "UPDATE instruction SET operand3='%s' WHERE id=%d;"
-cUPDATE_INSTRUCTION_FLAGS               = "UPDATE instruction SET flags=%d WHERE id = %d;"
-cUPDATE_INSTRUCTION_ADDRESS             = "UPDATE instruction SET address=%d where id=%d"
-cUPDATE_INSTRUCTION_COMMENT             = "UPDATE instruction SET comment='%s' where id=%d"
-cUPDATE_INSTRUCTION_BYTES               = "UPDATE instruction SET bytes='%s' where id=%d"
+cINSERT_INSTRUCTION                         = "INSERT INTO instruction (address, basic_block, function, module, mnemonic, bytes) VALUES (%d, %d, %d, %d, '%s', '%s');"
+cINSERT_MODULE                              = "INSERT INTO module (name, base, version) VALUES ('%s', %d, '%s');"
+cINSERT_FUNCTION                            = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, '%s');"
+cINSERT_BASIC_BLOCK                         = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);"
+                                            
+### INSTRUCTION ###                         
+                                            
+cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;"
+                                            
+cUPDATE_INSTRUCTION_MNEMONIC                = "UPDATE instruction SET mnemonic=%s where id=%d"
+cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%s WHERE id=%d;"
+cUPDATE_INSTRUCTION_OPERAND1                = "UPDATE instruction SET operand1=%s WHERE id=%d;"
+cUPDATE_INSTRUCTION_OPERAND2                = "UPDATE instruction SET operand2=%s WHERE id=%d;"
+cUPDATE_INSTRUCTION_OPERAND3                = "UPDATE instruction SET operand3=%s WHERE id=%d;"
+cUPDATE_INSTRUCTION_FLAGS                   = "UPDATE instruction SET flags=%d WHERE id = %d;"
+cUPDATE_INSTRUCTION_ADDRESS                 = "UPDATE instruction SET address=%d where id=%d"
+cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%s where id=%d"
+cUPDATE_INSTRUCTION_BYTES                   = "UPDATE instruction SET bytes=%s where id=%d"
 
 ### BASIC BLOCK ###
 
-cSELECT_BASIC_BLOCK                     = "SELECT module, function, start_address, end_address FROM basic_block WHERE id = %d;"
-cSELECT_NUM_INSTRUCTIONS                = "SELECT count(*) FROM instruction WHERE basic_block = %d;"
-cSELECT_SORTED_INSTRUCTIONS             = "SELECT id FROM instruction WHERE basic_block = %d"
+cSELECT_BASIC_BLOCK                         = "SELECT module, function, start_address, end_address FROM basic_block WHERE id = %d;"
+cSELECT_BASIC_BLOCK_NUM_INSTRUCTIONS        = "SELECT count(*) FROM instruction WHERE basic_block = %d;"
+cSELECT_BASIC_BLOCK_SORTED_INSTRUCTIONS     = "SELECT id FROM instruction WHERE basic_block = %d ORDER BY address ASC"
 
-cUPDATE_START_ADDRESS                   = "UPDATE basic_block SET start_address=%d where id=%d"
-cUPDATE_END_ADDRESS                     = "UPDATE basic_block SET end_address=%d where id=%d"
+cUPDATE_BASIC_BLOCK_START_ADDRESS           = "UPDATE basic_block SET start_address=%d where id=%d"
+cUPDATE_BASIC_BLOCK_END_ADDRESS             = "UPDATE basic_block SET end_address=%d where id=%d"
 
-cSELECT_BASIC_BLOCK_INSTRUCTION_REFERENCES = "SELECT b.address, d.address FROM cross_references AS c, instruction AS b, instruction AS d WHERE c.source = b.id AND c.destination = d.id AND b.basic_block = %d AND d.basic_block = %d AND c.reference_type = 8"
+cSELECT_BASIC_BLOCK_INSTRUCTION_REFERENCES  = "SELECT b.address, d.address FROM cross_references AS c, instruction AS b, instruction AS d WHERE c.source = b.id AND c.destination = d.id AND b.basic_block = %d AND d.basic_block = %d AND c.reference_type = 8"
 
 
 ### FUNCTION ###
 
-cSELECT_FUNCTION                        = "SELECT name, module, start_address, end_address FROM function WHERE id = %d;"
-cSELECT_FRAME_INFO                      = "SELECT saved_reg_size, frame_size, ret_size, local_var_size, arg_size FROM frame_info WHERE function = %d;"
-cSELECT_ARGS                            = "SELECT name FROM function_variables WHERE function = %d AND flags = 1;"
-cSELECT_LOCAL_VARS                      = "SELECT name FROM function_variables WHERE function = %d AND flags = 2;"
-cSELECT_FUNCTION_BASIC_BLOCKS           = "SELECT id FROM basic_block WHERE function = %d"
-cSELECT_FUNCTION_NUM_INSTRUCTIONS       = "SELECT count(*) FROM instruction WHERE function = %d;"
-cSELECT_FUNCTION_NUM_VARS               = "SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0"
-cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS = "SELECT id FROM basic_block WHERE function = %d AND start_address <= %d AND end_address >= %d"
-
-cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES = "SELECT b.start_address, d.start_address FROM cross_references AS c, basic_block AS b, basic_block AS d WHERE c.source = b.id AND c.destination = d.id AND b.function = %d AND d.function = %d AND c.reference_type = 4"
-
-cUPDATE_FUNCTION_START_ADDRESS          = "UPDATE function SET start_address=%d where id=%d"
-cUPDATE_FUNCTION_END_ADDRESS            = "UPDATE function SET end_address=%d where id=%d"
-cUPDATE_FUNCTION_FLAGS                  = "UPDATE function SET flags=%d WHERE id=%d;"
-cUPDATE_FUNCTION_ARG_SIZE               = "UPDATE frame_info SET arg_size=%d WHERE function=%d;"
-cUPDATE_FUNCTION_NAME                   = "UPDATE function SET name='%s' where id=%d"
-cUPDATE_FUNCTION_SAVED_REG_SIZE         = "UPDATE frame_info SET saved_reg_size=%d where function=%d"
-cUPDATE_FUNCTION_FRAME_SIZE             = "UPDATE frame_info SET frame_size=%d where function=%d"
-cUPDATE_FUNCTION_RET_SIZE               = "UPDATE frame_info SET ret_size=%d where function=%d"
-cUPDATE_FUNCTION_LOCAL_VAR_SIZE         = "UPDATE frame_info SET local_var_size=%d where function=%d"
-
-### MODULE ###
-
-cSELECT_MODULE_NUM_FUNCTIONS            = "SELECT count(*) FROM function WHERE module = %d;"
-cSELECT_MODULE_FUNCTIONS                = "SELECT id FROM function WHERE module = %d"
-cSELECT_MODULE_FUNCTION_REFERENCES      = "SELECT b.start_address, d.start_address FROM cross_references AS c, function AS b, function AS d WHERE c.source = b.id AND c.destination = d.id AND b.module = %d AND d.module = %d AND c.reference_type = 1"
-
-
-cUPDATE_MODULE_NAME                     = "UPDATE module SET name='%s' where id=%d"
-cUPDATE_MODULE_BASE                     = "UPDATE module SET base=%d where id=%d"
-cUPDATE_MODULE_SIGNATURE                = "UPDATE module SET signature='%s' where id=%d"
+cSELECT_FUNCTION                            = "SELECT name, module, start_address, end_address FROM function WHERE id = %d;"
+cSELECT_FRAME_INFO                          = "SELECT saved_reg_size, frame_size, ret_size, local_var_size, arg_size FROM frame_info WHERE function = %d;"
+cSELECT_ARGS                                = "SELECT name FROM function_variables WHERE function = %d AND flags = 1;"
+cSELECT_LOCAL_VARS                          = "SELECT name FROM function_variables WHERE function = %d AND flags = 2;"
+cSELECT_FUNCTION_BASIC_BLOCKS               = "SELECT id FROM basic_block WHERE function = %d"
+cSELECT_FUNCTION_NUM_INSTRUCTIONS           = "SELECT count(*) FROM instruction WHERE function = %d;"
+cSELECT_FUNCTION_NUM_VARS                   = "SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0"
+cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS     = "SELECT id FROM basic_block WHERE function = %d AND start_address <= %d AND end_address >= %d"
+                                            
+cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES     = "SELECT b.start_address, d.start_address FROM cross_references AS c, basic_block AS b, basic_block AS d WHERE c.source = b.id AND c.destination = d.id AND b.function = %d AND d.function = %d AND c.reference_type = 4"
+                                            
+cUPDATE_FUNCTION_START_ADDRESS              = "UPDATE function SET start_address=%d where id=%d"
+cUPDATE_FUNCTION_END_ADDRESS                = "UPDATE function SET end_address=%d where id=%d"
+cUPDATE_FUNCTION_FLAGS                      = "UPDATE function SET flags=%d WHERE id=%d;"
+cUPDATE_FUNCTION_ARG_SIZE                   = "UPDATE frame_info SET arg_size=%d WHERE function=%d;"
+cUPDATE_FUNCTION_NAME                       = "UPDATE function SET name=%s where id=%d"
+cUPDATE_FUNCTION_SAVED_REG_SIZE             = "UPDATE frame_info SET saved_reg_size=%d where function=%d"
+cUPDATE_FUNCTION_FRAME_SIZE                 = "UPDATE frame_info SET frame_size=%d where function=%d"
+cUPDATE_FUNCTION_RET_SIZE                   = "UPDATE frame_info SET ret_size=%d where function=%d"
+cUPDATE_FUNCTION_LOCAL_VAR_SIZE             = "UPDATE frame_info SET local_var_size=%d where function=%d"
+                                            
+### MODULE ###                              
+                                            
+cSELECT_MODULE                              = "SELECT name, base, signature FROM module WHERE id = %d;"
+cSELECT_MODULE_NUM_FUNCTIONS                = "SELECT count(*) FROM function WHERE module = %d;"
+cSELECT_MODULE_FUNCTIONS                    = "SELECT id FROM function WHERE module = %d"
+cSELECT_MODULE_FUNCTION_REFERENCES          = "SELECT b.start_address, d.start_address FROM cross_references AS c, function AS b, function AS d WHERE c.source = b.id AND c.destination = d.id AND b.module = %d AND d.module = %d AND c.reference_type = 1"
+                                            
+                                            
+cUPDATE_MODULE_NAME                         = "UPDATE module SET name=%s where id=%d"
+cUPDATE_MODULE_BASE                         = "UPDATE module SET base=%s where id=%d"
+cUPDATE_MODULE_SIGNATURE                    = "UPDATE module SET signature=%s where id=%d"

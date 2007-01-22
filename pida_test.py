@@ -8,7 +8,7 @@ class TestFunctionClass(unittest.TestCase):
     def setUp(self):
         filepath = os.getcwd() + "\\testdb"
         filepath = filepath.replace("\\", "/")
-        self.function = function(filepath, 1)
+        self.function = function.function(filepath, 1)
 
         self.assert_(self.function)
 
@@ -124,7 +124,7 @@ class TestBasicBlockClass(unittest.TestCase):
     def setUp(self):
         filepath = os.getcwd() + "\\testdb"
         filepath = filepath.replace("\\", "/")
-        self.basic_block = basic_block(filepath,1)
+        self.basic_block = basic_block.basic_block(filepath,1)
 
         self.assert_(self.basic_block)
 
@@ -174,7 +174,7 @@ class TestInstructionClass(unittest.TestCase):
         # eventually check for a db with a set md5 hash
         filepath = os.getcwd() + "\\testdb"
         filepath = filepath.replace("\\", "/")
-        self.instruction = instruction(filepath,1)
+        self.instruction = instruction.instruction(filepath,1)
 
         self.assert_(self.instruction)
 
@@ -220,7 +220,7 @@ class TestInstructionClass(unittest.TestCase):
         # Test writing
         self.instruction.mnem = "nop"
         self.assertEqual(self.instruction.mnem, "nop")
-        self.instruction.ea = "test"
+        self.instruction.mnem = "test"
 
     def testOperand1Property(self):
         # Test reading
@@ -266,6 +266,7 @@ class TestInstructionClass(unittest.TestCase):
         self.instruction.op2 = None
         self.instruction.op3 = None
 
+        self.assertEqual(self.instruction.disasm, "test")
 
 if __name__ == '__main__':
     unittest.main()

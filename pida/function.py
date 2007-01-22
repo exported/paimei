@@ -22,6 +22,8 @@ from pgraph      import *
 
 class function (pgraph.graph, pgraph.node):
     '''
+    A function.
+    
     @author:       Cameron Hotchkies, Pedram Amini
     @license:      GNU General Public License 2.0 or later
     @contact:      chotchkies@tippingpoint.com
@@ -97,13 +99,8 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     def __build_edges(self):
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_FUNCTION_BASIC_BLOCK_REFERENCES % (self.dbid, self.dbid)
-
-        curs.execute(sql)
-
-        results = curs.fetchall()
-
+        results = ss.select_function_basic_block_references(self.DSN, self.dbid)
+        
         for ed in results:
             newedge = edge.edge(ed[0], ed[1])
 
@@ -112,70 +109,50 @@ class function (pgraph.graph, pgraph.node):
     ####################################################################################################################
     def __load_from_sql(self):
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_FUNCTION % self.dbid
-        curs.execute(sql)
-
-        results = curs.fetchone()
-
-        if results is None:
+        results = ss.select_function(self.DSN, self.dbid)
+        
+        if len(results) == 0:
             raise "Function [ID:%d] does not exist in the database" % self.dbid
 
-        self.__name     = results[0]
-        self.module     = results[1]
-        self.__ea_start = results[2]
-        self.__ea_end   = results[3]
+        self.__name     = results['name']
+        self.module     = results['module']
+        self.__ea_start = results['start_address']
+        self.__ea_end   = results['end_address']
 
         self.__cached = True
 
     def __load_frame_info_from_sql(self):
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_FRAME_INFO % self.dbid
-        curs.execute(sql)
-
-        results = curs.fetchone()
-
-        if results is None:
+        results = ss.select_frame_info(self.DSN, self.dbid)
+        
+        if len(results) == 0:
             raise "Frame information for function [ID:%d] does not exist in the database" % self.dbid
 
-        self.__saved_reg_size   = results[0]
-        self.__frame_size       = results[1]
-        self.__ret_size         = results[2]
-        self.__local_var_size   = results[3]
-        self.__arg_size         = results[4]
+        self.__saved_reg_size   = results["saved_reg_size"]
+        self.__frame_size       = results["frame_size"]
+        self.__ret_size         = results["ret_size"]
+        self.__local_var_size   = results["local_var_size"]
+        self.__arg_size         = results["arg_size"]
 
         self.__frame_info_cache = True
 
     def __load_args_from_sql (self):
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-
-        # TODO: discuss with pedram how we want the values filled in
-        sql = ss.SELECT_ARGS % self.dbid
-        curs.execute(sql)
-
-        results = curs.fetchall()
-
+        results = ss.select_args(self.DSN, self.dbid)
+        
         if results:
             for arg in results:
-                self.__args.append(results[0])
+                self.__args.append(arg)
 
         self.__arg_cache = True
 
     def __load_local_vars_from_sql (self):
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-
-        # TODO: discuss with pedram how we want the values filled in
-        sql = ss.SELECT_LOCAL_VARS % self.dbid
-        curs.execute(sql)
-
-        results = curs.fetchall()
-
+        results = ss.select_local_vars(self.DSN, self.dbid)
+        
         if results:
             for localvar in results:
-                self.__local_vars.append(results[0])
+                self.__local_vars.append(localvar)
 
         self.__local_var_cache = True
 
@@ -192,12 +169,10 @@ class function (pgraph.graph, pgraph.node):
 
         if self.__nodes == None:
             ret_val = {}
+            
             ss = sql_singleton()
-
-            cursor = ss.connection(self.DSN).cursor()
-
-            results = cursor.execute(ss.SELECT_FUNCTION_BASIC_BLOCKS % self.dbid).fetchall()
-
+            ss.select_function_basic_blocks(self.DSN, self.dbid)
+            
             for basic_block_id in results:
                 new_basic_block = basic_block(self.DSN, basic_block_id)
                 ret_val[new_basic_block.ea_start] = new_basic_block
@@ -233,15 +208,8 @@ class function (pgraph.graph, pgraph.node):
         '''
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_FUNCTION_NUM_INSTRUCTIONS % self.dbid
-        curs.execute(sql)
-
-        try:
-            ret_val = curs.fetchone()[0]
-        except:
-            ret_val = 0
-
+        ret_val = ss.select_function_num_instructions(self.DSN, self.dbid)
+        
         return ret_val
 
     ####
@@ -294,9 +262,7 @@ class function (pgraph.graph, pgraph.node):
             self.__ea_start = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_START_ADDRESS % (value, self.dbid))
-        ss.connection().commit()
+        ss.update_function_start_address(self.DSN, self.dbid, value)
 
     ####
 
@@ -336,9 +302,7 @@ class function (pgraph.graph, pgraph.node):
             self.__ea_end = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_END_ADDRESS % (value, self.dbid))
-        ss.connection().commit()
+        ss.update_function_end_address(self.DSN, self.dbid, value)
 
     ####
 
@@ -378,10 +342,8 @@ class function (pgraph.graph, pgraph.node):
             self.__name = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_NAME % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_function_name(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteName (self):
@@ -457,9 +419,7 @@ class function (pgraph.graph, pgraph.node):
             self.__flags = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_FLAGS % (value, self.dbid))
-        ss.connection().commit()
+        ss.update_function_flags(self.DSN, self.dbid, value)
 
     ####
 
@@ -499,10 +459,8 @@ class function (pgraph.graph, pgraph.node):
             self.__saved_reg_size = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_SAVED_REG_SIZE % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_function_saved_reg_size(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteSavedRegSize (self):
@@ -541,10 +499,8 @@ class function (pgraph.graph, pgraph.node):
             self.__frame_size = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_FRAME_SIZE % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_function_frame_size(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteFrameSize (self):
@@ -583,9 +539,7 @@ class function (pgraph.graph, pgraph.node):
             self.__ret_size = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_RET_SIZE % (value, self.dbid))
-        ss.connection().commit()
+        ss.update_function_ret_size(self.DSN, self.dbid, value)        
 
     ####
 
@@ -625,10 +579,8 @@ class function (pgraph.graph, pgraph.node):
             self.__local_var_size = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_LOCAL_VAR_SIZE % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_function_local_var_size(self.DSN, self.dbid, value)
+                
     ####
 
     def __deleteLocalVarSize (self):
@@ -667,9 +619,7 @@ class function (pgraph.graph, pgraph.node):
             self.__arg_size = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_FUNCTION_ARG_SIZE % (value, self.dbid))
-        ss.connection().commit()
+        ss.update_function_arg_size(self.DSN, self.dbid, value)
 
     ####
 
@@ -780,9 +730,8 @@ class function (pgraph.graph, pgraph.node):
         '''
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        ret_val = curs.execute(ss.SELECT_FUNCTION_NUM_VARS % (self.dbid, VAR_TYPE_LOCAL)).fetchone()[0]
-
+        ret_val = ss.select_function_num_vars(self.DSN, self.dbid, VAR_TYPE_LOCAL)
+       
         return ret_val
 
     ####
@@ -817,9 +766,8 @@ class function (pgraph.graph, pgraph.node):
         '''
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        ret_val = curs.execute(ss.SELECT_FUNCTION_NUM_VARS % (self.dbid, VAR_TYPE_ARGUMENT)).fetchone()[0]
-
+        ret_val = ss.select_function_num_vars(self.DSN, self.dbid, VAR_TYPE_ARGUMENT)
+        
         return ret_val
 
     ####
@@ -853,6 +801,8 @@ class function (pgraph.graph, pgraph.node):
         @rtype:  Dict
         @return: The target eas keyed by the source eas
         '''
+        
+        # TODO : write this into the singleton
 
         ss = sql_singleton()
         curs = ss.connection(self.DSN).cursor()
@@ -904,12 +854,10 @@ class function (pgraph.graph, pgraph.node):
         '''
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-
-        results = curs.execute(ss.SELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS % (self.dbid, ea, ea)).fetchone()
-
-        if results:
-            return basic_block(self.DSN, results[0])
+        result_id = ss.select_function_basic_block_by_address(self.DSN, self.dbid, ea)
+        
+        if result_id:
+            return basic_block(self.DSN, result_id)
 
         return None
 

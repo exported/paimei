@@ -20,8 +20,10 @@ import binascii
 from defines        import *
 from sql_singleton  import *
 
-class instruction:
+class instruction(object):
     '''
+    This class represents an assembly instruction.
+    
     @author:       Cameron Hotchkies, Pedram Amini
     @license:      GNU General Public License 2.0 or later
     @contact:      chotchkies@tippingpoint.com
@@ -81,37 +83,34 @@ class instruction:
         '''
 
         self.dbid = database_id
+        self.DSN = DSN
         self.__cached = False
 
     ####################################################################################################################
     def __load_from_sql(self):
         ss = sql_singleton()
-        cr = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_INSTRUCTION % self.dbid
-        cr.execute(sql)
-
-        results = cr.fetchone()
-
+        results = ss.select_instruction(self.DSN, self.dbid)
+                
         if results:
-            self.__ea       = results[0]
-            self.__mnem     = results[1]
-            self.__op1      = results[2]
-            self.__op2      = results[3]
-            self.__op3      = results[4]
-            self.__comment  = results[5]
+            self.__ea       = results['address']
+            self.__mnem     = results['mnemonic']
+            self.__op1      = results['operand1']
+            self.__op2      = results['operand2']
+            self.__op3      = results['operand3']
+            self.__comment  = results['comment']
 
             bytes = []
 
             try:
 
-                for byte in binascii.a2b_hex(results[6]):
+                for byte in binascii.a2b_hex(results['bytes']):
                     bytes.append(struct.unpack('B', byte)[0])
             except:
-                print "Errored out on %s on address %x" % (results[6], self.__ea)
+                print "Errored out on %s on address %x" % (results['bytes'], self.__ea)
 
             self.__bytes = bytes
 
-            self.basic_block = results[7]
+            self.basic_block = results['basic_block']
 
             self.__cached = True
         else:
@@ -185,10 +184,8 @@ class instruction:
             self.__ea = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_INSTRUCTION_ADDRESS % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_instruction_address(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteAddress (self):
@@ -227,10 +224,8 @@ class instruction:
             self.__comment = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_INSTRUCTION_COMMENT % (value.replace("'", "''"), self.dbid))
-        ss.connection().commit()
-
+        ss.update_instruction_comment(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteComment (self):
@@ -271,14 +266,14 @@ class instruction:
         if self.__cached:
             self.__bytes = value
 
+        bytes = ""
+
         for byte in value:
             bytes += hex(byte)[2:]
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_INSTRUCTION_BYTES % (bytes, self.dbid))
-        ss.connection().commit()
-
+        ss.update_instruction_bytes(self.DSN, self.dbid, bytes)
+            
     ####
 
     def __deleteBytes (self):
@@ -319,10 +314,8 @@ class instruction:
             self.__mnem = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_INSTRUCTION_MNEMONIC % (value.replace("'", "''"), self.dbid))
-        ss.connection().commit()
-
+        ss.update_instruction_mnemonic(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteMnemonic (self):
@@ -362,9 +355,7 @@ class instruction:
             self.__op1 = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPATE_INSTRUCTION_OPERAND1 % (value.replace("'", "''"), self.dbid))
-        ss.connection().commit()
+        ss.update_instruction_operand(self.DSN, self.dbid, 1, value)
 
     ####
 
@@ -404,10 +395,8 @@ class instruction:
             self.__op2 = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_INSTRUCTION_OPERAND2 % (value.replace("'", "''"), self.dbid))
-        ss.connection().commit()
-
+        ss.update_instruction_operand(self.DSN, self.dbid, 2, value)
+        
     ####
 
     def __deleteOperand2 (self):
@@ -447,9 +436,7 @@ class instruction:
             self.__op3 = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_INSTRUCTION_OPERAND3 % (value.replace("'", "''"), self.dbid))
-        ss.connection().commit()
+        ss.update_instruction_operand(self.DSN, self.dbid, 3, value)
 
     ####
 
@@ -503,8 +490,6 @@ class instruction:
         @return: True if the instruction is a conditional branch, False otherwise.
         '''
 
-        #TODO work with caches
-
         if len(self.mnem) and self.mnem[0] == 'j' and self.mnem != "jmp":
             return True
 
@@ -523,8 +508,6 @@ class instruction:
         @rtype: Boolean
         @return: True if the register is modified
         '''
-
-        # TODO work with caches
 
         if self.mnem == "mov" or self.mnem == "pop" or self.mnem == "lea":
             if self.op1 == register:

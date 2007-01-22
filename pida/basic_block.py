@@ -21,6 +21,8 @@ from defines        import *
 
 class basic_block (pgraph.node):
     '''
+    A basic block instruction container.
+    
     @author:        Cameron Hotchkies, Pedram Amini
     @license:       GNU General Public License 2.0 or later
     @contact:       chotchkies@tippingpoint.com
@@ -65,16 +67,12 @@ class basic_block (pgraph.node):
     ####################################################################################################################
     def __load_from_sql(self):
         ss = sql_singleton()
-        cr = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_BASIC_BLOCK % self.dbid
-        cr.execute(sql)
-
-        results = cr.fetchone()
-
-        self.module     = results[0]
-        self.function   = results[1]
-        self.__ea_start = results[2]
-        self.__ea_end   = results[3]
+        results = ss.select_basic_block(self.DSN, self.dbid)
+        
+        self.module     = results['module']
+        self.function   = results['function']
+        self.__ea_start = results['start_address']
+        self.__ea_end   = results['end_address']
 
         self.__cached = True
 
@@ -108,10 +106,8 @@ class basic_block (pgraph.node):
             self.__ea_start = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_START_ADDRESS % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_basic_block_start_address(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteEaStart (self):
@@ -150,10 +146,8 @@ class basic_block (pgraph.node):
             self.__ea_end = value
 
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        curs.execute(ss.UPDATE_END_ADDRESS % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_basic_block_end_address(self.DSN, self.dbid, value)
+        
     ####
 
     def __deleteEaEnd (self):
@@ -174,15 +168,8 @@ class basic_block (pgraph.node):
         '''
 
         ss = sql_singleton()
-        cr = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_NUM_INSTRUCTIONS % self.dbid
-        cr.execute(sql)
-
-        try:
-            ret_val = cr.fetchone()[0]
-        except:
-            ret_val = 0
-
+        ret_val = ss.select_basic_block_num_instructions(self.DSN, self.dbid)
+        
         return ret_val
 
     ####
@@ -408,7 +395,7 @@ class basic_block (pgraph.node):
     ####################################################################################################################
     def sorted_instructions (self):
         '''
-        Return a list of the instructions within the graph, sorted by id.
+        Return a list of the instructions within the basic block, sorted by address.
 
         @rtype:  List
         @return: List of instructions, sorted by id.
@@ -416,13 +403,10 @@ class basic_block (pgraph.node):
 
         ret_val = []
         ss = sql_singleton()
-
-        cursor = ss.connection(self.DSN).cursor()
-
-        results = cursor.execute(ss.SELECT_SORTED_INSTRUCTIONS % self.dbid).fetchall()
-
+        results = ss.select_basic_block_sorted_instructions(self.DSN, self.dbid)
+        
         for instruction_id in results:
-            new_instruction = instruction(self.DSN, instruction_id[0])
+            new_instruction = instruction(self.DSN, instruction_id)
             ret_val.append(new_instruction)
 
         return ret_val

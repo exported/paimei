@@ -25,6 +25,8 @@ from defines  import *
 
 class module (pgraph.graph):
     '''
+    A module is an overall container for all the information stored in a binary, whether it is an executable or a library.
+    
     @author:       Cameron Hotchkies, Pedram Amini
     @license:      GNU General Public License 2.0 or later
     @contact:      chotchkies@tippingpoint.com
@@ -45,7 +47,7 @@ class module (pgraph.graph):
 
     
     dbid            = None    
-    DSN   = None
+    DSN             = None
 
     __cached        = False
     ext             = {}
@@ -60,6 +62,7 @@ class module (pgraph.graph):
         @param database_id: (Optional) The id of the module in the database.
         '''
 
+        # TODO : see if these two lines are actually required, I think they were only necessary before the DSN was required
         ss = sql_singleton()
         ss.connection(DSN)
 
@@ -74,14 +77,10 @@ class module (pgraph.graph):
 
     ####################################################################################################################
     def __build_edges(self):
+        
         ss = sql_singleton()
-        curs = ss.connection(self.DSN).cursor()
-        sql = ss.SELECT_MODULE_FUNCTION_REFERENCES % (self.dbid, self.dbid)
-
-        curs.execute(sql)
-
-        results = curs.fetchall()
-
+        results = ss.select_module_function_references(self.DSN, self.dbid)
+        
         for ed in results:
             newedge = edge.edge(ed[0], ed[1])
 
@@ -93,18 +92,12 @@ class module (pgraph.graph):
         '''
 	    Loads the information about a module from a SQL datastore.
 	    '''
-
-        print "Loading Module"
-
         ss = sql_singleton()
-        ss.connection(self.DSN)
-        sql = ss.LOAD_MODULE % (self.dbid)
-
-        cr = ss.cursor()
-
-        results = cr.execute(sql).fetchone()
-
-        self.name = results["name"]
+        results = ss.select_module(self.DSN, self.dbid)
+        
+        self.__name         = results["name"]
+        self.__base         = results["base"]
+        self.__signature    = results["signature"]
 
         self.__cached = True
 
@@ -138,10 +131,8 @@ class module (pgraph.graph):
             self.__name = value
 
         ss = sql_singleton()
-
-        ss.cursor().execute(ss.UPDATE_MODULE_NAME % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_module_name(self.DSN, self.dbid, value)
+                
     ####
 
     def __deleteName (self):
@@ -178,10 +169,8 @@ class module (pgraph.graph):
             self.__base = value
 
         ss = sql_singleton()
-
-        ss.cursor().execute(ss.UPDATE_MODULE_BASE % (value, self.dbid))
-        ss.connection().commit()
-
+        ss.update_module_base(self.DSN, self.dbid, value)
+        
     def __deleteBase (self):
         '''
         destructs the base address of the module
@@ -216,8 +205,7 @@ class module (pgraph.graph):
             self.__signature = value
 
         ss = sql_singleton()
-        ss.cursor().execute(ss.UPDATE_MODULE_SIGNATURE % (value, self.dbid))
-        ss.connection().commit()
+        ss.update_module_signature(self.DSN, self.dbid, value)        
 
     def __deleteSignature (self):
         '''
@@ -237,14 +225,7 @@ class module (pgraph.graph):
         '''
 
         ss = sql_singleton()
-        cr = ss.cursor()
-        sql = ss.SELECT_MODULE_NUM_FUNCTIONS % self.dbid
-        cr.execute(sql)
-
-        try:
-            ret_val = cr.fetchone()[0]
-        except:
-            ret_val = 0
+        ret_val = ss.select_module_num_functions(self.DSN, self.dbid)        
 
         return ret_val
 
@@ -281,13 +262,10 @@ class module (pgraph.graph):
         if self.__nodes == None:
             ret_val = {}
             ss = sql_singleton()
-
-            cursor = ss.connection(self.DSN).cursor()
-
-            results = cursor.execute(ss.SELECT_MODULE_FUNCTIONS % self.dbid).fetchall()
-
+            results = ss.select_module_functions(self.DSN, self.dbid)
+            
             for function_id in results:
-                new_function = function(self.DSN, function_id[0])
+                new_function = function(self.DSN, function_id)
                 ret_val[new_function.ea_start] = new_function
 
             self.__nodes = ret_val

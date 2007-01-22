@@ -21,17 +21,15 @@
 '''
 
 import wx
-import copy
-
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
 from pydbg import *
 import utils
 
-class ProcessListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin):
+class ProcessListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
     '''
-    Our custom list control containing the hits for the current target/tag.
+    Our custom list control containing a sortable list of PIDs and process names.
     '''
 
     FUNCTIONS    = utils.process_stalker.FUNCTIONS
@@ -47,8 +45,22 @@ class ProcessListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin):
 
         ListCtrlAutoWidthMixin.__init__(self)
 
+        self.items_sort_map = {}
+        self.itemDataMap    = self.items_sort_map
+
+        ColumnSorterMixin.__init__(self, 2)
+
         self.InsertColumn(0, "PID")
         self.InsertColumn(1, "Process")
+
+
+    ####################################################################################################################
+    def GetListCtrl (self):
+        '''
+        Used by the ColumnSorterMixin, see wx/lib/mixins/listctrl.py
+        '''
+
+        return self
 
 
     ####################################################################################################################
@@ -186,6 +198,10 @@ class ProcessListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin):
             self.InsertStringItem(idx, "")
             self.SetStringItem(idx, 0, "%d" % pid)
             self.SetStringItem(idx, 1, proc)
+
+            self.items_sort_map[idx] = (pid, proc)
+            self.SetItemData(idx, idx)
+
             idx += 1
 
 

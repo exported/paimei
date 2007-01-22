@@ -71,6 +71,7 @@ class crash_binning:
         crash = __crash_bin_struct__()
 
         crash.exception_address   = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress
+        crash.exception_module    = pydbg.addr_to_module(crash.exception_address).szModule
         crash.write_violation     = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionInformation[0]
         crash.violation_address   = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionInformation[1]
         crash.violation_thread_id = pydbg.dbg.dwThreadId
@@ -81,6 +82,15 @@ class crash_binning:
         crash.stack_unwind        = pydbg.stack_unwind()
         crash.seh_unwind          = pydbg.seh_unwind()
         crash.extra               = extra
+
+        # add module information to the stack and seh unwind.
+        for i in xrange(len(crash.stack_unwind)):
+            addr = crash.stack_unwind[i]
+            crash.stack_unwind[i] = "%s:%08x" % (pydbg.addr_to_module(addr).szModule, addr)
+
+        for i in xrange(len(crash.seh_unwind)):
+            (addr, handler) = crash.seh_unwind[i]
+            crash.seh_unwind[i] = (addr, handler, "%s:%08x" % (pydbg.addr_to_module(handler).szModule, handler))
 
         if not self.bins.has_key(crash.exception_address):
             self.bins[crash.exception_address] = []
@@ -101,8 +111,9 @@ class crash_binning:
         else:
             direction = "read from"
 
-        synopsis = "0x%08x %s from thread %d caused access violation\nwhen attempting to %s 0x%08x\n\n" % \
+        synopsis = "%s:%08x %s from thread %d caused access violation\nwhen attempting to %s 0x%08x\n\n" % \
             (
+                self.last_crash.exception_module,       \
                 self.last_crash.exception_address,      \
                 self.last_crash.disasm,                 \
                 self.last_crash.violation_thread_id,    \
@@ -118,17 +129,17 @@ class crash_binning:
 
         if len(self.last_crash.stack_unwind):
             synopsis += "\nstack unwind:\n"
-            for addr in self.last_crash.stack_unwind:
-                synopsis += "\t%08x\n" % addr
+            for entry in self.last_crash.stack_unwind:
+                synopsis += "\t%s\n" % entry
 
         if len(self.last_crash.seh_unwind):
             synopsis += "\nSEH unwind:\n"
-            for (addr, handler) in self.last_crash.seh_unwind:
+            for (addr, handler, handler_str) in self.last_crash.seh_unwind:
                 try:
                     disasm = self.pydbg.disasm(handler)
                 except:
                     disasm = "[INVALID]"
 
-                synopsis +=  "\t%08x -> %08x: %s\n" % (addr, handler, disasm)
+                synopsis +=  "\t%08x -> %s\t%s\n" % (addr, handler_str, disasm)
 
         return synopsis + "\n"

@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup( name         = "PaiMei",
-       version      = "1.1",
+       version      = "1.2",
        description  = "PaiMei - Reverse Engineering Framework",
        author       = "Pedram Amini",
        author_email = "pedram.amini@gmail.com",

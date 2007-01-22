@@ -33,12 +33,19 @@ class mysql_connect_dialog(wx.Dialog):
 
         self.mysql_logo = wx.StaticBitmap(self, -1, wx.Bitmap(self.parent.cwd + "/images/mysql.bmp", wx.BITMAP_TYPE_ANY))
         self.host_static = wx.StaticText(self, -1, "MySQL Host:")
-        self.host = wx.TextCtrl(self, -1, "localhost")
         self.username_static = wx.StaticText(self, -1, "MySQL User:")
-        self.username = wx.TextCtrl(self, -1, "root")
         self.password_static = wx.StaticText(self, -1, "MySQL Passwd:")
-        self.password = wx.TextCtrl(self, -1, "", style=wx.TE_PASSWORD)
         self.connect = wx.Button(self, -1, "Connect")
+
+        # if the main frame already contains mysql values, then use them.
+        if self.parent.mysql_host:     self.host = wx.TextCtrl(self, -1, self.parent.mysql_host)
+        else:                          self.host = wx.TextCtrl(self, -1, "localhost")
+
+        if self.parent.mysql_username: self.username = wx.TextCtrl(self, -1, self.parent.mysql_username)
+        else:                          self.username = wx.TextCtrl(self, -1, "root")
+
+        if self.parent.mysql_password: self.password = wx.TextCtrl(self, -1, self.parent.mysql_password, style=wx.TE_PASSWORD)
+        else:                          self.password = wx.TextCtrl(self, -1, "", style=wx.TE_PASSWORD)
 
         self.__set_properties()
         self.__do_layout()
@@ -89,12 +96,20 @@ class mysql_connect_dialog(wx.Dialog):
         username = self.username.GetLineText(0)
         password = self.password.GetLineText(0)
 
+        # bubble up the form values to the main frame for possible persistent storage.
+        self.parent.mysql_host     = host
+        self.parent.mysql_username = username
+        self.parent.mysql_password = password
+
+        self.mysql_connect(host, username, password)
+        self.Destroy()
+
+    def mysql_connect (self, host, username, password):
         try:
             self.parent.mysql = MySQLdb.connect(host=host, user=username, passwd=password, db="paimei")
         except MySQLdb.OperationalError, err:
             self.parent.status_bar.SetStatusText("Failed connecting to MySQL server: %s" % err[1])
-            self.Destroy()
             return
 
         self.parent.status_bar.SetStatusText("Successfully connected to MySQL server at %s." % host)
-        self.Destroy()
+        self.parent.status_bar.SetStatusText("MySQL: %s" % host, 2)

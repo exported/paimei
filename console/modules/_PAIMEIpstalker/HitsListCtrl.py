@@ -105,14 +105,14 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
             self.SetStringItem(idx, 5, "%s"   % is_function)
             self.SetStringItem(idx, 6,          hit["tag"])
 
-            self.items_sort_map[idx] = \
-                (int(hit["num"]),
-                 "+%ds" % timestamp,
-                 "%08x" % hit["eip"],
-                 int(hit["tid"]),
-                          hit["module"],
-                 "%s"   % is_function,
-                          hit["tag"])
+            self.items_sort_map[idx] = ( \
+                int(hit["num"]),
+                "+%ds" % timestamp,
+                "%08x" % hit["eip"],
+                int(hit["tid"]),
+                hit["module"],
+                "%s"   % is_function,
+                hit["tag"])
 
             self.SetItemData(idx, idx)
 
@@ -174,6 +174,8 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
         self.selected = event.GetItem()
 
         hit = self.hits_by_index[self.GetItemData(self.selected.GetId())]
+
+        separator = "-" * 72
 
         context_dump  = "%s\n" % time.ctime(hit["timestamp"])
         context_dump += "EIP: %08x\n" % hit["eip"]

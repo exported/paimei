@@ -82,6 +82,9 @@ class TestCase:
         
         return self.rc
 
+    def handler_exit_process (self):
+        return DBG_CONTINUE
+
     def Run(self):
         self.stats["files_ran"] = self.main_window.files_ran
         self.stats["files_left"] = self.main_window.files_left
@@ -109,9 +112,11 @@ class TestCase:
                     time.sleep(1)
             
             for key in item.keys():
+                #time.sleep(self.timeout+1)
                 #self.pydbg = pydbg()
                 dbg = pydbg()
-                
+                dbg.event_handler_exit_process = self.handler_exit_process
+
                 self.current_pos = key
                 self.current_file = item[key]
                 
@@ -145,14 +150,14 @@ class TestCase:
                     wx.PostEvent(self.main_window, evt)
                     self.End(-1)
                 
-                # Continue execution
+                #Continue execution
                 try:
                     dbg.debug_event_loop()
                 except pdx, x:
                     evt = ThreadEventLog(msg = "Problem in debug_Event_loop() (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
                     wx.PostEvent(self.main_window, evt)
 
-                dbg.debug_event_loop()
+                #dbg.debug_event_loop()
 
                 
                 self.stats["files_ran"] += 1
@@ -173,16 +178,17 @@ class TestCase:
     def Watch(self, pydbg, current_file):
         time.sleep(self.timeout)
         
-        try:
-            pydbg.terminate_process()
-        except pdx, x:
-            evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, current_file))
-            wx.PostEvent(self.main_window, evt)
-            return 1
-        
-        evt = ThreadEventLog(msg = "Terminated Process: %s %s" % (self.program_name, current_file))
-        wx.PostEvent(self.main_window, evt)
-        return 0
+        if pydbg.debugger_active:
+	        try:
+	            pydbg.terminate_process()
+	        except pdx, x:
+	            evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, current_file))
+	            wx.PostEvent(self.main_window, evt)
+	            return 1
+	        
+	        evt = ThreadEventLog(msg = "Terminated Process: %s %s" % (self.program_name, current_file))
+	        wx.PostEvent(self.main_window, evt)
+	        return 0
 
     def GuardHandler(self, pydbg):
         evt = ThreadEventLog(msg = "[!] Guard page hit @ 0x%08x" % (pydbg.exception_address))

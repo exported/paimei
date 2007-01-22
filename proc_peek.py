@@ -1,6 +1,6 @@
 #!c:\python\python.exe
 
-# 
+#
 # Proc Peek
 #
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
@@ -33,7 +33,8 @@ import utils
 from pydbg import *
 from pydbg.defines import *
 
-USAGE = "USAGE: proc_peek.py "                                                              \
+USAGE = "DEPRECATED: See PAIMEIpeek\n"                                                      \
+        "\nUSAGE: proc_peek.py "                                                            \
         "\n    <-r|--recon RECON FILE> name of proc_peek_recon output file"                 \
         "\n    [-p|--pid PID]          pid to attach to (must specify this or watch)"       \
         "\n    [-w|--watch PROC]       target name to watch for and attach to"              \
@@ -238,10 +239,17 @@ def handler_breakpoint (dbg):
             wsock_recv     = dbg.func_resolve("wsock32", "recv")
             wsock_recvfrom = dbg.func_resolve("wsock32", "recvfrom")
 
-            dbg.bp_set(ws2_recv)
-            dbg.bp_set(ws2_recvfrom)
-            dbg.bp_set(wsock_recv)
-            dbg.bp_set(wsock_recvfrom)
+            try:    dbg.bp_set(ws2_recv)
+            except: pass
+
+            try:    dbg.bp_set(ws2_recvfrom)
+            except: pass
+
+            try:    dbg.bp_set(wsock_recv)
+            except: pass
+
+            try:    dbg.bp_set(wsock_recvfrom)
+            except: pass
 
         return DBG_CONTINUE
 

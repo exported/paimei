@@ -15,7 +15,7 @@ __all__ = \
 ########################################################################################################################
 def load (file_name, progress_bar=None):
     '''
-    Restore a saved PIDA module from disk.
+    Restore a saved BAKMEI module from disk.
 
     @type  file_name: String
     @param file_name: File name to import from

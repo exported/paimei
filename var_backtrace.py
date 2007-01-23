@@ -2,15 +2,14 @@ from idaapi         import *
 from idautils       import *
 from idc            import *
 
-from pida    import *
-#import pida
+from bakmei    import *
 
 import time
 
 '''
 Variable backtrace script for IDA.
 
-This does not work independantly of IDA at the moment, but does however rely on the PIDA 
+This does not work independantly of IDA at the moment, but does however rely on the bakmei 
 extensions for manipulating varivakes
 
 '''

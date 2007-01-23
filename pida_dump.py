@@ -24,7 +24,7 @@
 '''
 
 import time
-import pida
+import bakmei
 from pysqlite2 import dbapi2 as sqlite
 
 DEPTH_FUNCTIONS    = 0x0001
@@ -59,20 +59,20 @@ def main():
     analysis |= ANALYSIS_RPC
 
 
-    output_file = AskFile(1, GetInputFile() + ".obdf", "Save OBDF file to?")
+    output_file = AskFile(1, GetInputFile() + ".obd", "Save Open Binary DB file to?")
 
 
     if not output_file:
         Warning("Cancelled.")
     else:
-        for tbl in pida.SQLITE_CREATE_PIDA_SCHEMA:
+        for tbl in bakmei.SQLITE_CREATE_BAKMEI_SCHEMA:
             curs.execute(tbl)
 
         print "Analyzing IDB..."
         start = time.time()
 
         try:
-            signature = pida.signature(GetInputFilePath())
+            signature = bakmei.signature(GetInputFilePath())
         except:
             print "OBDF.DUMP> Could not calculate signature for %s, perhaps the file was moved?" % GetInputFilePath()
             signature = ""
@@ -127,7 +127,7 @@ def copy_from_memory(filename):
 
     curs.execute("ATTACH DATABASE '%s' AS extern;" % outfile)
 
-    for tbl in pida.SQLITE_CREATE_PIDA_SCHEMA:
+    for tbl in bakmei.SQLITE_CREATE_BAKMEI_SCHEMA:
         tb2 = tbl.replace("TABLE ", "TABLE extern.")
 
         curs.execute(tb2)
@@ -325,7 +325,7 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
     @param basic_block: (Optional, Def=None) Pointer to parent basic block container
     '''
 
-    ss = pida.sql_singleton()
+    ss = bakmei.sql_singleton()
 
     # raw instruction bytes.
     bytes = ""
@@ -421,7 +421,7 @@ def create_basic_block (ea_start, ea_end, depth, analysis, function_id, module_i
     @param depth:    (Optional, Def=DEPTH_FULL) How deep to analyze the module
     @type  analysis: Integer
     @param analysis: (Optional, Def=ANALYSIS_NONE) Which extra analysis options to enable
-    @type  function: pida.function
+    @type  function: bakmei.function
     @param function: (Optional, Def=None) Pointer to parent function container
     '''
 
@@ -576,7 +576,7 @@ def __init_enumerate_rpc__ (module_id):
                 if function_id:
                     curs.execute("INSERT INTO rpc_data (function, module, uuid, opcode) VALUES (%d, %d, '%s', %d);" % (function_id, module_id, uuid_bin_to_string(uuid), opcode))
                 else:
-                    print "PIDA.MODULE> No function node for RPC routine @%08X" % addr
+                    print "bakmei.MODULE> No function node for RPC routine @%08X" % addr
 
                 ea     += 4
                 opcode += 1
@@ -650,7 +650,7 @@ def __init_args_and_local_vars__ (func_struct, frame_struct, function_id, module
     if not frame_struct:
         return
 
-    ss = pida.sql_singleton()
+    ss = bakmei.sql_singleton()
 
     saved_reg_size = func_struct.frregs
     frame_size     = get_frame_size(func_struct)
@@ -728,7 +728,7 @@ def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE
     # TODO do data xrefs as well (this may clear up imports not being stored)
 
 def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module_id=0):
-        ss = pida.sql_singleton()
+        ss = bakmei.sql_singleton()
 
         # The end address is the same as the start address for the insertion
         sql = ss.INSERT_FUNCTION % (module_id, ea_start, ea_start, "")
@@ -779,7 +779,7 @@ def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module_
 
 
 sql_connection = sqlite.connect(":memory:")
-ss = pida.sql_singleton()
+ss = bakmei.sql_singleton()
 curs = sql_connection.cursor()
 
 # Initialize global BB edges list

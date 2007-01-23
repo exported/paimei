@@ -1,3 +1,8 @@
+yy.yy.  Pai Mei 2.0
+    bakmei:
+        - PIDA was converted to a sql stored back end and renamed to Bak Mei.
+        - All scripts relying on PIDA have been converted to use the new Bak Mei storage.
+
 xx.xx.2006 [REV ]
     docs:
         - Updated library, module and developer documentation to reflect new additions.

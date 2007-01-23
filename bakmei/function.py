@@ -1,5 +1,5 @@
 #
-# PIDA Function
+# Bak Mei - The Pai Mei Backend
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 # Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
@@ -849,7 +849,7 @@ class function (pgraph.graph, pgraph.node):
         @type  ea: DWORD
         @param ea: An address within the basic block to find
 
-        @rtype:  pida.basic_block
+        @rtype:  bakmei.basic_block
         @return: The basic block that contains the given address or None if not found.
         '''
 

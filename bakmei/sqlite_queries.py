@@ -1,5 +1,5 @@
 #
-# PIDA SQL Singleton
+# Bak Mei - The Pai Mei Backend
 # Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
@@ -21,7 +21,7 @@
 '''
 
 
-SQLITE_CREATE_PIDA_SCHEMA = ("""
+SQLITE_CREATE_BAKMEI_SCHEMA = ("""
     CREATE TABLE module (
         id              INTEGER PRIMARY KEY,
         name            varchar(255) NOT NULL,

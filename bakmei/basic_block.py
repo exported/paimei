@@ -1,5 +1,5 @@
 #
-# PIDA Basic Block
+# Bak Mei - The Pai Mei Backend
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 # Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
@@ -199,7 +199,7 @@ class basic_block (pgraph.node):
         '''
         Gets the instructions in the basic block.
 
-        @rtype:  [pida.instruction]
+        @rtype:  [bakmei.instruction]
         @return: The instructions in the basic block.
         '''
 
@@ -213,7 +213,7 @@ class basic_block (pgraph.node):
         '''
         Sets the instructions in the basic block. (This will raise an exception as this is read-only)
 
-        @type  value: [pida.instruction]
+        @type  value: [bakmei.instruction]
         @param value: The number of instructions in the basic block.
         '''
 
@@ -234,7 +234,7 @@ class basic_block (pgraph.node):
         '''
         Gets the instructions in the basic block.
 
-        @rtype:  [pida.instruction]
+        @rtype:  [bakmei.instruction]
         @return: The instructions in the basic block.
         '''
 
@@ -253,7 +253,7 @@ class basic_block (pgraph.node):
         '''
         Sets the instructions in the basic block. (This will raise an exception as this is read-only)
 
-        @type  value: [pida.instruction]
+        @type  value: [bakmei.instruction]
         @param value: The number of instructions in the basic block.
         '''
 

@@ -1,5 +1,5 @@
 #
-# PIDA Instruction
+# Bak Mei - The Pai Mei Backend
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 # Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #

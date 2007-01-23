@@ -1,5 +1,5 @@
 #
-# PIDA Module
+# Bak Mei - The Pai Mei Backend
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 # Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
@@ -296,7 +296,7 @@ class module (pgraph.graph):
         @type  ea: DWORD
         @param ea: An address within the function to find
 
-        @rtype:  pida.function
+        @rtype:  bakmei.function
         @return: The function that contains the given address or None if not found.
         '''
 
@@ -316,7 +316,7 @@ class module (pgraph.graph):
     def next_ea (self, ea=None):
         '''
         Return the instruction after to the one at ea. You can call this routine without an argument after the first
-        call. The overall structure of PIDA was not really designed for this kind of functionality, so this is kind of
+        call. The overall structure of BAKMEI was not really designed for this kind of functionality, so this is kind of
         a hack.
 
         @todo: See if I can do this better.
@@ -358,7 +358,7 @@ class module (pgraph.graph):
     def prev_ea (self, ea=None):
         '''
         Within the function that contains ea, return the instruction prior to the one at ea. You can call this routine
-        without an argument after the first call. The overall structure of PIDA was not really designed for this kind of
+        without an argument after the first call. The overall structure of BAKMEI was not really designed for this kind of
         functionality, so this is kind of a hack.
 
         @todo: See if I can do this better.

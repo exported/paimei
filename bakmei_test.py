@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from bakmei import *
+from pida import *
 from pgraph import *
 
 class TestFunctionClass(unittest.TestCase):

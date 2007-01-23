@@ -103,3 +103,12 @@ class system_dll:
                 kernel32.UnmapViewOfFile(file_ptr)
 
             kernel32.CloseHandle(file_map)
+
+
+    ####################################################################################################################
+    def __del__ (self):
+        '''
+        Close the handle.
+        '''
+
+        kernel32.CloseHandle(self.handle)

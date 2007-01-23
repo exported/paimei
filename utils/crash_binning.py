@@ -70,8 +70,15 @@ class crash_binning:
         self.pydbg = pydbg
         crash = __crash_bin_struct__()
 
+        exception_module = pydbg.addr_to_module(pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress)
+
+        if exception_module:
+            exception_module = exception_module.szModule
+        else:
+            exception_module = "[INVALID]"
+
+        crash.exception_module    = exception_module
         crash.exception_address   = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress
-        crash.exception_module    = pydbg.addr_to_module(crash.exception_address).szModule
         crash.write_violation     = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionInformation[0]
         crash.violation_address   = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionInformation[1]
         crash.violation_thread_id = pydbg.dbg.dwThreadId
@@ -85,12 +92,27 @@ class crash_binning:
 
         # add module information to the stack and seh unwind.
         for i in xrange(len(crash.stack_unwind)):
-            addr = crash.stack_unwind[i]
-            crash.stack_unwind[i] = "%s:%08x" % (pydbg.addr_to_module(addr).szModule, addr)
+            addr   = crash.stack_unwind[i]
+            module = pydbg.addr_to_module(addr)
+
+            if module:
+                module = module.szModule
+            else:
+                module = "[INVALID]"
+
+            crash.stack_unwind[i] = "%s:%08x" % (module, addr)
 
         for i in xrange(len(crash.seh_unwind)):
             (addr, handler) = crash.seh_unwind[i]
-            crash.seh_unwind[i] = (addr, handler, "%s:%08x" % (pydbg.addr_to_module(handler).szModule, handler))
+
+            module = pydbg.addr_to_module(handler)
+
+            if module:
+                module = module.szModule
+            else:
+                module = "[INVALID]"
+
+            crash.seh_unwind[i] = (addr, handler, "%s:%08x" % (module, handler))
 
         if not self.bins.has_key(crash.exception_address):
             self.bins[crash.exception_address] = []
@@ -140,6 +162,6 @@ class crash_binning:
                 except:
                     disasm = "[INVALID]"
 
-                synopsis +=  "\t%08x -> %s\t%s\n" % (addr, handler_str, disasm)
+                synopsis +=  "\t%08x -> %s %s\n" % (addr, handler_str, disasm)
 
         return synopsis + "\n"

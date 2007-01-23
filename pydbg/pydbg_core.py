@@ -348,6 +348,7 @@ class pydbg_core(object):
             self.close_handle(self.h_thread)
             kernel32.ContinueDebugEvent(dbg.dwProcessId, dbg.dwThreadId, continue_status)
 
+
     ####################################################################################################################
     def debug_event_loop (self):
         '''
@@ -566,7 +567,7 @@ class pydbg_core(object):
 
         # resolve the newly created threads TEB and add it to the internal dictionary.
         thread_id      = self.dbg.dwThreadId
-        thread_handle  = self.open_thread(thread_id)
+        thread_handle  = self.dbg.u.CreateThread.hThread
         thread_context = self.get_thread_context(thread_handle)
         selector_entry = LDT_ENTRY()
 
@@ -653,6 +654,7 @@ class pydbg_core(object):
             pass
         else:
             self.system_dlls.remove(unloaded)
+            del(unloaded)
 
         return DBG_CONTINUE
 
@@ -703,6 +705,120 @@ class pydbg_core(object):
         '''
 
         return DBG_EXCEPTION_NOT_HANDLED
+
+
+    ####################################################################################################################
+    def func_resolve (self, dll, function):
+        '''
+        Utility function that resolves the address of a given module / function name pair under the context of the
+        debugger.
+
+        @see: func_resolve_debuggee()
+
+        @type  dll:      String
+        @param dll:      Name of the DLL (case-insensitive)
+        @type  function: String
+        @param function: Name of the function to resolve (case-sensitive)
+
+        @rtype:  DWORD
+        @return: Address
+        '''
+
+        handle  = kernel32.LoadLibraryA(dll)
+        address = kernel32.GetProcAddress(handle, function)
+
+        kernel32.FreeLibrary(handle)
+
+        return address
+
+
+    ####################################################################################################################
+    def func_resolve_debuggee (self, dll_name, func_name):
+        '''
+        Utility function that resolves the address of a given module / function name pair under the context of the
+        debuggee.
+
+        @author: Otto Ebeling
+        @see:    func_resolve()
+        @todo:   Add support for followed imports.
+
+        @type  dll_name:  String
+        @param dll_name:  Name of the DLL (case-insensitive, ex:ws2_32.dll)
+        @type  func_name: String
+        @param func_name: Name of the function to resolve (case-sensitive)
+
+        @rtype:  DWORD
+        @return: Address of the symbol in the target process address space if it can be resolved, None otherwise
+        '''
+
+        dll_name = dll_name.lower()
+
+        # we can't make the assumption that all DLL names end in .dll, for example Quicktime libs end in .qtx / .qts
+        # so instead of this old line:
+        #     if not dll_name.endswith(".dll"):
+        # we'll check for the presence of a dot and will add .dll as a conveneince.
+        if not dll_name.count("."):
+            dll_name += ".dll"
+
+        for module in self.iterate_modules():
+            if module.szModule.lower() == dll_name:
+                base_address = module.modBaseAddr
+                dos_header   = self.read_process_memory(base_address, 0x40)
+
+                # check validity of DOS header.
+                if len(dos_header) != 0x40 or dos_header[:2] != "MZ":
+                    continue
+
+                e_lfanew   = struct.unpack("<I", dos_header[0x3c:0x40])[0]
+                pe_headers = self.read_process_memory(base_address + e_lfanew, 0xF8)
+
+                # check validity of PE headers.
+                if len(pe_headers) != 0xF8 or pe_headers[:2] != "PE":
+                    continue
+
+                export_directory_rva = struct.unpack("<I", pe_headers[0x78:0x7C])[0]
+                export_directory_len = struct.unpack("<I", pe_headers[0x7C:0x80])[0]
+                export_directory     = self.read_process_memory(base_address + export_directory_rva, export_directory_len)
+                num_of_functions     = struct.unpack("<I", export_directory[0x14:0x18])[0]
+                num_of_names         = struct.unpack("<I", export_directory[0x18:0x1C])[0]
+                address_of_functions = struct.unpack("<I", export_directory[0x1C:0x20])[0]
+                address_of_names     = struct.unpack("<I", export_directory[0x20:0x24])[0]
+                address_of_ordinals  = struct.unpack("<I", export_directory[0x24:0x28])[0]
+                name_table           = self.read_process_memory(base_address + address_of_names, num_of_names * 4)
+
+                # perform a binary search across the function names.
+                low  = 0
+                high = num_of_names
+
+                while low <= high:
+                    # python does not suffer from integer overflows:
+                    #     http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
+                    middle          = (low + high) / 2
+                    current_address = base_address + struct.unpack("<I", name_table[middle*4:(middle+1)*4])[0]
+
+                    # we use a crude approach here. read 256 bytes and cut on NULL char. not very beautiful, but reading
+                    # 1 byte at a time is very slow.
+                    name_buffer = self.read_process_memory(current_address, 256)
+                    name_buffer = name_buffer[:name_buffer.find("\0")]
+
+                    if name_buffer < func_name:
+                        low = middle + 1
+                    elif name_buffer > func_name:
+                        high = middle - 1
+                    else:
+                        # MSFT documentation is misleading - see http://www.bitsum.com/pedocerrors.htm
+                        bin_ordinal      = self.read_process_memory(base_address + address_of_ordinals + middle * 2, 2)
+                        ordinal          = struct.unpack("<H", bin_ordinal)[0]   # ordinalBase has already been subtracted
+                        bin_func_address = self.read_process_memory(base_address + address_of_functions + ordinal * 4, 4)
+                        function_address = struct.unpack("<I", bin_func_address)[0]
+
+                        return base_address + function_address
+
+                # function was not found.
+                return None
+
+        # module was not found.
+        return None
 
 
     ####################################################################################################################
@@ -978,6 +1094,10 @@ class pydbg_core(object):
         except:
             pass
 
+        # store the handles we need.
+        self.pid       = pi.dwProcessId
+        self.h_process = pi.hProcess
+
         # resolve the PEB address.
         selector_entry = LDT_ENTRY()
         thread_context = self.get_thread_context(pi.hThread)
@@ -989,7 +1109,7 @@ class pydbg_core(object):
         teb += (selector_entry.HighWord.Bits.BaseMid << 16) + (selector_entry.HighWord.Bits.BaseHi << 24)
 
         # add this TEB to the internal dictionary.
-        self.tebs[pi.dwThreadID] = teb
+        self.tebs[pi.dwThreadId] = teb
 
         self.peb = self.read_process_memory(teb + 0x30, 4)
         self.peb = struct.unpack("<L", self.peb)[0]
@@ -997,9 +1117,6 @@ class pydbg_core(object):
         # if the function (CreateProcess) succeeds, be sure to call the CloseHandle function to close the hProcess and
         # hThread handles when you are finished with them. -bill gates
         self.close_handle(pi.hThread)
-
-        self.pid       = pi.dwProcessId
-        self.h_process = pi.hProcess
 
 
     ####################################################################################################################
@@ -1387,12 +1504,17 @@ class pydbg_core(object):
 
 
     ####################################################################################################################
-    def terminate_process (self, exit_code=0):
+    def terminate_process (self, exit_code=0, method="terminateprocess"):
         '''
-        Terminate the debuggee.
+        Terminate the debuggee using the specified method.
+
+        "terminateprocess": Terminate the debuggee by calling TerminateProcess(debuggee_handle).
+        "exitprocess":      Terminate the debuggee by setting its current EIP to ExitProcess().
 
         @type  exit_code: Integer
         @param exit_code: (Optional, def=0) Exit code
+        @type  method:    String
+        @param method:    (Optonal, def="terminateprocess") Termination method. See __doc__ for more info.
 
         @raise pdx: An exception is raised on failure.
         '''
@@ -1400,8 +1522,14 @@ class pydbg_core(object):
         self.set_debugger_active(False)
 
         try:
-            if not kernel32.TerminateProcess(self.h_process, exit_code):
-                raise pdx("TerminateProcess(%d)" % exit_code, True)
+            if method == "exitprocess":
+                self.context.Eip = self.func_resolve_debuggee("kernel32", "ExitProcess")
+                self.set_thread_context(self.context)
+
+            # fall back to "terminateprocess".
+            else:
+                if not kernel32.TerminateProcess(self.h_process, exit_code):
+                    raise pdx("TerminateProcess(%d)" % exit_code, True)
         finally:
                 self.close_handle(self.h_process)
 

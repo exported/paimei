@@ -32,6 +32,46 @@ class sql_singleton:
     # storage for the instance reference
     __instance = None
 
+    
+    def extract_DSN_values(DSN):
+        '''
+        To be honest this is not really a standard DSN format, kind of a hack that looks similar and I call it DSN
+        '''
+        sections = DSN.split(';')
+        
+        if len(sections) == 1:
+            # This case means it wasn't a DSN string, so it is probably the default sqlite pathname
+            return sections
+        elif sections[0] == "sqlite":
+            ret_val = ()
+            
+            if sections[1][:5].upper() == "PATH=":
+                sections[1] = sections[1][5:]
+        
+            ret_val.append(sections[1])
+            
+            return ret_val
+        elif sections[0] == "mysql":
+            
+            server = port = dbname = uid = pwd = None
+            
+            for entry in sections[1:]:
+                temp = entry.split('=')
+                if temp[0].upper() == "SERVER":
+                    server = temp[1]
+                elif temp[0].upper() == "PORT":
+                    port = temp[1]
+                elif temp[0].upper() == "DATABASE":
+                    dbname = temp[1]
+                elif temp[0].upper() == "UID":
+                    uid = temp[1]
+                elif temp[0].upper() == "PWD":
+                    pwd = temp[1]
+        
+            return (server, port, dbname, uid, pwd)
+        
+        return None
+
     class __impl:
         '''
         Implementation of the singleton interface
@@ -63,61 +103,69 @@ class sql_singleton:
 
         def select_instruction(self, DSN, instruction_id):
             ret_val = {}
+            
+            sql_query = None
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_INSTRUCTION
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_INSTRUCTION % instruction_id).fetchone()
+                sql_query = bakmei.sqlite_queries.cSELECT_INSTRUCTION
                 
-                print "Retrieved %d results" % len(results)
-                print results
-                
-                ret_val = {'address':results[0], 'mnemonic':results[1], 'operand1':results[2], 'operand2':results[3], 'operand3':results[4], 'comment':results[5], 'bytes':results[6], 'basic_block':results[7]}
+            results = curs.execute(sql_query % instruction_id).fetchone()
+            
+            ret_val = {'address':results[0], 'mnemonic':results[1], 'operand1':results[2], 'operand2':results[3], 'operand3':results[4], 'comment':results[5], 'bytes':results[6], 'basic_block':results[7]}
 
             return ret_val
 
         def update_instruction_mnemonic(self, DSN, instruction_id, mnemonic):
-            if DSN[:6] == "mysql:":
-                pass
+            if mnemonic:
+                mnemonic = "'" + mnemonic.replace("'",  "''") + "'"
+            else:
+                mnemonic = "NULL"
+                
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_INSTRUCTION_MNEMONIC % (mnemonic, instruction_id))
             else: #sqlite
                 curs = self.connection(DSN)
-
-                if mnemonic:
-                    mnemonic = "'" + mnemonic.replace("'",  "''") + "'"
-                else:
-                    mnemonic = "NULL"
-
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_MNEMONIC % (mnemonic, instruction_id))
-
                 curs.commit()
 
         def update_instruction_comment(self, DSN, instruction_id, comment):
-            if DSN[:6] == "mysql:":
-                pass
+            if comment:
+                comment = "'" + comment.replace("'",  "''") + "'"
+            else:
+                comment = "NULL"
+                
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()                
+                curs.execute(bakmei.mysql_queries.cUPDATE_INSTRUCTION_COMMENT % (comment, instruction_id))
             else: #sqlite
-                curs = self.connection(DSN)
-
-                if comment:
-                    comment = "'" + comment.replace("'",  "''") + "'"
-                else:
-                    comment = "NULL"
-
+                curs = self.connection(DSN)                
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_COMMENT % (comment, instruction_id))
-
                 curs.commit()
 
-
         def update_instruction_operand(self, DSN, instruction_id, operand_seq, value):
-            if DSN[:6] == "mysql:":
-                pass
+            if value:
+                value = "'" + value.replace("'",  "''") + "'"
+            else:
+                value = "NULL"
+                
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                if operand_seq == 1:
+                    sql = bakmei.mysql_queries.cUPDATE_INSTRUCTION_OPERAND1
+                elif operand_seq == 2:
+                    sql = bakmei.mysql_queries.cUPDATE_INSTRUCTION_OPERAND2
+                elif operand_seq == 3:
+                    sql = bakmei.mysql_queries.cUPDATE_INSTRUCTION_OPERAND3
+
+                curs.execute(sql % (value, instruction_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
-
-                if value:
-                    value = "'" + value.replace("'",  "''") + "'"
-                else:
-                    value = "NULL"
                 if operand_seq == 1:
                     sql = bakmei.sqlite_queries.cUPDATE_INSTRUCTION_OPERAND1
                 elif operand_seq == 2:
@@ -130,34 +178,37 @@ class sql_singleton:
                 curs.commit()
 
         def update_instruction_flags(self, DSN, instruction_id, flags):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_INSTRUCTION_FLAGS % (flags, instruction_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_FLAGS % (flags, instruction_id))
                 curs.commit()
 
         def update_instruction_address(self, DSN, instruction_id, address):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_INSTRUCTION_ADDRESS % (address, instruction_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_ADDRESS % (address, instruction_id))
                 curs.commit()
   
         def update_instruction_bytes(self, DSN, instruction_id, byte_string):
-            if DSN[:6] == "mysql:":
-                pass
+            if byte_string:
+                byte_string = "'" + byte_string.replace("'",  "''") + "'"
+            else:
+                byte_string = "NULL"
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_INSTRUCTION_BYTES % (byte_string, instruction_id))
             else: #sqlite
-                curs = self.connection(DSN)
-
-                if byte_string:
-                    byte_string = "'" + byte_string.replace("'",  "''") + "'"
-                else:
-                    byte_string = "NULL"
-
+                curs = self.connection(DSN)                
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_BYTES % (byte_string, instruction_id))
-
                 curs.commit()
 
         ## BASIC BLOCK ###
@@ -165,52 +216,64 @@ class sql_singleton:
         def select_basic_block(self, DSN, basic_block_id):
             ret_val = {}
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                bakmei.mysql_queries.cSELECT_BASIC_BLOCK
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_BASIC_BLOCK % basic_block_id).fetchone()
-                ret_val = {'module':results[0], 'function':results[1], 'start_address':results[2], 'end_address':results[3]}
+                sql_query = bakmei.sqlite_queries.cSELECT_BASIC_BLOCK
+            
+            results = curs.execute(sql_query % basic_block_id).fetchone()
+            
+            ret_val = {'module':results[0], 'function':results[1], 'start_address':results[2], 'end_address':results[3]}
 
             return ret_val
 
         def select_basic_block_num_instructions(self, DSN, basic_block_id):
             ret_val = 0
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_BASIC_BLOCK_NUM_INSTRUCTIONS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_BASIC_BLOCK_NUM_INSTRUCTIONS % basic_block_id).fetchone()
-                ret_val = results[0]
+                sql_query = bakmei.sqlite_queries.cSELECT_BASIC_BLOCK_NUM_INSTRUCTIONS
+                
+            results = curs.execute(sql_query % basic_block_id).fetchone()
+            ret_val = results[0]
 
             return ret_val
 
         def select_basic_block_sorted_instructions(self, DSN, basic_block_id):
             ret_val = []
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_BASIC_BLOCK_SORTED_INSTRUCTIONS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_BASIC_BLOCK_SORTED_INSTRUCTIONS % basic_block_id).fetchall()
+                sql_query = bakmei.sqlite_queries.cSELECT_BASIC_BLOCK_SORTED_INSTRUCTIONS
 
-                for result_id in results:
-                    ret_val += result_id
+            results = curs.execute(sql_query % basic_block_id).fetchall()
+
+            for result_id in results:
+                ret_val += result_id
 
             return ret_val
 
         def update_basic_block_start_address(self, DSN, basic_block_id, address):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_BASIC_BLOCK_START_ADDRESS % (address, basic_block_id))
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_BASIC_BLOCK_START_ADDRESS % (address, basic_block_id))
                 curs.commit()
 
         def update_basic_block_end_address(self, DSN, basic_block_id, address):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor
+                curs.execute(bakmei.mysql_queries.cUPDATE_BASIC_BLOCK_END_ADDRESS % (address, basic_block_id))                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_BASIC_BLOCK_END_ADDRESS % (address, basic_block_id))
@@ -221,39 +284,48 @@ class sql_singleton:
         def select_function(self, DSN, function_id):
             ret_val = {}
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN)
+                sql_query = bakmei.mysql_queries.cSELECT_FUNCTION
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION % function_id).fetchone()
-                ret_val = {'name':results[0], 'module':results[1], 'start_address':results[2], 'end_address':results[3]}
+                sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION
+            
+            results = curs.execute(sql_query % function_id).fetchone()
+            ret_val = {'name':results[0], 'module':results[1], 'start_address':results[2], 'end_address':results[3]}
 
             return ret_val
 
         def select_frame_info(self, DSN, function_id):
             ret_val = {}
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_FRAME_INFO
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_FRAME_INFO % function_id).fetchone()
+                sql_query = bakmei.sqlite_queries.cSELECT_FRAME_INFO
+                
+            results = curs.execute(sql_query % function_id).fetchone()
 
-                ret_val = {'saved_reg_size':results[0], 'frame_size':results[1], 'ret_size':results[2], 'local_var_size': results[3], 'arg_size':results[4]}
+            ret_val = {'saved_reg_size':results[0], 'frame_size':results[1], 'ret_size':results[2], 'local_var_size': results[3], 'arg_size':results[4]}
 
             return ret_val
 
         def select_args(self, DSN, function_id):
             ret_val = []
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_ARGS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_ARGS % function_id).fetchall()
+                sql_query = bakmei.sqlite_queries.cSELECT_ARGS
+                
+            results = curs.execute(sql_query % function_id).fetchall()
 
-                for result_row in results:
-                    ret_val += {'name':result_row[0]}
+            for result_row in results:
+                ret_val += {'name':result_row[0]}
 
             return ret_val
 
@@ -261,65 +333,80 @@ class sql_singleton:
         def select_local_vars(self, DSN, function_id):
             ret_val = []
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_LOCAL_VARS   
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_LOCAL_VARS % function_id).fetchall()
+                sql_query = bakmei.sqlite_queries.cSELECT_LOCAL_VARS
+                    
+            results = curs.execute(sql_query % function_id).fetchall()
 
-                for result_row in results:
-                    ret_val += {'name':result_row[0]}
+            for result_row in results:
+                ret_val += {'name':result_row[0]}
 
             return ret_val
 
         def select_function_basic_blocks(self, DSN, function_id):
             ret_val = []
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_FUNCTION_BASIC_BLOCKS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCKS % function_id).fetchall()
+                sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCKS
+                
+            results = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCKS % function_id).fetchall()
 
-                for result_row in results:
-                    ret_val += result_row[0]
+            for result_row in results:
+                ret_val += result_row[0]
 
             return ret_val
 
         def select_function_num_instructions(self, DSN, function_id):
             ret_val = 0
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_FUNCTION_NUM_INSTRUCTIONS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION_NUM_INSTRUCTIONS % function_id).fetchone()
-                ret_val = results[0]
+                sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION_NUM_INSTRUCTIONS
+                
+            results = curs.execute(sql_query % function_id).fetchone()
+            ret_val = results[0]
 
             return ret_val
 
         def select_function_num_vars(self, DSN, function_id, var_type):
             ret_val = 0
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_FUNCTION_NUM_VARS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION_NUM_VARS % (function_id, var_type)).fetchone()
-                ret_val = results[0]
+                sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION_NUM_VARS
+                
+            results = curs.execute(sql_query % (function_id, var_type)).fetchone()
+            ret_val = results[0]
 
             return ret_val
 
         def select_function_basic_block_by_address(self, DSN, function_id, address):
             ret_val = None
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS
             else: #sqlite
                 curs = self.connection(DSN)
-                result = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS % (function_id, address, address)).fetchone()
-                if result:
-                    ret_val = result[0]
+                sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS
+                
+            result = curs.execute(sql_query % (function_id, address, address)).fetchone()
+            if result:
+                ret_val = result[0]
 
             return ret_val
 
@@ -329,79 +416,99 @@ class sql_singleton:
             '''
             ret_val = []
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES % (function_id, function_id)).fetchall()
-                for result_row in results:
-                    ret_val += (result_row[0], result_row[1])
+                sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES
+                
+            results = curs.execute(sql_query % (function_id, function_id)).fetchall()
+            for result_row in results:
+                ret_val += (result_row[0], result_row[1])
 
             return ret_val
 
         def update_function_start_address(self, DSN, function_id, address):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_START_ADDRESS % (address, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_START_ADDRESS % (address, function_id))
                 curs.commit()
 
         def update_function_end_address(self, DSN, function_id, address):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_END_ADDRESS % (address, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_END_ADDRESS % (address, function_id))
                 curs.commit()
 
         def update_function_flags(self, DSN, function_id, flags):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_FLAGS % (size, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_FLAGS % (size, function_id))
                 curs.commit()
 
         def update_function_arg_size(self, DSN, function_id, size):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_ARG_SIZE % (size, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_ARG_SIZE % (size, function_id))
                 curs.commit()
 
         def update_function_name(self, DSN, function_id, name):
-            if DSN[:6] == "mysql:":
-                pass
+            if name:
+                name = "'" + name.replace("'",  "''") + "'"
+            else:
+                name = "NULL"
+            
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_NAME % (name, function_id))
+                
             else: #sqlite
-                if name:
-                    name = "'" + name.replace("'",  "''") + "'"
-                else:
-                    name = "NULL"
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_NAME % (name, function_id))
                 curs.commit()
 
         def update_function_saved_reg_size(self, DSN, function_id, size):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_SAVED_REG_SIZE % (size, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_SAVED_REG_SIZE % (size, function_id))
                 curs.commit()
 
         def update_function_frame_size(self, DSN, function_id, size):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_FRAME_SIZE % (size, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_FRAME_SIZE % (size, function_id))
                 curs.commit()
 
         def update_function_ret_size(self, DSN, function_id, size):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_RET_SIZE % (size, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_RET_SIZE % (size, function_id))
@@ -409,8 +516,10 @@ class sql_singleton:
 
 
         def update_function_local_var_size(self, DSN, function_id, size):
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_LOCAL_VAR_SIZE % (size, function_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_LOCAL_VAR_SIZE % (size, function_id))
@@ -420,15 +529,18 @@ class sql_singleton:
 
         def select_module(self, DSN, module_id):
             ret_val = {}
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULE
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_MODULE % module_id).fetchone()
-
-                ret_val["name"]         = results[0]
-                ret_val["base"]         = results[1]
-                ret_val["signature"]    = results[2]
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULE
+                
+            results = curs.execute(sql_query % module_id).fetchone()
+            
+            ret_val["name"]         = results[0]
+            ret_val["base"]         = results[1]
+            ret_val["signature"]    = results[2]
 
             return ret_val
 
@@ -438,75 +550,90 @@ class sql_singleton:
             '''
             ret_val = []
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULE_FUNCTION_REFERENCES
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_MODULE_FUNCTION_REFERENCES % (module_id, module_id)).fetchall()
-                for result_row in results:
-                    ret_val += (result_row[0], result_row[1])
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULE_FUNCTION_REFERENCES
+                
+            results = curs.execute(sql_query % (module_id, module_id)).fetchall()
+            for result_row in results:
+                ret_val += (result_row[0], result_row[1])
 
             return ret_val
 
         def select_module_num_functions(self, DSN, module_id):
             ret_val = 0
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULE_NUM_FUNCTIONS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_MODULE_NUM_FUNCTIONS % module_id).fetchone()
-                ret_val = results[0]
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULE_NUM_FUNCTIONS
+            
+            results = curs.execute(sql_query % module_id).fetchone()
+            ret_val = results[0]
 
             return ret_val
 
         def select_module_functions(self, DSN, module_id):
             ret_val = []
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULE_FUNCTIONS
             else: #sqlite
                 curs = self.connection(DSN)
-                results = curs.execute(bakmei.sqlite_queries.cSELECT_MODULE_FUNCTIONS % module_id).fetchall()
-
-                for result_row in results:
-                    ret_val += result_row[0]
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULE_FUNCTIONS
+            
+            results = curs.execute(sql_query % module_id).fetchall()
+            
+            for result_row in results:
+                ret_val += result_row[0]
 
             return ret_val
 
         def update_module_name(self, DSN, module_id, name):
-            if DSN[:6] == "mysql:":
-                pass
+            if name:
+                name = "'" + name.replace("'",  "''") + "'"
+            else:
+                name = "NULL"
+                
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()             
+                curs.execute(bakmei.mysql_queries.cUPDATE_MODULE_NAME % (name, module_id))
+                
             else: #sqlite
-                curs = self.connection(DSN)
-                if name:
-                    name = "'" + name.replace("'",  "''") + "'"
-                else:
-                    name = "NULL"
+                curs = self.connection(DSN)                
                 curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_NAME % (name, module_id))
                 curs.commit()
-
-
+ 
         def update_module_base(self, DSN, module_id, base):
             if not isNumber(base):
                 base = "NULL"
 
-            if DSN[:6] == "mysql:":
-                pass
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_MODULE_BASE % (base, module_id))
+                
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_BASE % (base, module_id))
                 curs.commit()
 
         def update_module_signature(self, DSN, module_id, signature):
-            if DSN[:6] == "mysql:":
-                pass
+            if signature:
+                signature = "'" + signature.replace("'",  "''") + "'"
+            else:
+                signature = "NULL"
+                    
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_MODULE_SIGNATURE % (signature, module_id))                
             else: #sqlite
-                curs = self.connection(DSN)
-                if signature:
-                    signature = "'" + signature.replace("'",  "''") + "'"
-                else:
-                    signature = "NULL"
+                curs = self.connection(DSN)                
                 curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_SIGNATURE % (signature, module_id))
                 curs.commit()
 
@@ -525,50 +652,56 @@ class sql_singleton:
                 self.__init_connection(DSN)
 
             return self.__sql[DSN]
-
-        def __init_connection(self, DSN_name):
-
-            print "initing"
-
-            if self.__active_syntax == "mysql":
+            
+        def __init_connection(self, DSN):                                    
+            if DSN[:6] == "mysql;":
+                db_values = sql_singleton.extract_DSN_values(DSN)
+                
                 try:
-                    self.__sql[DSN_name] = MySQLdb.connect(host=host, user=username, passwd=password, db="bakmei_" + DSN_name)
+                    self.__sql[DSN] = MySQLdb.connect(host=db_values[0], user=db_values[3], passwd=db_values[4], db=db_values[2])
                 except MySQLdb.OperationalError, err:
                     if err[0] == 1049:
                         # DB doesn't exist, let's make it!
-                        create_bakmei_database(DSN_name)
+                        create_bakmei_database(DSN)
                     else:
                         raise MySQLdb.OperationalError, err
             else:
                 #sqlite
-                self.__sql[DSN_name] = sqlite.connect(DSN_name)
+                self.__sql[DSN] = sqlite.connect(DSN)
 
-                tables =  self.__sql[DSN_name].cursor().execute("SELECT name from sqlite_master where type='table';")
+                tables =  self.__sql[DSN].cursor().execute("SELECT name from sqlite_master where type='table';")
 
                 if len(tables.fetchall()) == 0:
-                    self.create_bakmei_database(DSN_name)
+                    self.create_bakmei_database(DSN)
 
-            self.__active_DSN = DSN_name  #TEMP
+            self.__active_DSN = DSN  #TEMP
 
-        def create_bakmei_database(self, DSN):
-            #self.connection(DSN) = MySQLdb.connect(host=host, user=username, passwd=password)
-            #cursor = self.__sql[DSN].cursor()
-            #
-            ## create db
-            #cursor.execute("CREATE DATABASE bakmei_" + DSN)
-            #cursor.execute("USE bakmei_" + DSN)
-            #
-            ## create tables
-            #for query in MYSQL_CREATE_BAKMEI_SCHEMA:
-            #    cursor.execute(query)
-            cursor = self.__sql[DSN].cursor()
+        def create_bakmei_database(self, DSN):           
+            if DSN[:6] == "mysql;":
+                db_values = sql_singleton.extract_DSN_values(DSN)
+                
+                __sql[DSN] = MySQLdb.connect(host=db_values[0], user=db_values[3], passwd=db_values[4])
+                cursor = self.__sql[DSN].cursor()
+                
+                # create db
+                cursor.execute("CREATE DATABASE %s" % db_values[2])
+                cursor.execute("USE %s" + db_values[2])
+                
+                # create tables
+                for query in bakmei.mysql_queries.MYSQL_CREATE_BAKMEI_SCHEMA:
+                    cursor.execute(query)
+            else: #sqlite
+                cursor = self.__sql[DSN].cursor()
 
-            for query in SQLITE_CREATE_BAKMEI_SCHEMA:
-                cursor.execute(query)
+                for query in bakmei.sqlite_queries.SQLITE_CREATE_BAKMEI_SCHEMA:
+                    cursor.execute(query)
 
-            self.__sql[DSN].commit()
+                self.__sql[DSN].commit()
 
 
+        def __del__(self):
+            # TODO Close all database connections
+            pass
 
         def cursor(self):
             return self.__sql[self.__active_DSN].cursor()

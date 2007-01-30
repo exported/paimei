@@ -553,7 +553,7 @@ class pydbg(pydbg_core):
         # set the thread context.
         self.set_thread_context(context)
 
-        #context = self.get_thread_context(self.h_thread)
+        context = self.get_thread_context(self.h_thread)
         #print "Dr0 = %08x" % context.Dr0
         #print "Dr1 = %08x" % context.Dr1
         #print "Dr2 = %08x" % context.Dr2
@@ -905,11 +905,16 @@ class pydbg(pydbg_core):
         context_list["esp"] = self.smart_dereference(context.Esp, print_dots, hex_dump)
 
         for offset in xrange(0, stack_depth + 1):
-            # no try/except here because ESP *should* always be readable and i'd really like to know if it's not.
-            esp = self.flip_endian_dword(self.read_process_memory(context.Esp + offset * 4, 4))
-            context_list["esp+%02x"%(offset*4)]          = {}
-            context_list["esp+%02x"%(offset*4)]["value"] = esp
-            context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots, hex_dump)
+            try:
+                esp = self.flip_endian_dword(self.read_process_memory(context.Esp + offset * 4, 4))
+
+                context_list["esp+%02x"%(offset*4)]          = {}
+                context_list["esp+%02x"%(offset*4)]["value"] = esp
+                context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots, hex_dump)
+            except:
+                context_list["esp+%02x"%(offset*4)]          = {}
+                context_list["esp+%02x"%(offset*4)]["value"] = 0
+                context_list["esp+%02x"%(offset*4)]["desc"]  = "[INVALID]"
 
         return context_list
 

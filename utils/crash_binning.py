@@ -24,6 +24,7 @@ import zlib
 import cPickle
 
 class __crash_bin_struct__:
+    exception_module    = None
     exception_address   = 0
     write_violation     = 0
     violation_address   = 0

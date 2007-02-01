@@ -218,7 +218,7 @@ class module (pgraph.graph):
 
     def __getNumFunctions (self):
         '''
-        The number of instructions in the function
+        The number of functions in the module
 
         @rtype:  Integer
         @return: The number of instructions in the function
@@ -233,18 +233,18 @@ class module (pgraph.graph):
 
     def __setNumFunctions (self, value):
         '''
-        Sets the number of instructions (raises an exception - READ ONLY)
+        Sets the number of functions (raises an exception - READ ONLY)
 
         @type  value: Integer
-        @param value: The number of instructions in the function
+        @param value: The number of functions in the module
         '''
-        raise NotImplementedError, "num_instructions is a read-only property"
+        raise NotImplementedError, "num_functions is a read-only property"
 
     ####
 
     def __deleteNumFunctions (self):
         '''
-        destructs the num_instructions
+        destructs the num_functions
         '''
         pass # dynamically generated property value
 
@@ -253,10 +253,10 @@ class module (pgraph.graph):
 
     def __getNodes (self):
         '''
-        Gets the signature of the module
+        Gets the functions (nodes) of the module
 
         @rtype:  String
-        @return: The signature of the module
+        @return: A dictionary of all the functions keyed by start addresses
         '''
 
         if self.__nodes == None:
@@ -284,9 +284,47 @@ class module (pgraph.graph):
 
     def __deleteNodes (self):
         '''
-        destructs the signature of the module
+        destructs the nodes of the module
         '''
         del self.__nodes
+
+    ####################################################################################################################
+    # imported_functions accessors
+
+    def __getImportedFunctions (self):
+        '''
+        Gets the imported functions for the module
+
+        @rtype:  String
+        @return: The signature of the module
+        '''
+        
+        ret_val = []
+        ss = sql_singleton()
+        results = ss.select_module_imported_functions(self.DSN, self.dbid)
+        
+        for function_id in results:
+            new_function = function(self.DSN, function_id)
+            ret_val.append(new_function)
+            
+        return ret_val
+
+    def __setImportedFunctions (self, value):
+        '''
+        Sets the imported functions of the module. This will generate an error.
+
+        @type  value: String
+        @param value: The signature of the module.
+        '''
+
+        raise NotImplementedError, "nodes and functions are not directly writable for modules. This is a read-only property"
+
+    def __deleteImportedFunctions (self):
+        '''
+        destructs the imports
+        '''
+        pass # dynamically generated property
+
 
     ####################################################################################################################
     def find_function (self, ea):
@@ -498,8 +536,9 @@ class module (pgraph.graph):
     ####################################################################################################################
     # PROPERTIES
 
-    name            = property(__getName,           __setName,          __deleteName,           "The name of the module.")
-    base            = property(__getBase,           __setBase,          __deleteBase,           "The base address of the module.")
-    signature       = property(__getSignature,      __setSignature,     __deleteSignature,      "The module signature.")
-    nodes           = property(__getNodes,          __setNodes,         __deleteNodes,          "The functions in the module, keyed by the starting address.")
-    num_functions   = property(__getNumFunctions,   __setNumFunctions,  __deleteNumFunctions,   "The number of functions in the module.")
+    name                = property(__getName,               __setName,              __deleteName,               "The name of the module.")
+    base                = property(__getBase,               __setBase,              __deleteBase,               "The base address of the module.")
+    signature           = property(__getSignature,          __setSignature,         __deleteSignature,          "The module signature.")
+    nodes               = property(__getNodes,              __setNodes,             __deleteNodes,              "The functions in the module, keyed by the starting address.")
+    num_functions       = property(__getNumFunctions,       __setNumFunctions,      __deleteNumFunctions,       "The number of functions in the module.")
+    imported_functions  = property(__getImportedFunctions,  __setImportedFunctions, __deleteImportedFunctions,  "The functions imported from other libraries.")

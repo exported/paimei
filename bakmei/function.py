@@ -171,7 +171,7 @@ class function (pgraph.graph, pgraph.node):
             ret_val = {}
             
             ss = sql_singleton()
-            ss.select_function_basic_blocks(self.DSN, self.dbid)
+            results = ss.select_function_basic_blocks(self.DSN, self.dbid)
             
             for basic_block_id in results:
                 new_basic_block = basic_block(self.DSN, basic_block_id)

@@ -180,6 +180,7 @@ cUPDATE_FUNCTION_LOCAL_VAR_SIZE             = "UPDATE frame_info SET local_var_s
 cSELECT_MODULE                              = "SELECT name, base, signature FROM module WHERE id = %d;"
 cSELECT_MODULE_NUM_FUNCTIONS                = "SELECT count(*) FROM function WHERE module = %d;"
 cSELECT_MODULE_FUNCTIONS                    = "SELECT id FROM function WHERE module = %d"
+cSELECT_MODULE_IMPORTED_FUNCTIONS                    = "SELECT id FROM function WHERE module = %d AND import IS NOT NULL"
 cSELECT_MODULE_FUNCTION_REFERENCES          = "SELECT b.start_address, d.start_address FROM cross_references AS c, function AS b, function AS d WHERE c.source = b.id AND c.destination = d.id AND b.module = %d AND d.module = %d AND c.reference_type = 1"
                                             
                                             

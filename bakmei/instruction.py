@@ -23,17 +23,17 @@ from sql_singleton  import *
 class instruction(object):
     '''
     This class represents an assembly instruction.
-    
+
     @author:       Cameron Hotchkies, Pedram Amini
     @license:      GNU General Public License 2.0 or later
     @contact:      chotchkies@tippingpoint.com
     @organization: www.openrce.org
-    
+
     @cvar dbid:    Database Identifier
     @type dbid:    Integer
     @cvar DSN:     Database location
     @type DSN:     String
-    
+
     @type ea:       DWORD
     @type comment:  String
     @type bytes:    List
@@ -41,12 +41,12 @@ class instruction(object):
     @type disasm:   String
     @type op1:      String
     @deprecated: This will be replaced by a list of operands, allowing for more flexibility.
-    
+
     @type op2:      String
     @deprecated op2: This will be replaced by a list of operands, allowing for more flexibility.
-    
+
     @type op3:      String
-    @deprecated op3: This will be replaced by a list of operands, allowing for more flexibility.   
+    @deprecated op3: This will be replaced by a list of operands, allowing for more flexibility.
     '''
 
     __ea            = None                      # effective address of instruction
@@ -58,11 +58,12 @@ class instruction(object):
     __op3           = None                      # the third operand (optional)
 
     dbid            = None                      # Database ID
-    DSN   = None
+    DSN             = None
     basic_block     = None                      # parent basic_block id
 
     __cached        = False
 
+    # TODO : remove these bad boys
     refs_string     = None                      # string, if any, that this instruction references
     refs_api        = None                      # known API, if any, that this instruction references
     refs_arg        = None                      # argument, if any, that this instruction references
@@ -90,7 +91,7 @@ class instruction(object):
     def __load_from_sql(self):
         ss = sql_singleton()
         results = ss.select_instruction(self.DSN, self.dbid)
-                
+
         if results:
             self.__ea       = results['address']
             self.__mnem     = results['mnemonic']
@@ -185,7 +186,7 @@ class instruction(object):
 
         ss = sql_singleton()
         ss.update_instruction_address(self.DSN, self.dbid, value)
-        
+
     ####
 
     def __deleteAddress (self):
@@ -225,7 +226,7 @@ class instruction(object):
 
         ss = sql_singleton()
         ss.update_instruction_comment(self.DSN, self.dbid, value)
-        
+
     ####
 
     def __deleteComment (self):
@@ -269,11 +270,14 @@ class instruction(object):
         bytes = ""
 
         for byte in value:
-            bytes += hex(byte)[2:]
+            temp_byte = hex(byte)[2:]
+            if len(temp_byte) < 2:
+                temp_byte = "0" + temp_byte
+            bytes += temp_byte
 
         ss = sql_singleton()
         ss.update_instruction_bytes(self.DSN, self.dbid, bytes)
-            
+
     ####
 
     def __deleteBytes (self):
@@ -315,7 +319,7 @@ class instruction(object):
 
         ss = sql_singleton()
         ss.update_instruction_mnemonic(self.DSN, self.dbid, value)
-        
+
     ####
 
     def __deleteMnemonic (self):
@@ -396,7 +400,7 @@ class instruction(object):
 
         ss = sql_singleton()
         ss.update_instruction_operand(self.DSN, self.dbid, 2, value)
-        
+
     ####
 
     def __deleteOperand2 (self):
@@ -671,7 +675,7 @@ class instruction(object):
     ea      = property(__getAddress,    __setAddress,   __deleteAddress,    "The address of the instruction.")
     comment = property(__getComment,    __setComment,   __deleteComment,    "The instruction comment.")
     bytes   = property(__getBytes,      __setBytes,     __deleteBytes,      "The raw bytes of the instruction.")
-    mnem    = property(__getMnemonic,   __setMnemonic,  __deleteMnemonic,   "The instruction mnemonic.")    
+    mnem    = property(__getMnemonic,   __setMnemonic,  __deleteMnemonic,   "The instruction mnemonic.")
     op1     = property(__getOperand1,   __setOperand1,  __deleteOperand1,   "The first operand.")
     op2     = property(__getOperand2,   __setOperand2,  __deleteOperand2,   "The second operand.")
     op3     = property(__getOperand3,   __setOperand3,  __deleteOperand3,   "The third operand.")

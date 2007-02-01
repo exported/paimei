@@ -24,7 +24,7 @@
 '''
 
 import time
-import pida
+from bakmei import sql_singleton, sqlite_queries
 from pysqlite2 import dbapi2 as sqlite
 
 DEPTH_FUNCTIONS    = 0x0001
@@ -64,15 +64,12 @@ def main():
 
     if not output_file:
         Warning("Cancelled.")
-    else:
-        for tbl in pida.SQLITE_CREATE_PIDA_SCHEMA:
-            curs.execute(tbl)
-
+    else:     
         print "Analyzing IDB..."
         start = time.time()
 
         try:
-            signature = pida.signature(GetInputFilePath())
+            signature = bakmei.signature(GetInputFilePath())
         except:
             print "OBDF.DUMP> Could not calculate signature for %s, perhaps the file was moved?" % GetInputFilePath()
             signature = ""
@@ -89,10 +86,14 @@ def main():
 
         print "Done. Completed in %f seconds.\n" % round(time.time() - start, 3)
 
+####################################################################################################################
+
 def find_bb_by_instruction(instruction_id):
     res = curs.execute("SELECT basic_block FROM instruction WHERE id = %d;" % instruction_id).fetchone()
 
     return res[0]
+
+####################################################################################################################
 
 def set_up_cross_references():
     function_added = {}
@@ -105,8 +106,6 @@ def set_up_cross_references():
             curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 8);" % (id_tuple_source[0], id_tuple_dest[0]))
 
             if not basic_block_added.has_key((id_tuple_source[1], id_tuple_dest[1])):
-                if id_tuple_source[1] == 50:
-                    print "saving %d to %d" % (50, id_tuple_dest[1])
                 curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 4);" % (id_tuple_source[1], id_tuple_dest[1]))
                 basic_block_added[(id_tuple_source[1], id_tuple_dest[1])] = 1
 
@@ -115,9 +114,13 @@ def set_up_cross_references():
                     function_added[(id_tuple_source[2], id_tuple_dest[2])] = 1
 
         except KeyError, details:
-            # TODO pick up all this lost code
+            # TODO pick up all this lost code (Mainly thunks and unfunctioned code)
             print "Missing instruction for 0x%08x / 0x%08x - It's probably not in a defined function. Skipping." % xref
+            # print "0x%08x: Missing Source?" % xref[0]
+            # print "0x%08x: Missing Dest?" % xref[1]
     sql_connection.commit()
+
+####################################################################################################################
 
 def copy_from_memory(filename):
     outfile = filename
@@ -127,7 +130,7 @@ def copy_from_memory(filename):
 
     curs.execute("ATTACH DATABASE '%s' AS extern;" % outfile)
 
-    for tbl in pida.SQLITE_CREATE_PIDA_SCHEMA:
+    for tbl in sqlite_queries.SQLITE_CREATE_BAKMEI_SCHEMA:
         tb2 = tbl.replace("TABLE ", "TABLE extern.")
 
         curs.execute(tb2)
@@ -144,25 +147,67 @@ def copy_from_memory(filename):
     sql_connection.close()
 
 ####################################################################################################################
-def enumerate_imports ():
-    '''
-    Enumerate and add nodes / edges for each import within the module. This routine will pass through the entire
-    module structure.
-    '''
 
-    #for all instructions:
-    #    if instruction.refs_api:
-    #        (address, api) = instruction.refs_api
-    #
-    #        node = function(address, module=self)
-    #        self.add_node(node)
-    #
-    #        edge = pgraph.edge.edge(func.ea_start, address)
-    #        self.add_edge(edge)
+def enumerate_imports (module_id):
+    """
+    Enumerate and add nodes / edges for each import within the module. This routine only checks the .idata section
+    
+    This code was blatantly stolen from Cody's get_lib_calls script
+    """
 
-    # TODO this seems like a SQL query.. ask pedram
-    pass
+    seg_start = SegByName(".idata")
+    seg_end = SegEnd(seg_start)
 
+    # Set first import address
+    import_ea = seg_start
+
+    # Do not leave the .idata segment
+    while import_ea < seg_end:
+        
+        #Get the name of the imported function
+        import_name = Name(import_ea);
+         
+        if len(import_name) > 1:
+            # TODO : Save the library name as well
+            curs.execute("INSERT INTO import (name, module, library) VALUES ('%s', %d, '');" % (import_name.replace("'","''"), module_id))
+            import_id = curs.lastrowid
+
+            sql = ss.INSERT_FUNCTION % (module_id, import_ea, import_ea, import_name)        
+            curs.execute(sql)
+            dbid = curs.lastrowid
+            
+            curs.execute("UPDATE function SET import=%d WHERE id=%d;" % (import_id, dbid))
+            
+            sql_connection.commit()        
+            
+        # Advance to the next import
+        import_ea += 4        
+        
+    # Time to hit up the Flirt stuff (also stolen from Cody)
+    
+    # print "[+] Enumerating FLIRT imports"
+    
+    # From .text iterate functions for lib flag then xref
+    seg_start = SegByName(".text")
+
+    print_rest = False
+
+    for function_ea in Functions(seg_start, SegEnd(seg_start)):
+        # grab the function flags.
+        flags = GetFunctionFlags(function_ea)
+
+        if flags & FUNC_LIB or flags & FUNC_STATIC:
+            lib_name = GetFunctionName(function_ea)
+            
+            if len(lib_name) > 1:
+                xref_start = function_ea
+                #print "0x%08x: %s" % (function_ea, lib_name)
+                
+            print_rest = True
+        #else: # Thunks and statics
+            #if print_rest == True:
+                #print "Flags == %x" % flags
+                 
 ####################################################################################################################
 def _get_arg_ref (ea):
     '''
@@ -202,8 +247,8 @@ def _get_arg_ref (ea):
 
     return None
 
-
 ####################################################################################################################
+
 def _get_constant_ref (ea, opnum=0):
     '''
     Return the constant value, if any, reference by the instruction.
@@ -238,8 +283,8 @@ def _get_constant_ref (ea, opnum=0):
 
     return None
 
-
 ####################################################################################################################
+
 def _get_var_ref (ea):
     '''
     Return the stack offset of the local variable referenced, if any, by the instruction.
@@ -272,8 +317,8 @@ def _get_var_ref (ea):
 
     return None
 
-
 ####################################################################################################################
+
 def get_string_reference (ea):
     '''
     If the specified instruction references a string, get and return the contents of that string.
@@ -287,9 +332,6 @@ def get_string_reference (ea):
     @rtype:  Mixed
     @return: ASCII representation of string referenced from ea if found, None otherwise.
     '''
-
-    # TODO: move to dump script
-
     dref = Dfirst(ea)
     s    = ""
 
@@ -311,6 +353,7 @@ def get_string_reference (ea):
     return s
 
 ####################################################################################################################
+
 def create_instruction (ea, basic_block_id, function_id, module_id):
     '''
     Analyze the instruction at ea.
@@ -324,8 +367,6 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
     @type  basic_block: pgraph.basic_block
     @param basic_block: (Optional, Def=None) Pointer to parent basic block container
     '''
-
-    ss = pida.sql_singleton()
 
     # raw instruction bytes.
     bytes = ""
@@ -345,19 +386,19 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
 
     comment = Comment(ea)
     if comment != None:
-        curs.execute(ss.UPDATE_INSTRUCTION_COMMENT % (comment.replace("'", "''"), dbid))
-
+        ss.update_instruction_comment(global_DSN, dbid, comment)
+        
     # instruction mnemonic and operands.
     op1  = GetOpnd(ea, 0)
     if op1 != None and op1 != "":
-        curs.execute(ss.UPDATE_INSTRUCTION_OPERAND1 % (op1.replace("'", "''"), dbid))
+        ss.update_instruction_operand(global_DSN, dbid, 1, op1)
         op2  = GetOpnd(ea, 1)
         if op2 != None and op2 != "":
-            curs.execute(ss.UPDATE_INSTRUCTION_OPERAND2 % (op2.replace("'", "''"), dbid))
+            ss.update_instruction_operand(global_DSN, dbid, 2, op2)        
             op3  = GetOpnd(ea, 2)
-            if op3 != None and op3 != "":
-                curs.execute(ss.UPDATE_INSTRUCTION_OPERAND3 % (op3.replace("'", "''"), dbid))
-
+            if op3 != None and op3 != "":                
+                ss.update_instruction_operand(global_DSN, dbid, 3, op3)
+        
 
     #TODO process these last?
     # XXX - this is a dirty hack to determine if and any API reference.
@@ -386,27 +427,7 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
     return dbid
 
 ####################################################################################################################
-def __init_collect_function_chunks__ (ea_start):
-    '''
-    Generate and return the list of function chunks (including the main one) for the current function. Ripped from
-    idb2reml (Ero Carerra).
 
-    @rtype   List
-    @return: List of function chunks (start, end tuples) for the current function.
-    '''
-
-    chunks   = []
-    iterator = func_tail_iterator_t(get_func(ea_start))
-    status   = iterator.main()
-
-    while status:
-        chunk = iterator.chunk()
-        chunks.append((chunk.startEA, chunk.endEA))
-        status = iterator.next()
-
-    return chunks
-
-####################################################################################################################
 def create_basic_block (ea_start, ea_end, depth, analysis, function_id, module_id):
     '''
     Analyze the basic block from ea_start to ea_end.
@@ -421,7 +442,7 @@ def create_basic_block (ea_start, ea_end, depth, analysis, function_id, module_i
     @param depth:    (Optional, Def=DEPTH_FULL) How deep to analyze the module
     @type  analysis: Integer
     @param analysis: (Optional, Def=ANALYSIS_NONE) Which extra analysis options to enable
-    @type  function: pida.function
+    @type  function: bakmei.function
     @param function: (Optional, Def=None) Pointer to parent function container
     '''
 
@@ -443,6 +464,7 @@ def create_basic_block (ea_start, ea_end, depth, analysis, function_id, module_i
         sql_connection.commit()
 
 ##################################################################################################################
+
 def branches_from (ea):
     '''
     Enumerate and return the list of branches from the supplied address, *including* the next logical instruction.
@@ -456,14 +478,7 @@ def branches_from (ea):
     @return: List of branches from the specified address.
     '''
 
-#    if is_call_insn(ea):
-#        return []
-
     xrefs = CodeRefsFrom(ea, 1)
-
-    if ea == 0x411a2a:
-        print "JJJ"
-        print xrefs
 
     # if the only xref from ea is next ea, then return nothing.
     if len(xrefs) == 1 and xrefs[0] == NextNotTail(ea):
@@ -477,6 +492,7 @@ def branches_from (ea):
 
 
 ####################################################################################################################
+
 def branches_to (ea):
     '''
     Enumerate and return the list of branches to the supplied address, *excluding* the previous logical instruction.
@@ -505,6 +521,8 @@ def branches_to (ea):
 
     return xrefs
 
+####################################################################################################################
+
 def uuid_bin_to_string (uuid):
      '''
      Convert the binary representation of a UUID to a human readable string.
@@ -524,6 +542,7 @@ def uuid_bin_to_string (uuid):
      return "%08x-%04x-%04x-%04x-%04x%08x" % (block1, block2, block3, block4, block5, block6)
 
 ####################################################################################################################
+
 def __init_enumerate_rpc__ (module_id):
     '''
     Enumerate all RPC interfaces and add additional properties to the RPC functions. This routine will pass through
@@ -576,29 +595,35 @@ def __init_enumerate_rpc__ (module_id):
                 if function_id:
                     curs.execute("INSERT INTO rpc_data (function, module, uuid, opcode) VALUES (%d, %d, '%s', %d);" % (function_id, module_id, uuid_bin_to_string(uuid), opcode))
                 else:
-                    print "PIDA.MODULE> No function node for RPC routine @%08X" % addr
+                    print "BAKMEI.MODULE> No function node for RPC routine @%08X" % addr
 
                 ea     += 4
                 opcode += 1
 
-
 ####################################################################################################################
+
 def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
     '''
     Enumerate the basic block boundaries for the current function and store them in a graph structure.
+    Partly stolen from Ero
     '''
+    chunks   = []
+    iterator = func_tail_iterator_t(get_func(ea_start))
+    status   = iterator.main()
 
-    chunks = __init_collect_function_chunks__(ea_start)
-
+    while status:
+        chunk = iterator.chunk()
+        chunks.append((chunk.startEA, chunk.endEA))
+        status = iterator.next()
+     
     for (chunk_start, chunk_end) in chunks:
-        edges       = []
         block_start = chunk_start
 
         # enumerate the nodes.
         for ea in Heads(chunk_start, chunk_end):
             # ignore data heads.
             if not isCode(GetFlags(ea)):
-                continue
+                continue           
 
             prev_ea       = PrevNotTail(ea)
             next_ea       = NextNotTail(ea)
@@ -614,7 +639,8 @@ def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
                 next_ea = PrevNotTail(next_ea)
 
             # if the current instruction is a ret instruction, end the current node at ea.
-            if is_ret_insn(ea):
+            # if there is a branch from the current instruction, end the current node at ea.            
+            if is_ret_insn(ea) or br_from or chunk_end == next_ea:
                 bb = create_basic_block(block_start, ea, depth, analysis, function_id, module_id)
 
                 # start a new block at the next ea.
@@ -623,24 +649,16 @@ def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
             # if there is a branch to the current instruction, end the current node at previous ea.
             elif br_to and block_start != ea:
                 bb = create_basic_block(block_start, prev_ea, depth, analysis, function_id, module_id)
-
-                # draw an "implicit" branch.
-                if not is_ret_insn(prev_ea):
-                    edges.append((block_start, ea, 0x0000FF))
-
+                
                 # start a new block at ea.
-                block_start = ea
-
-            # if there is a branch from the current instruction, end the current node at ea.
-            elif br_from:
-                bb = create_basic_block(block_start, ea, depth, analysis, function_id, module_id)
-
-                # start a new block at the next ea.
-                block_start = next_ea
+                block_start = ea                     
             else:
-                # TODO find a way to catch imports
                 pass
+                
+
+
 ####################################################################################################################
+
 def __init_args_and_local_vars__ (func_struct, frame_struct, function_id, module_id):
     '''
     Calculate the total size of arguments, # of arguments and # of local variables. Update the internal class member
@@ -649,9 +667,7 @@ def __init_args_and_local_vars__ (func_struct, frame_struct, function_id, module
 
     if not frame_struct:
         return
-
-    ss = pida.sql_singleton()
-
+  
     saved_reg_size = func_struct.frregs
     frame_size     = get_frame_size(func_struct)
     ret_size       = get_frame_retsize(func_struct)
@@ -687,8 +703,9 @@ def __init_args_and_local_vars__ (func_struct, frame_struct, function_id, module
             curs.execute("INSERT INTO function_variables (function, module, name, flags, offset) VALUES (%d, %d, '%s', %d, %d);" %(function_id, module_id, name.replace("'", "''"), vtype, end_offset))
 
     arg_size = frame_offset - argument_boundary
-    curs.execute(ss.UPDATE_FUNCTION_ARG_SIZE % (arg_size, function_id))
+    ss.update_function_arg_size(global_DSN, function_id, arg_size)
 
+####################################################################################################################
 
 def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE):
     sql = ss.INSERT_MODULE % (name, MinEA() - 0x1000, "0")
@@ -702,7 +719,7 @@ def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE
 
     # enumerate and add the functions within the module.
     if log:
-        print "Analyzing functions..."
+        print "Analyzing %d functions..." % len(Functions(MinEA(), MaxEA()))
 
     for ea in Functions(MinEA(), MaxEA()):
         func = create_function(ea, depth, analysis, module_id)
@@ -712,7 +729,7 @@ def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE
         if log:
             print"Enumerating imports..."
 
-        enumerate_imports()
+        enumerate_imports(module_id)
 
     # enumerate and propogate attributes for any discovered RPC interfaces.
     if analysis & ANALYSIS_RPC:
@@ -727,59 +744,68 @@ def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE
 
     # TODO do data xrefs as well (this may clear up imports not being stored)
 
+####################################################################################################################
+
 def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module_id=0):
-        ss = pida.sql_singleton()
+    # The end address is the same as the start address for the insertion
+    sql = ss.INSERT_FUNCTION % (module_id, ea_start, ea_start, "")
+    
+    curs.execute(sql)
+    dbid = curs.lastrowid
+    
+    sql_connection.commit()
+    
+    # grab the ida function and frame structures.
+    func_struct  = get_func(ea_start)
+    frame_struct = get_frame(func_struct)
+    
+    # grab the function flags.
+    flags = GetFunctionFlags(ea_start)
+    ss.update_function_flags(global_DSN, dbid, flags)                
+    
+    if not func_struct:
+        print "0x%08x: [X] Bad Function?" % ea_start
+    
+    #TODO should this be done first?
+    # if we're not in a "real" function. set the id and ea_start manually and stop analyzing.
+    # LIES! FUNC_LIB and possibly FUNC_STATIC are in fact functions, this may be for thunks.
+    #if not func_struct or flags & FUNC_LIB or flags & FUNC_STATIC:
+    #    name       = get_name(ea_start, ea_start)
+    #    is_import  = True
+    #
+    #    return dbid
+    ######### END TODO ############
+    
+    ea_start       = func_struct.startEA
+    ea_end         = PrevAddr(func_struct.endEA)
+    name           = GetFunctionName(ea_start)
+    
+    curs.execute("UPDATE function SET start_address=%d, end_address=%d, name='%s' WHERE id = %d;" % (ea_start, ea_end, name.replace("'","''"), dbid))
+    
+    saved_reg_size = func_struct.frregs
+    frame_size     = get_frame_size(func_struct)
+    ret_size       = get_frame_retsize(func_struct)
+    local_var_size = func_struct.frsize
+    
+    curs.execute("INSERT INTO frame_info (function, saved_reg_size, frame_size, ret_size, local_var_size) VALUES (%d, %d, %d, %d, %d);" % (dbid, saved_reg_size, frame_size, ret_size, local_var_size))
+    
+    chunks         = [(ea_start, ea_end)]
+    
+    __init_args_and_local_vars__(func_struct, frame_struct, dbid, module_id)
+    
+    if ea_start == 0x6a6cc660:
+        print "Should be saving blocks and insn"
+    
+    if depth & DEPTH_BASIC_BLOCKS:
+        __init_basic_blocks__(ea_start, depth, analysis, dbid, module_id)
+    
+    return dbid
 
-        # The end address is the same as the start address for the insertion
-        sql = ss.INSERT_FUNCTION % (module_id, ea_start, ea_start, "")
+####################################################################################################################
 
-        curs.execute(sql)
-        dbid = curs.lastrowid
-
-        sql_connection.commit()
-
-        # grab the ida function and frame structures.
-        func_struct  = get_func(ea_start)
-        frame_struct = get_frame(func_struct)
-
-        # grab the function flags.
-        flags = GetFunctionFlags(ea_start)
-        curs.execute(ss.UPDATE_FUNCTION_FLAGS % (flags, dbid))
-
-        #TODO should this be done first?
-        # if we're not in a "real" function. set the id and ea_start manually and stop analyzing.
-        if not func_struct or flags & FUNC_LIB or flags & FUNC_STATIC:
-            name       = get_name(ea_start, ea_start)
-            is_import  = True
-
-            return dbid
-        ######### END TODO ############
-
-        ea_start       = func_struct.startEA
-        ea_end         = PrevAddr(func_struct.endEA)
-        name           = GetFunctionName(ea_start)
-
-        curs.execute("UPDATE function SET start_address=%d, end_address=%d, name='%s' WHERE id = %d;" % (ea_start, ea_end, name.replace("'","''"), dbid))
-
-        saved_reg_size = func_struct.frregs
-        frame_size     = get_frame_size(func_struct)
-        ret_size       = get_frame_retsize(func_struct)
-        local_var_size = func_struct.frsize
-
-        curs.execute("INSERT INTO frame_info (function, saved_reg_size, frame_size, ret_size, local_var_size) VALUES (%d, %d, %d, %d, %d);" % (dbid, saved_reg_size, frame_size, ret_size, local_var_size))
-
-        chunks         = [(ea_start, ea_end)]
-
-        __init_args_and_local_vars__(func_struct, frame_struct, dbid, module_id)
-
-        if depth & DEPTH_BASIC_BLOCKS:
-            __init_basic_blocks__(ea_start, depth, analysis, dbid, module_id)
-
-        return dbid
-
-
-sql_connection = sqlite.connect(":memory:")
-ss = pida.sql_singleton()
+ss = sql_singleton.sql_singleton()
+global_DSN = ":memory:"
+sql_connection = ss.connection(global_DSN)
 curs = sql_connection.cursor()
 
 # Initialize global BB edges list

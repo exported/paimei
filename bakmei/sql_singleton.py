@@ -19,7 +19,7 @@ from sqlite_queries import *
 
 import bakmei
 
-class sql_singleton:
+class sql_singleton(object):
     '''
      A singleton used to store the SQL connection
 
@@ -32,10 +32,12 @@ class sql_singleton:
     # storage for the instance reference
     __instance = None
 
-    
     def extract_DSN_values(DSN):
         '''
         To be honest this is not really a standard DSN format, kind of a hack that looks similar and I call it DSN
+        
+        @rtype: tuple
+        @return: A tuple containing the parsed information. The structure of the tuple changes based on the source database.
         '''
         sections = DSN.split(';')
         
@@ -72,7 +74,7 @@ class sql_singleton:
         
         return None
 
-    class __impl:
+    class __impl(object):
         '''
         Implementation of the singleton interface
         '''
@@ -92,6 +94,9 @@ class sql_singleton:
                 return True
             except ValueError:
                 return False
+
+        def test(self):
+            print "inner"
 
 
         INSERT_INSTRUCTION                     = cINSERT_INSTRUCTION
@@ -257,7 +262,7 @@ class sql_singleton:
             results = curs.execute(sql_query % basic_block_id).fetchall()
 
             for result_id in results:
-                ret_val += result_id
+                ret_val.append(result_id)
 
             return ret_val
 
@@ -325,7 +330,7 @@ class sql_singleton:
             results = curs.execute(sql_query % function_id).fetchall()
 
             for result_row in results:
-                ret_val += {'name':result_row[0]}
+                ret_val.append({'name':result_row[0]})
 
             return ret_val
 
@@ -343,7 +348,7 @@ class sql_singleton:
             results = curs.execute(sql_query % function_id).fetchall()
 
             for result_row in results:
-                ret_val += {'name':result_row[0]}
+                ret_val.append({'name':result_row[0]})
 
             return ret_val
 
@@ -360,7 +365,7 @@ class sql_singleton:
             results = curs.execute(bakmei.sqlite_queries.cSELECT_FUNCTION_BASIC_BLOCKS % function_id).fetchall()
 
             for result_row in results:
-                ret_val += result_row[0]
+                ret_val.append(result_row[0])
 
             return ret_val
 
@@ -425,7 +430,7 @@ class sql_singleton:
                 
             results = curs.execute(sql_query % (function_id, function_id)).fetchall()
             for result_row in results:
-                ret_val += (result_row[0], result_row[1])
+                ret_val.append((result_row[0], result_row[1]))
 
             return ret_val
 
@@ -452,11 +457,11 @@ class sql_singleton:
         def update_function_flags(self, DSN, function_id, flags):
             if DSN[:6] == "mysql;":
                 curs = self.connection(DSN).cursor()
-                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_FLAGS % (size, function_id))
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_FLAGS % (flags, function_id))
                 
             else: #sqlite
                 curs = self.connection(DSN)
-                curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_FLAGS % (size, function_id))
+                curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_FLAGS % (flags, function_id))
                 curs.commit()
 
         def update_function_arg_size(self, DSN, function_id, size):
@@ -559,7 +564,7 @@ class sql_singleton:
                 
             results = curs.execute(sql_query % (module_id, module_id)).fetchall()
             for result_row in results:
-                ret_val += (result_row[0], result_row[1])
+                ret_val.append((result_row[0], result_row[1]))
 
             return ret_val
 
@@ -578,6 +583,23 @@ class sql_singleton:
 
             return ret_val
 
+        def select_module_imported_functions(self, DSN, module_id):
+            ret_val = []
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULE_IMPORTED_FUNCTIONS
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULE_IMPORTED_FUNCTIONS
+            
+            results = curs.execute(sql_query % module_id).fetchall()
+            
+            for result_row in results:
+                ret_val.append(result_row[0])
+
+            return ret_val
+
         def select_module_functions(self, DSN, module_id):
             ret_val = []
 
@@ -591,7 +613,7 @@ class sql_singleton:
             results = curs.execute(sql_query % module_id).fetchall()
             
             for result_row in results:
-                ret_val += result_row[0]
+                ret_val.append(result_row[0])
 
             return ret_val
 
@@ -643,12 +665,10 @@ class sql_singleton:
             '''
 
             if DSN == None:
-                print "DSN missing"
-                raise "wtf is the DSN?"
                 DSN = self.__active_DSN
 
             if not self.__sql.has_key(DSN):
-                "Connection missing"
+                # Connection missing
                 self.__init_connection(DSN)
 
             return self.__sql[DSN]
@@ -706,6 +726,691 @@ class sql_singleton:
         def cursor(self):
             return self.__sql[self.__active_DSN].cursor()
 
+############### Wrapper properties to expose methods to the documentation ####################
+
+    def select_instruction(self, DSN, instruction_id):
+        '''
+        Retrieve the attributes of the instruction.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to query.
+        
+        @rtype:                 dict
+        @return:                A dict containing the instruction attributes. The keys for the dictionary are "address", "mnemonic", "operand1", "operand2", "operand3", "comment", "bytes", "basic_block".
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_instruction(DSN, instruction_id)  
+
+    def update_instruction_mnemonic(self, DSN, instruction_id, mnemonic):
+        '''
+        Update the mnemonic of an instruction in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to update.
+        @type   mnemonic:       String
+        @param  mnemonic:       The mnemonic of the instruction.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_instruction_mnemonic(DSN, instruction_id, mnemonic)  
+
+    def update_instruction_comment(self, DSN, instruction_id, comment):
+        '''
+        Update the comment on an instruction in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to update.
+        @type   comment:        String
+        @param  comment:        The comment on the instruction.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_instruction_comment(DSN, instruction_id, comment)  
+
+    def update_instruction_operand(self, DSN, instruction_id, operand_seq, value):
+        '''
+        Update the operand of an instruction.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to update.
+        @type   operand_seq:    Integer
+        @param  operand_seq:    The placement of the operand in the instruction.
+        @type   value:          String
+        @param  value:          The textual representation of the operand.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_instruction_operand(DSN, instruction_id, operand_seq, value)  
+
+    def update_instruction_flags(self, DSN, instruction_id, flags):
+        '''
+        Update the flags of an instruction in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to update.
+        @type   flags:          Integer
+        @param  flags:          The flags of the instruction.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_instruction_flags(DSN, instruction_id, flags)  
+
+    def update_instruction_address(self, DSN, instruction_id, address):
+        '''
+        Update the address of an instruction in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to update.
+        @type   address:        Integer
+        @param  address:        The address of the instruction.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_instruction_address(DSN, instruction_id, address)  
+
+    def update_instruction_bytes(self, DSN, instruction_id, byte_string):
+        '''
+        Update the bytes of an instruction in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to update.
+        @type   byte_string:    String
+        @param  byte_string:    The bytes of the instruction packed in hex.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_instruction_bytes(DSN, instruction_id, byte_string)  
+
+    ## BASIC BLOCK ###
+
+    def select_basic_block(self, DSN, basic_block_id):
+        '''
+        Retrieve the attributes of the basic block.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   basic_block_id: Integer
+        @param  basic_block_id: The ID of the basic_block to query.
+        
+        @rtype:                 dict
+        @return:                A dictionary of all the attributes for the given basic block. The keys for the dictionary are "module", "function", "start_address", "end_address".
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_basic_block(DSN, basic_block_id)  
+
+    def select_basic_block_num_instructions(self, DSN, basic_block_id):
+        '''
+        Retrieve the number of instructions contained in the basic block.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   basic_block_id: Integer
+        @param  basic_block_id: The ID of the basic_block to query.
+        
+        @rtype:                 Integer
+        @return:                The number of instructions contained in the basic block.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_basic_block_num_instructions(DSN, basic_block_id)  
+
+    def select_basic_block_sorted_instructions(self, DSN, basic_block_id):
+        '''
+        Retrieve the instructions contained in the basic block ordered by address.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   basic_block_id: Integer
+        @param  basic_block_id: The ID of the basic_block to query.
+        
+        @rtype:                 [Integer]
+        @return:                A list of the IDs of the instructions contained in the basic block.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_basic_block_sorted_instructions(DSN, basic_block_id)  
+
+    def update_basic_block_start_address(self, DSN, basic_block_id, address):
+        '''
+        Update the starting address of a basic block in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   basic_block_id: Integer
+        @param  basic_block_id: The ID of the basic block to update.
+        @type   address:        Integer
+        @param  address:        The basic block starting address.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_basic_block_start_address(DSN, basic_block_id, address)  
+
+    def update_basic_block_end_address(self, DSN, basic_block_id, address):
+        '''
+        Update the ending address of a basic block in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   basic_block_id: Integer
+        @param  basic_block_id: The ID of the basic block to update.
+        @type   address:        Integer
+        @param  address:        The basic block ending address.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_basic_block_end_address(DSN, basic_block_id, address)  
+
+    ## FUNCTION ###
+
+    def select_function(self, DSN, function_id):
+        '''
+        Retrieve the attributes of the function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        
+        @rtype:                 dict
+        @return:                A dict containing the function attributes. The keys for the dictionary are "name", "module", "start_address", "end_address".
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_function(DSN, function_id)  
+
+    def select_frame_info(self, DSN, function_id):
+        '''
+        Retrieve the frame information for the function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        
+        @rtype:                 dict
+        @return:                A dict containing the frame information attributes. The keys for the dictionary are "saved_reg_size", "frame_size", "ret_size", "local_var_size", "arg_size".
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_frame_info(DSN, function_id)  
+
+    def select_args(self, DSN, function_id):
+        '''
+        Retrieve the arguments of the function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        
+        @rtype:                 [dict]
+        @return:                A list of dicts containing the argument attributes. The keys for the dictionary are "name".
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_args(DSN, function_id)  
+
+    def select_local_vars(self, DSN, function_id):
+        '''
+        Retrieve the local variables of the function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        
+        @rtype:                 [dict]
+        @return:                A list of dicts containing the local variable attributes. The keys for the dictionary are "name".
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_local_vars(DSN, function_id)  
+
+    def select_function_basic_blocks(self, DSN, function_id):
+        '''
+        Retrieve the basic blocks contained in the function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        
+        @rtype:                 [Integer]
+        @return:                A list of the IDs of the basic blocks contained in the function.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_function_basic_blocks(DSN, function_id)  
+
+    def select_function_num_instructions(self, DSN, function_id):
+        '''
+        Retrieve the number of instructions contained in the function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        
+        @rtype:                 Integer
+        @return:                The number of instructions contained in the function.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_function_num_instructions(DSN, function_id)
+
+    def select_function_num_vars(self, DSN, function_id, var_type):
+        '''
+        Retrieve the number of a given type of variables in the function.
+        
+        VAR_TYPE_ARGUMENT   = 1
+        
+        VAR_TYPE_LOCAL      = 2
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        @type   var_type:       Integer
+        @param  var_type:       The address contained in the basic block.
+        @rtype:                 Integer
+        @return:                The number of variables in the function.
+        
+        @seealso:               defines.py
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_function_num_vars(DSN, function_id, var_type)  
+                
+    def select_function_basic_block_by_address(self, DSN, function_id, address):
+        '''
+        Retrieve the basic block in the function containing the given address.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        @type   address:        Integer
+        @param  address:        The address contained in the basic block.
+        @rtype:                 Integer
+        @return:                The ID of the basic block to be retrieved.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_function_basic_block_by_address(DSN, function_id, address)
+        
+    def select_function_basic_block_references(self, DSN, function_id):
+        '''
+        Retrieve the basic block cross references for the function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        @rtype:                 tuple
+        @return:                A tuple in the format of (src_basic_block_id, dst_basic_block_id).
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_function_basic_block_references(DSN, function_id)
+
+    def update_function_start_address(self, DSN, function_id, address):
+        '''
+        Update the starting address of a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   address:        Integer
+        @param  address:        The function starting address.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_start_address(DSN, function_id, address)
+        
+    def update_function_end_address(self, DSN, function_id, address):
+        '''
+        Update the ending address of a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   address:        Integer
+        @param  address:        The function end address.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_end_address(DSN, function_id, address)
+         
+    def update_function_flags(self, DSN, function_id, flags):
+        '''
+        Update the flags for a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   flags:          Integer
+        @param  flags:          The function flags.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_flags(DSN, function_id, flags)
+
+    def update_function_arg_size(self, DSN, function_id, size):
+        '''
+        Update the function argument size for a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   size:           Integer
+        @param  size:           The total function arguments size.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_arg_size(DSN, function_id, size)
+
+    def update_function_name(self, DSN, function_id, name):
+        '''
+        Update the name of a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   name:           String
+        @param  name:           The name of the function.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_name(DSN, function_id, name)
+
+    def update_function_saved_reg_size(self, DSN, function_id, size):
+        '''
+        Update the saved registers size for a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   size:           Integer
+        @param  size:           The saved registers size.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_saved_reg_size(DSN, function_id, size)
+
+    def update_function_frame_size(self, DSN, function_id, size):
+        '''
+        Update the frame size for a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   size:           Integer
+        @param  size:           The frame size.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_frame_size(DSN, function_id, size)        
+
+    def update_function_ret_size(self, DSN, function_id, size):
+        '''
+        Update the return variable size for a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   size:           Integer
+        @param  size:           The return variable size.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_ret_size(DSN, function_id, size)
+
+    def update_function_local_var_size(self, DSN, function_id, size):
+        '''
+        Update the local variable size for a function in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   size:           Integer
+        @param  size:           The local variable size.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_function_local_var_size(DSN, function_id, size)        
+
+    ## MODULE ###
+
+    def select_module(self, DSN, module_id):
+        '''
+        Retrieve all the attributes of the given module
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to retrieve.
+        
+        @rtype:             dict
+        @return:            A dictionary of all the attributes for the given module. The keys for the dictionary are "name", "base" and "signature".
+        '''        
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_module(DSN, module_id)
+
+    def select_module_function_references(self, DSN, module_id):
+        '''
+        Returns a list of tuples consisting of the source function address and the destination function address.
+      
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to query.
+        
+        @rtype:             (Integer, Integer)
+        @return:            A tuple in the format of (src_function_id, dst_function_id).
+        '''        
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_module_function_references(DSN, module_id)        
+        
+    def select_module_num_functions(self, DSN, module_id):
+        '''
+        Retrieve the number of functions contained in the given module
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to query.
+        
+        @rtype:             Integer
+        @return:            The number of functions contained in the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_module_num_functions(DSN, module_id)
+        
+    def select_module_imported_functions(self, DSN, module_id):
+        '''
+        Retrieve all the function IDs that are imported into the given module
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to query.
+        
+        @rtype:             [Integer]
+        @return:            A list of the imported function IDs contained in the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_module_imported_functions(DSN, module_id)
+        
+    def select_module_functions(self, DSN, module_id):
+        '''
+        Retrieve all the function IDs that are contained in the given module
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to query.
+        
+        @rtype:             [Integer]
+        @return:            A list of the function IDs contained in the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_module_functions(DSN, module_id)
+        
+    def update_module_name(self, DSN, module_id, name):
+        '''
+        Update the module name in the database.
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to update.
+        @type   name:       String
+        @param  name:       The module name to store in the database.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_module_name(DSN, module_id, name)
+        
+    def update_module_base(self, DSN, module_id, base):
+        '''
+        Update the module base address in the database.
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to update.
+        @type   base:       Integer
+        @param  base:       The base address to store in the database.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_module_base(DSN, module_id, base)
+
+    def update_module_signature(self, DSN, module_id, signature):
+        '''
+        Update the module signature in the database.
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to update.
+        @type   signature:  String
+        @param  signature:  The signature to store in the database.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_module_signature(DSN)
+
+    def connection(self, DSN):
+        '''
+        Get the SQL connection object. 
+        This method is used to create the initial connection, and should not be called afterwards.
+        This should not be used when you can use the execute method.
+        
+        @return: the SQL connection object
+        
+        @seealso: sql_singleton.execute()
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.connection(DSN)        
+
+    def create_bakmei_database(self, DSN):
+        '''
+        Creates the schema for a Bak Mei database at the given DSN.
+        
+        @type   DSN: String
+        @param  DSN: The database source name
+        '''          
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.create_bakmei_database(DSN)
+        
+    def cursor(self):
+        '''
+        Get the SQL cursor object for the current connection. This should not be used when you can use the execute method.
+        
+        @return:    the SQL cursor object
+        @rtype:     cursor
+        
+        @seealso:   sql_singleton.execute()
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.cursor()
+
+
 ############### DO NOT MODIFY PAST THIS POINT ###############
 
     def __init__(self):
@@ -731,3 +1436,11 @@ class sql_singleton:
         Delegate access to implementation
         '''
         return setattr(self.__instance, attr, value)
+    
+    def test(self):
+        print sql_singleton.__instance
+        print "outer"
+
+class SingletonInstanceException(Exception):
+    def __str__(self):
+        return "The sql_singleton class must be instantiated before this method can be called."

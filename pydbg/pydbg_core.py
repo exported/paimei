@@ -612,7 +612,8 @@ class pydbg_core(object):
         '''
 
         # remove the TEB entry for the exiting thread id.
-        del(self.tebs[self.dbg.dwThreadId])
+        if self.tebs.has_key(self.dbg.dwThreadId):
+        	del(self.tebs[self.dbg.dwThreadId])
 
         return DBG_CONTINUE
 

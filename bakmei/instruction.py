@@ -451,6 +451,35 @@ class instruction(object):
 
         del self.__op3
 
+    ####################################################################################################################
+    # xrefs_to accessors
+
+    def __getXrefsTo (self):
+        '''
+        Returns the instructions that reference this instruction.
+
+        @rtype:   [instruction]
+        @returns: A list of instructions that reference this instructon
+        '''
+
+        ret_val = []
+
+        ss = sql_singleton()
+
+        results = ss.select_instruction_references_to(self.DSN, self.dbid)
+
+        for instruction_id in results:
+            ret_val.append(instruction(self.DSN, instruction_id))
+
+        return ret_val
+
+    def __setXrefsTo (self, value):
+
+        raise NotImplementedError, "xrefs_to is a read-only property"
+
+    def __deleteXrefsTo (self):
+        # nothing to destroy
+        pass
 
     ####################################################################################################################
     # disasm accessors
@@ -672,12 +701,13 @@ class instruction(object):
 
     ####################################################################################################################
     # PROPERTIES
-    ea      = property(__getAddress,    __setAddress,   __deleteAddress,    "The address of the instruction.")
-    comment = property(__getComment,    __setComment,   __deleteComment,    "The instruction comment.")
-    bytes   = property(__getBytes,      __setBytes,     __deleteBytes,      "The raw bytes of the instruction.")
-    mnem    = property(__getMnemonic,   __setMnemonic,  __deleteMnemonic,   "The instruction mnemonic.")
-    op1     = property(__getOperand1,   __setOperand1,  __deleteOperand1,   "The first operand.")
-    op2     = property(__getOperand2,   __setOperand2,  __deleteOperand2,   "The second operand.")
-    op3     = property(__getOperand3,   __setOperand3,  __deleteOperand3,   "The third operand.")
-    disasm  = property(__getDisasm,     __setDisasm,    __deleteDisasm,     "The textual disassembly of the instruction.")
-    id      = property(__getAddress,    __setAddress,   __deleteAddress,    "The identifier for the class (internal use only).")
+    ea          = property(__getAddress,    __setAddress,   __deleteAddress,    "The address of the instruction.")
+    comment     = property(__getComment,    __setComment,   __deleteComment,    "The instruction comment.")
+    bytes       = property(__getBytes,      __setBytes,     __deleteBytes,      "The raw bytes of the instruction.")
+    mnem        = property(__getMnemonic,   __setMnemonic,  __deleteMnemonic,   "The instruction mnemonic.")
+    op1         = property(__getOperand1,   __setOperand1,  __deleteOperand1,   "The first operand.")
+    op2         = property(__getOperand2,   __setOperand2,  __deleteOperand2,   "The second operand.")
+    op3         = property(__getOperand3,   __setOperand3,  __deleteOperand3,   "The third operand.")
+    disasm      = property(__getDisasm,     __setDisasm,    __deleteDisasm,     "The textual disassembly of the instruction.")
+    xrefs_to    = property(__getXrefsTo,    __setXrefsTo,   __deleteXrefsTo,    "The instructions that referenc this instruction.")
+    id          = property(__getAddress,    __setAddress,   __deleteAddress,    "The identifier for the class (internal use only).")

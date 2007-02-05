@@ -64,7 +64,7 @@ def main():
 
     if not output_file:
         Warning("Cancelled.")
-    else:     
+    else:
         print "Analyzing IDB..."
         start = time.time()
 
@@ -118,6 +118,32 @@ def set_up_cross_references():
             print "Missing instruction for 0x%08x / 0x%08x - It's probably not in a defined function. Skipping." % xref
             # print "0x%08x: Missing Source?" % xref[0]
             # print "0x%08x: Missing Dest?" % xref[1]
+
+    # Build Data XRefs
+
+    function_added = {}
+    basic_block_added = {}
+
+    for dref in global_drefs.keys():
+        try:
+            id_tuple_source = instruction_address_lookup[dref[0]]
+
+            curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 64);" % (id_tuple_source[0], dref[1]))
+
+            if not basic_block_added.has_key((id_tuple_source[1], dref[1])):
+                curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 32);" % (id_tuple_source[1], dref[1]))
+                basic_block_added[(id_tuple_source[1], dref[1])] = 1
+
+                if id_tuple_source[2] != id_tuple_dest[2] and not function_added.has_key((id_tuple_source[2], dref[1])):
+                    curs.execute("INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 16);" % (id_tuple_source[2], dref[1]))
+                    function_added[(id_tuple_source[2], id_tuple_dest[2])] = 1
+
+        except KeyError, details:
+            # TODO pick up all this lost code (Mainly thunks and unfunctioned code)
+            print "0x%08x: Missing instruction for Data Ref." % dref[0]
+            # print "0x%08x: Missing Source?" % xref[0]
+            # print "0x%08x: Missing Dest?" % xref[1]
+
     sql_connection.commit()
 
 ####################################################################################################################
@@ -151,7 +177,7 @@ def copy_from_memory(filename):
 def enumerate_imports (module_id):
     """
     Enumerate and add nodes / edges for each import within the module. This routine only checks the .idata section
-    
+
     This code was blatantly stolen from Cody's get_lib_calls script
     """
 
@@ -163,51 +189,37 @@ def enumerate_imports (module_id):
 
     # Do not leave the .idata segment
     while import_ea < seg_end:
-        
+
         #Get the name of the imported function
         import_name = Name(import_ea);
-         
+
         if len(import_name) > 1:
             # TODO : Save the library name as well
             curs.execute("INSERT INTO import (name, module, library) VALUES ('%s', %d, '');" % (import_name.replace("'","''"), module_id))
             import_id = curs.lastrowid
 
-            sql = ss.INSERT_FUNCTION % (module_id, import_ea, import_ea, import_name)        
+            sql = ss.INSERT_FUNCTION % (module_id, import_ea, import_ea, import_name)
             curs.execute(sql)
             dbid = curs.lastrowid
-            
+
             curs.execute("UPDATE function SET import=%d WHERE id=%d;" % (import_id, dbid))
-            
-            sql_connection.commit()        
-            
+
+            sql_connection.commit()
+
+            # Set up Data References
+            curs.execute("INSERT INTO data (address, data_type, value) VALUES (%d, '00000000', 1);" % import_ea)
+
+            import_id = curs.lastrowid
+
+            for refs in DataRefsTo(import_ea):
+                global_drefs[(refs, import_id)] = 1
+
         # Advance to the next import
-        import_ea += 4        
-        
-    # Time to hit up the Flirt stuff (also stolen from Cody)
-    
-    # print "[+] Enumerating FLIRT imports"
-    
-    # From .text iterate functions for lib flag then xref
-    seg_start = SegByName(".text")
+        import_ea += 4
 
-    print_rest = False
+    # TODO also grab THUNKS
 
-    for function_ea in Functions(seg_start, SegEnd(seg_start)):
-        # grab the function flags.
-        flags = GetFunctionFlags(function_ea)
 
-        if flags & FUNC_LIB or flags & FUNC_STATIC:
-            lib_name = GetFunctionName(function_ea)
-            
-            if len(lib_name) > 1:
-                xref_start = function_ea
-                #print "0x%08x: %s" % (function_ea, lib_name)
-                
-            print_rest = True
-        #else: # Thunks and statics
-            #if print_rest == True:
-                #print "Flags == %x" % flags
-                 
 ####################################################################################################################
 def _get_arg_ref (ea):
     '''
@@ -387,18 +399,18 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
     comment = Comment(ea)
     if comment != None:
         ss.update_instruction_comment(global_DSN, dbid, comment)
-        
+
     # instruction mnemonic and operands.
     op1  = GetOpnd(ea, 0)
     if op1 != None and op1 != "":
         ss.update_instruction_operand(global_DSN, dbid, 1, op1)
         op2  = GetOpnd(ea, 1)
         if op2 != None and op2 != "":
-            ss.update_instruction_operand(global_DSN, dbid, 2, op2)        
+            ss.update_instruction_operand(global_DSN, dbid, 2, op2)
             op3  = GetOpnd(ea, 2)
-            if op3 != None and op3 != "":                
+            if op3 != None and op3 != "":
                 ss.update_instruction_operand(global_DSN, dbid, 3, op3)
-        
+
 
     #TODO process these last?
     # XXX - this is a dirty hack to determine if and any API reference.
@@ -485,7 +497,6 @@ def branches_from (ea):
         xrefs = []
 
     for xr in xrefs:
-        global_branches_from[ea] = xr
         global_branches[(ea, xr)] = 1
 
     return xrefs
@@ -516,7 +527,6 @@ def branches_to (ea):
     for xref in CodeRefsTo(ea, 1):
         if xref not in [prev_ea, prev_code_ea]: # not is_call_insn(xref) and
             xrefs.append(xref)
-            #global_branches_from[xref] = ea
             global_branches[(xref, ea)] = 1
 
     return xrefs
@@ -615,7 +625,7 @@ def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
         chunk = iterator.chunk()
         chunks.append((chunk.startEA, chunk.endEA))
         status = iterator.next()
-     
+
     for (chunk_start, chunk_end) in chunks:
         block_start = chunk_start
 
@@ -623,7 +633,7 @@ def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
         for ea in Heads(chunk_start, chunk_end):
             # ignore data heads.
             if not isCode(GetFlags(ea)):
-                continue           
+                continue
 
             prev_ea       = PrevNotTail(ea)
             next_ea       = NextNotTail(ea)
@@ -639,7 +649,7 @@ def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
                 next_ea = PrevNotTail(next_ea)
 
             # if the current instruction is a ret instruction, end the current node at ea.
-            # if there is a branch from the current instruction, end the current node at ea.            
+            # if there is a branch from the current instruction, end the current node at ea.
             if is_ret_insn(ea) or br_from or chunk_end == next_ea:
                 bb = create_basic_block(block_start, ea, depth, analysis, function_id, module_id)
 
@@ -649,12 +659,12 @@ def __init_basic_blocks__ (ea_start, depth, analysis, function_id, module_id):
             # if there is a branch to the current instruction, end the current node at previous ea.
             elif br_to and block_start != ea:
                 bb = create_basic_block(block_start, prev_ea, depth, analysis, function_id, module_id)
-                
+
                 # start a new block at ea.
-                block_start = ea                     
+                block_start = ea
             else:
                 pass
-                
+
 
 
 ####################################################################################################################
@@ -667,7 +677,7 @@ def __init_args_and_local_vars__ (func_struct, frame_struct, function_id, module
 
     if not frame_struct:
         return
-  
+
     saved_reg_size = func_struct.frregs
     frame_size     = get_frame_size(func_struct)
     ret_size       = get_frame_retsize(func_struct)
@@ -749,23 +759,23 @@ def create_module(name, signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE
 def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module_id=0):
     # The end address is the same as the start address for the insertion
     sql = ss.INSERT_FUNCTION % (module_id, ea_start, ea_start, "")
-    
+
     curs.execute(sql)
     dbid = curs.lastrowid
-    
+
     sql_connection.commit()
-    
+
     # grab the ida function and frame structures.
     func_struct  = get_func(ea_start)
     frame_struct = get_frame(func_struct)
-    
+
     # grab the function flags.
     flags = GetFunctionFlags(ea_start)
-    ss.update_function_flags(global_DSN, dbid, flags)                
-    
+    ss.update_function_flags(global_DSN, dbid, flags)
+
     if not func_struct:
         print "0x%08x: [X] Bad Function?" % ea_start
-    
+
     #TODO should this be done first?
     # if we're not in a "real" function. set the id and ea_start manually and stop analyzing.
     # LIES! FUNC_LIB and possibly FUNC_STATIC are in fact functions, this may be for thunks.
@@ -775,30 +785,30 @@ def create_function (ea_start, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, module_
     #
     #    return dbid
     ######### END TODO ############
-    
+
     ea_start       = func_struct.startEA
     ea_end         = PrevAddr(func_struct.endEA)
     name           = GetFunctionName(ea_start)
-    
+
     curs.execute("UPDATE function SET start_address=%d, end_address=%d, name='%s' WHERE id = %d;" % (ea_start, ea_end, name.replace("'","''"), dbid))
-    
+
     saved_reg_size = func_struct.frregs
     frame_size     = get_frame_size(func_struct)
     ret_size       = get_frame_retsize(func_struct)
     local_var_size = func_struct.frsize
-    
+
     curs.execute("INSERT INTO frame_info (function, saved_reg_size, frame_size, ret_size, local_var_size) VALUES (%d, %d, %d, %d, %d);" % (dbid, saved_reg_size, frame_size, ret_size, local_var_size))
-    
+
     chunks         = [(ea_start, ea_end)]
-    
+
     __init_args_and_local_vars__(func_struct, frame_struct, dbid, module_id)
-    
+
     if ea_start == 0x6a6cc660:
         print "Should be saving blocks and insn"
-    
+
     if depth & DEPTH_BASIC_BLOCKS:
         __init_basic_blocks__(ea_start, depth, analysis, dbid, module_id)
-    
+
     return dbid
 
 ####################################################################################################################
@@ -809,8 +819,8 @@ sql_connection = ss.connection(global_DSN)
 curs = sql_connection.cursor()
 
 # Initialize global BB edges list
-global_branches_from = {}
 global_branches = {}
+global_drefs = {}
 instruction_address_lookup = {}
 
 

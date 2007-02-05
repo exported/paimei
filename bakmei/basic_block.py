@@ -205,7 +205,7 @@ class basic_block (pgraph.node):
 
         # FIX TODO: should be a dict!
         
-        return self.sorted_instructions()
+        return self.sorted_instructions
 
     ####
 
@@ -238,7 +238,7 @@ class basic_block (pgraph.node):
         @return: The instructions in the basic block.
         '''
 
-        ins = self.sorted_instructions()
+        ins = self.sorted_instructions
 
         ret_val = {}
 
@@ -257,7 +257,7 @@ class basic_block (pgraph.node):
         @param value: The number of instructions in the basic block.
         '''
 
-        raise TypeError, "The nodes property is read-only"
+        raise NotImplementedError, "The nodes property is read-only"
 
     ####
 
@@ -301,7 +301,7 @@ class basic_block (pgraph.node):
 
         self.gml_height = 45
 
-        for instruction in self.sorted_instructions():
+        for instruction in self.sorted_instructions:
             colored_instruction = instruction.disasm.split()
 
             if colored_instruction[0] == "call":
@@ -347,7 +347,7 @@ class basic_block (pgraph.node):
         self.label = ""
         self.shape = "box"
 
-        for instruction in self.sorted_instructions():
+        for instruction in self.sorted_instructions:
             self.label += "%08x  %s\\n" % (instruction.ea, instruction.disasm)
 
         return super(basic_block, self).render_node_graphviz(graph)
@@ -368,7 +368,7 @@ class basic_block (pgraph.node):
 
         self.label = ""
 
-        for instruction in self.sorted_instructions():
+        for instruction in self.sorted_instructions:
             self.label += "%08x  %s\\n" % (instruction.ea, instruction.disasm)
 
         return super(basic_block, self).render_node_udraw(graph)
@@ -386,14 +386,14 @@ class basic_block (pgraph.node):
 
         self.label = ""
 
-        for instruction in self.sorted_instructions():
+        for instruction in self.sorted_instructions:
             self.label += "%08x  %s\\n" % (instruction.ea, instruction.disasm)
 
         return super(basic_block, self).render_node_udraw_update()
 
 
     ####################################################################################################################
-    def sorted_instructions (self):
+    def __getSortedInstructions (self):
         '''
         Return a list of the instructions within the basic block, sorted by address.
 
@@ -407,16 +407,37 @@ class basic_block (pgraph.node):
         
         for instruction_id in results:
             new_instruction = instruction(self.DSN, instruction_id)
-            ret_val.append(new_instruction)
+            ret_val.append(new_instruction)        
 
         return ret_val
+        
+    ####
+
+    def __setSortedInstructions (self, value):
+        '''
+        Sets the instructions in the basic block. (This will raise an exception as this is read-only)
+
+        @type  value: [bakmei.instruction]
+        @param value: The number of instructions in the basic block.
+        '''
+
+        raise NotImplementedError, "The sorted_instructions property is read-only"
+
+    ####
+
+    def __deleteSortedInstructions (self):
+        '''
+        destructs the instructions in the basic block
+        '''
+        pass # dynamically generated property value
 
     ####################################################################################################################
     # PROPERTIES
 
-    num_instructions    = property(__getNumInstructions,    __setNumInstructions,   __deleteNumInstructions,    "The number of instructions in the basic block.")
-    ea_start            = property(__getEaStart,            __setEaStart,           __deleteEaStart,            "The starting address of the basic block.")
-    ea_end              = property(__getEaEnd,              __setEaEnd,             __deleteEaEnd,              "The ending address of the basic block.")
-    nodes               = property(__getNodes,              __setNodes,             __deleteNodes,              "The instructions in the basic block keyed by address.")
-    instructions        = property(__getInstructions,       __setInstructions,      __deleteInstructions,       "The instructions in the basic block keyed by address.")
-    id                  = property(__getEaStart,            __setEaStart,           __deleteEaStart,            "The basic block id (internal use only)")
+    num_instructions    = property(__getNumInstructions,    __setNumInstructions,       __deleteNumInstructions,    "The number of instructions in the basic block.")
+    ea_start            = property(__getEaStart,            __setEaStart,               __deleteEaStart,            "The starting address of the basic block.")
+    ea_end              = property(__getEaEnd,              __setEaEnd,                 __deleteEaEnd,              "The ending address of the basic block.")
+    nodes               = property(__getNodes,              __setNodes,                 __deleteNodes,              "The instructions in the basic block keyed by address.")
+    instructions        = property(__getInstructions,       __setInstructions,          __deleteInstructions,       "The instructions in the basic block keyed by address.")
+    sorted_instructions = property(__getSortedInstructions, __setSortedInstructions,    __deleteSortedInstructions, "A list of instructions within the basic block sorted by address")
+    id                  = property(__getEaStart,            __setEaStart,               __deleteEaStart,            "The basic block id (internal use only)")

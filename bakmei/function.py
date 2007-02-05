@@ -114,10 +114,11 @@ class function (pgraph.graph, pgraph.node):
         if len(results) == 0:
             raise "Function [ID:%d] does not exist in the database" % self.dbid
 
-        self.__name     = results['name']
-        self.module     = results['module']
-        self.__ea_start = results['start_address']
-        self.__ea_end   = results['end_address']
+        self.__name         = results['name']
+        self.module         = results['module']
+        self.__ea_start     = results['start_address']
+        self.__ea_end       = results['end_address']
+        self.__import_id    = results['import_id']
 
         self.__cached = True
 
@@ -195,6 +196,47 @@ class function (pgraph.graph, pgraph.node):
         destructs the signature of the module
         '''
         pass
+
+    ####################################################################################################################
+    # instructions_to
+
+    def __getInstructionsTo (self):
+        '''
+        The instructions that reference this function
+
+        @rtype:  [instruction]
+        @return: A list of the instructions that reference this function
+        '''
+
+        ret_val = []
+
+        ss = sql_singleton()
+        insn_ids = ss.select_function_instruction_references_to(self.DSN, self.dbid)
+        
+        for ids in insn_ids:
+            ret_val.append(instruction(self.DSN, ids))
+        
+        return ret_val
+
+    ####
+
+    def __setInstructionsTo (self, value):
+        '''
+        Sets the instructions that reference this function (raises an exception - READ ONLY)
+
+        @type  value: Integer
+        @param value: The number of instructions in the function
+        '''
+        raise NotImplementedError, "num_instructions is a read-only property"
+        return -1
+
+    ####
+
+    def __deleteInstructionsTo (self):
+        '''
+        destructs the instructions_to
+        '''
+        pass # dynamically generated property value
 
     ####################################################################################################################
     # num_instruction
@@ -366,7 +408,10 @@ class function (pgraph.graph, pgraph.node):
         if not self.__cached:
             self.__load_from_sql()
 
-        return self.__is_import
+        if self.__is_import == None or self.__is_import < 1:
+            return False
+            
+        return True
 
     ####
 
@@ -1005,6 +1050,8 @@ class function (pgraph.graph, pgraph.node):
     name                = property(__getName,               __setName,              __deleteName,               "The name of the function.")
     is_import           = property(__getIsImport,           __setIsImport,          __deleteIsImport,           "Indicates if the function is imported.")
     flags               = property(__getFlags,              __setFlags,             __deleteFlags,              "The function flags.")
+
+    instructions_to     = property(__getInstructionsTo,     __setInstructionsTo,    __deleteInstructionsTo,     "The instructions that reference this function.")
 
     # Frame info properties
 

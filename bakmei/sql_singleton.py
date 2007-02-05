@@ -123,6 +123,25 @@ class sql_singleton(object):
             ret_val = {'address':results[0], 'mnemonic':results[1], 'operand1':results[2], 'operand2':results[3], 'operand3':results[4], 'comment':results[5], 'bytes':results[6], 'basic_block':results[7]}
 
             return ret_val
+            
+        def select_instruction_references_to(self, DSN, instruction_id):
+            ret_val = []
+            
+            sql_query = None
+            
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_INSTRUCTION_XREFS_TO
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_INSTRUCTION_XREFS_TO
+                
+            results = curs.execute(sql_query % instruction_id).fetchall()
+            
+            for result in results:
+                ret_val.append(result[0])                
+            
+            return ret_val          
 
         def update_instruction_mnemonic(self, DSN, instruction_id, mnemonic):
             if mnemonic:
@@ -262,7 +281,7 @@ class sql_singleton(object):
             results = curs.execute(sql_query % basic_block_id).fetchall()
 
             for result_id in results:
-                ret_val.append(result_id)
+                ret_val.append(result_id[0])
 
             return ret_val
 
@@ -277,7 +296,7 @@ class sql_singleton(object):
 
         def update_basic_block_end_address(self, DSN, basic_block_id, address):
             if DSN[:6] == "mysql;":
-                curs = self.connection(DSN).cursor
+                curs = self.connection(DSN).cursor()
                 curs.execute(bakmei.mysql_queries.cUPDATE_BASIC_BLOCK_END_ADDRESS % (address, basic_block_id))                
             else: #sqlite
                 curs = self.connection(DSN)
@@ -290,17 +309,47 @@ class sql_singleton(object):
             ret_val = {}
 
             if DSN[:6] == "mysql;":
-                curs = self.connection(DSN)
+                curs = self.connection(DSN).cursor()
                 sql_query = bakmei.mysql_queries.cSELECT_FUNCTION
             else: #sqlite
                 curs = self.connection(DSN)
                 sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION
             
             results = curs.execute(sql_query % function_id).fetchone()
-            ret_val = {'name':results[0], 'module':results[1], 'start_address':results[2], 'end_address':results[3]}
+            ret_val = {'name':results[0], 'module':results[1], 'start_address':results[2], 'end_address':results[3], 'import_id':results[4]}
 
             return ret_val
-
+            
+        def select_function_instruction_references_to(self, DSN, function_id):
+            ret_val = []
+            
+            function_attr = self.select_function(DSN, function_id)
+            
+            is_import = True
+            
+            if function_attr["import_id"] == None or function_attr["import_id"] < 1:
+                is_import = False
+            
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                if is_import:
+                    sql_query = bakmei.mysql_queries.cSELECT_FUNCTION_DATA_REF_INSTRUCTION % function_attr["start_address"]
+                else:
+                    sql_query = bakmei.mysql_queries.cSELECT_FUNCTION_CODE_REF_INSTRUCTION % function_id
+            else: #sqlite
+                curs = self.connection(DSN)
+                if is_import:
+                    sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION_DATA_REF_INSTRUCTION % function_attr["start_address"]
+                else:
+                    sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION_CODE_REF_INSTRUCTION % function_id
+                        
+            results = curs.execute(sql_query).fetchall()                       
+            
+            for result in results:
+                ret_val.append(result[0])
+                
+            return ret_val
+            
         def select_frame_info(self, DSN, function_id):
             ret_val = {}
 
@@ -599,6 +648,23 @@ class sql_singleton(object):
                 ret_val.append(result_row[0])
 
             return ret_val
+            
+        def select_module_library_functions(self, DSN, module_id):
+            ret_val = []
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULE_LIBRARY_FUNCTIONS
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULE_LIBRARY_FUNCTIONS
+            
+            results = curs.execute(sql_query % module_id).fetchall()
+            
+            for result_row in results:
+                ret_val.append(result_row[0])
+
+            return ret_val
 
         def select_module_functions(self, DSN, module_id):
             ret_val = []
@@ -744,6 +810,23 @@ class sql_singleton(object):
             raise SingletonInstanceException
         
         return sql_singleton.__instance.select_instruction(DSN, instruction_id)  
+        
+    def select_instruction_references_to(self, DSN, instruction_id):
+        '''
+        Retrieve the instructions that reference the given instruction.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to query.
+        
+        @rtype:                 [Integer]
+        @return:                A list of IDs of the instructions that reference the given instruction.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_instruction_references_to(DSN, instruction_id)
 
     def update_instruction_mnemonic(self, DSN, instruction_id, mnemonic):
         '''
@@ -940,13 +1023,30 @@ class sql_singleton(object):
         @param  function_id:    The ID of the function to query.
         
         @rtype:                 dict
-        @return:                A dict containing the function attributes. The keys for the dictionary are "name", "module", "start_address", "end_address".
+        @return:                A dict containing the function attributes. The keys for the dictionary are "name", "module", "start_address", "end_address", "import_id".
         '''
         if sql_singleton.__instance is None:
             raise SingletonInstanceException
         
         return sql_singleton.__instance.select_function(DSN, function_id)  
 
+    def select_function_instruction_references_to(self, DSN, function_id):
+        '''
+        Retrieve a list of instructions that reference the given function.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to query.
+        
+        @rtype:                 [integer]
+        @return:                A list of the IDs of the instructions that reference the given function.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+                       
+        return sql_singleton.__instance.select_function_instruction_references_to(DSN, function_id)  
+        
     def select_frame_info(self, DSN, function_id):
         '''
         Retrieve the frame information for the function.
@@ -1303,7 +1403,24 @@ class sql_singleton(object):
             raise SingletonInstanceException
         
         return sql_singleton.__instance.select_module_imported_functions(DSN, module_id)
+
+    def select_module_library_functions(self, DSN, module_id):
+        '''
+        Retrieve all the function IDs that are inline library calls for the given module
         
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to query.
+        
+        @rtype:             [Integer]
+        @return:            A list of the inline library function IDs contained in the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_module_library_functions(DSN, module_id)
+                
     def select_module_functions(self, DSN, module_id):
         '''
         Retrieve all the function IDs that are contained in the given module

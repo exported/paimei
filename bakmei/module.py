@@ -26,12 +26,12 @@ from defines  import *
 class module (pgraph.graph):
     '''
     A module is an overall container for all the information stored in a binary, whether it is an executable or a library.
-    
+
     @author:       Cameron Hotchkies, Pedram Amini
     @license:      GNU General Public License 2.0 or later
     @contact:      chotchkies@tippingpoint.com
     @organization: www.openrce.org
-    
+
     @cvar dbid:    Database Identifier
     @type dbid:    Integer
     @cvar DSN:     Database location
@@ -45,8 +45,8 @@ class module (pgraph.graph):
 
     __nodes         = None
 
-    
-    dbid            = None    
+
+    dbid            = None
     DSN             = None
 
     __cached        = False
@@ -77,10 +77,10 @@ class module (pgraph.graph):
 
     ####################################################################################################################
     def __build_edges(self):
-        
+
         ss = sql_singleton()
         results = ss.select_module_function_references(self.DSN, self.dbid)
-        
+
         for ed in results:
             newedge = edge.edge(ed[0], ed[1])
 
@@ -94,7 +94,7 @@ class module (pgraph.graph):
 	    '''
         ss = sql_singleton()
         results = ss.select_module(self.DSN, self.dbid)
-        
+
         self.__name         = results["name"]
         self.__base         = results["base"]
         self.__signature    = results["signature"]
@@ -132,7 +132,7 @@ class module (pgraph.graph):
 
         ss = sql_singleton()
         ss.update_module_name(self.DSN, self.dbid, value)
-                
+
     ####
 
     def __deleteName (self):
@@ -170,7 +170,7 @@ class module (pgraph.graph):
 
         ss = sql_singleton()
         ss.update_module_base(self.DSN, self.dbid, value)
-        
+
     def __deleteBase (self):
         '''
         destructs the base address of the module
@@ -205,7 +205,7 @@ class module (pgraph.graph):
             self.__signature = value
 
         ss = sql_singleton()
-        ss.update_module_signature(self.DSN, self.dbid, value)        
+        ss.update_module_signature(self.DSN, self.dbid, value)
 
     def __deleteSignature (self):
         '''
@@ -225,7 +225,7 @@ class module (pgraph.graph):
         '''
 
         ss = sql_singleton()
-        ret_val = ss.select_module_num_functions(self.DSN, self.dbid)        
+        ret_val = ss.select_module_num_functions(self.DSN, self.dbid)
 
         return ret_val
 
@@ -263,7 +263,7 @@ class module (pgraph.graph):
             ret_val = {}
             ss = sql_singleton()
             results = ss.select_module_functions(self.DSN, self.dbid)
-            
+
             for function_id in results:
                 new_function = function(self.DSN, function_id)
                 ret_val[new_function.ea_start] = new_function
@@ -295,18 +295,18 @@ class module (pgraph.graph):
         '''
         Gets the imported functions for the module
 
-        @rtype:  String
-        @return: The signature of the module
+        @rtype:  [function]
+        @return: The imported functions of the module
         '''
-        
+
         ret_val = []
         ss = sql_singleton()
         results = ss.select_module_imported_functions(self.DSN, self.dbid)
-        
+
         for function_id in results:
             new_function = function(self.DSN, function_id)
             ret_val.append(new_function)
-            
+
         return ret_val
 
     def __setImportedFunctions (self, value):
@@ -325,6 +325,42 @@ class module (pgraph.graph):
         '''
         pass # dynamically generated property
 
+    ####################################################################################################################
+    # library_functions accessors
+
+    def __getLibraryFunctions (self):
+        '''
+        Gets the library functions for the module
+
+        @rtype:  [function]
+        @return: The inline library functions of the module
+        '''
+
+        ret_val = []
+        ss = sql_singleton()
+        results = ss.select_module_library_functions(self.DSN, self.dbid)
+
+        for function_id in results:
+            new_function = function(self.DSN, function_id)
+            ret_val.append(new_function)
+
+        return ret_val
+
+    def __setLibraryFunctions (self, value):
+        '''
+        Sets the imported functions of the module. This will generate an error.
+
+        @type  value: String
+        @param value: The signature of the module.
+        '''
+
+        raise NotImplementedError, "nodes and functions are not directly writable for modules. This is a read-only property"
+
+    def __deleteLibraryFunctions (self):
+        '''
+        destructs the imports
+        '''
+        pass # dynamically generated property
 
     ####################################################################################################################
     def find_function (self, ea):
@@ -542,3 +578,4 @@ class module (pgraph.graph):
     nodes               = property(__getNodes,              __setNodes,             __deleteNodes,              "The functions in the module, keyed by the starting address.")
     num_functions       = property(__getNumFunctions,       __setNumFunctions,      __deleteNumFunctions,       "The number of functions in the module.")
     imported_functions  = property(__getImportedFunctions,  __setImportedFunctions, __deleteImportedFunctions,  "The functions imported from other libraries.")
+    library_functions   = property(__getLibraryFunctions,   __setLibraryFunctions,  __deleteLibraryFunctions,   "The library functions compiled inline.")

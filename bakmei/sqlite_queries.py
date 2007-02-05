@@ -129,6 +129,7 @@ cINSERT_BASIC_BLOCK                         = "INSERT INTO basic_block (start_ad
 ### INSTRUCTION ###                         
                                             
 cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;"
+cSELECT_INSTRUCTION_XREFS_TO                = "SELECT source FROM cross_references WHERE destination=%d AND reference_type = 8;"
                                             
 cUPDATE_INSTRUCTION_MNEMONIC                = "UPDATE instruction SET mnemonic=%s where id=%d"
 cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%s WHERE id=%d;"
@@ -154,7 +155,7 @@ cSELECT_BASIC_BLOCK_INSTRUCTION_REFERENCES  = "SELECT b.address, d.address FROM 
 
 ### FUNCTION ###
 
-cSELECT_FUNCTION                            = "SELECT name, module, start_address, end_address FROM function WHERE id = %d;"
+cSELECT_FUNCTION                            = "SELECT name, module, start_address, end_address, import FROM function WHERE id = %d;"
 cSELECT_FRAME_INFO                          = "SELECT saved_reg_size, frame_size, ret_size, local_var_size, arg_size FROM frame_info WHERE function = %d;"
 cSELECT_ARGS                                = "SELECT name FROM function_variables WHERE function = %d AND flags = 1;"
 cSELECT_LOCAL_VARS                          = "SELECT name FROM function_variables WHERE function = %d AND flags = 2;"
@@ -164,6 +165,8 @@ cSELECT_FUNCTION_NUM_VARS                   = "SELECT count(*) FROM function_var
 cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS     = "SELECT id FROM basic_block WHERE function = %d AND start_address <= %d AND end_address >= %d"
                                             
 cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES     = "SELECT b.start_address, d.start_address FROM cross_references AS c, basic_block AS b, basic_block AS d WHERE c.source = b.id AND c.destination = d.id AND b.function = %d AND d.function = %d AND c.reference_type = 4"
+cSELECT_FUNCTION_CODE_REF_INSTRUCTION       = "SELECT a.id from cross_references AS c, instruction AS a, instruction AS b WHERE a.id=c.source AND b.id = c.destination AND b.function = %d AND c.reference_type=8;"
+cSELECT_FUNCTION_DATA_REF_INSTRUCTION       = "SELECT a.id from cross_references AS c, instruction AS a, data AS d WHERE a.id=c.source AND d.id = c.destination AND d.address = %d AND c.reference_type=64;"
                                             
 cUPDATE_FUNCTION_START_ADDRESS              = "UPDATE function SET start_address=%d where id=%d"
 cUPDATE_FUNCTION_END_ADDRESS                = "UPDATE function SET end_address=%d where id=%d"
@@ -181,6 +184,7 @@ cSELECT_MODULE                              = "SELECT name, base, signature FROM
 cSELECT_MODULE_NUM_FUNCTIONS                = "SELECT count(*) FROM function WHERE module = %d;"
 cSELECT_MODULE_FUNCTIONS                    = "SELECT id FROM function WHERE module = %d"
 cSELECT_MODULE_IMPORTED_FUNCTIONS           = "SELECT id FROM function WHERE module = %d AND import IS NOT NULL"
+cSELECT_MODULE_LIBRARY_FUNCTIONS            = "SELECT id FROM function WHERE module = %d AND flags & 4 > 0"
 cSELECT_MODULE_FUNCTION_REFERENCES          = "SELECT b.start_address, d.start_address FROM cross_references AS c, function AS b, function AS d WHERE c.source = b.id AND c.destination = d.id AND b.module = %d AND d.module = %d AND c.reference_type = 1"
                                             
                                             

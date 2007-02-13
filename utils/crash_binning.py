@@ -20,11 +20,7 @@
 @organization: www.openrce.org
 '''
 
-import zlib
-import cPickle
-
 class __crash_bin_struct__:
-    exception_module    = None
     exception_address   = 0
     write_violation     = 0
     violation_address   = 0
@@ -74,15 +70,6 @@ class crash_binning:
         self.pydbg = pydbg
         crash = __crash_bin_struct__()
 
-        # add module name to the exception address.
-        exception_module = pydbg.addr_to_module(pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress)
-
-        if exception_module:
-            exception_module = exception_module.szModule
-        else:
-            exception_module = "[INVALID]"
-
-        crash.exception_module    = exception_module
         crash.exception_address   = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress
         crash.write_violation     = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionInformation[0]
         crash.violation_address   = pydbg.dbg.u.Exception.ExceptionRecord.ExceptionInformation[1]
@@ -94,32 +81,6 @@ class crash_binning:
         crash.stack_unwind        = pydbg.stack_unwind()
         crash.seh_unwind          = pydbg.seh_unwind()
         crash.extra               = extra
-
-        # add module names to the stack unwind.
-        for i in xrange(len(crash.stack_unwind)):
-            addr   = crash.stack_unwind[i]
-            module = pydbg.addr_to_module(addr)
-
-            if module:
-                module = module.szModule
-            else:
-                module = "[INVALID]"
-
-            crash.stack_unwind[i] = "%s:%08x" % (module, addr)
-
-
-        # add module names to the SEH unwind.
-        for i in xrange(len(crash.seh_unwind)):
-            (addr, handler) = crash.seh_unwind[i]
-
-            module = pydbg.addr_to_module(handler)
-
-            if module:
-                module = module.szModule
-            else:
-                module = "[INVALID]"
-
-            crash.seh_unwind[i] = (addr, handler, "%s:%08x" % (module, handler))
 
         if not self.bins.has_key(crash.exception_address):
             self.bins[crash.exception_address] = []
@@ -140,9 +101,8 @@ class crash_binning:
         else:
             direction = "read from"
 
-        synopsis = "%s:%08x %s from thread %d caused access violation\nwhen attempting to %s 0x%08x\n\n" % \
+        synopsis = "0x%08x %s from thread %d caused access violation\nwhen attempting to %s 0x%08x\n\n" % \
             (
-                self.last_crash.exception_module,       \
                 self.last_crash.exception_address,      \
                 self.last_crash.disasm,                 \
                 self.last_crash.violation_thread_id,    \
@@ -158,70 +118,17 @@ class crash_binning:
 
         if len(self.last_crash.stack_unwind):
             synopsis += "\nstack unwind:\n"
-            for entry in self.last_crash.stack_unwind:
-                synopsis += "\t%s\n" % entry
+            for addr in self.last_crash.stack_unwind:
+                synopsis += "\t%08x\n" % addr
 
         if len(self.last_crash.seh_unwind):
             synopsis += "\nSEH unwind:\n"
-            for (addr, handler, handler_str) in self.last_crash.seh_unwind:
+            for (addr, handler) in self.last_crash.seh_unwind:
                 try:
                     disasm = self.pydbg.disasm(handler)
                 except:
                     disasm = "[INVALID]"
 
-                synopsis +=  "\t%08x -> %s %s\n" % (addr, handler_str, disasm)
+                synopsis +=  "\t%08x -> %08x: %s\n" % (addr, handler, disasm)
 
         return synopsis + "\n"
-
-
-    ####################################################################################################################
-    def export_file (self, file_name):
-        '''
-        Dump the entire object structure to disk.
-
-        @see: import_file()
-
-        @type  name: String
-        @param name: File name to export to
-
-        @rtype:  crash_binning
-        @return: self
-        '''
-
-        # null out what we don't serialize but save copies to restore after dumping to disk.
-        last_crash = self.last_crash
-        pydbg      = self.pydbg
-
-        self.last_crash = self.pydbg = None
-
-        fh = open(file_name, "wb+")
-        fh.write(zlib.compress(cPickle.dumps(self, protocol=2)))
-        fh.close()
-
-        self.last_crash = last_crash
-        self.pydbg      = pydbg
-
-        return self
-
-
-    ####################################################################################################################
-    def import_file (self, file_name):
-        '''
-        Load the entire object structure from disk.
-
-        @see: export_file()
-
-        @type  name: String
-        @param name: File name to import from
-
-        @rtype:  crash_binning
-        @return: self
-        '''
-
-        fh  = open(file_name, "rb")
-        tmp = cPickle.loads(zlib.decompress(fh.read()))
-        fh.close()
-
-        self.bins = tmp.bins
-
-        return self

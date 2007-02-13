@@ -25,8 +25,6 @@ try:    import MySQLdb
 except: pass
 
 import time
-import zlib
-import cPickle
 
 class __code_coverage_struct__:
     eip         = 0x00000000
@@ -174,7 +172,6 @@ class code_coverage:
             print sql
             print
 
-        cursor.close()
         return self
 
 
@@ -203,7 +200,7 @@ class code_coverage:
 
 
     ####################################################################################################################
-    def export_file (self, file_name):
+    def export_file (file_name):
         '''
         Dump the entire object structure to disk.
 
@@ -285,12 +282,11 @@ class code_coverage:
                     print sql
                     print
 
-        cursor.close()
         return self
 
 
     ####################################################################################################################
-    def import_file (self, file_name):
+    def import_file (file_name):
         '''
         Load the entire object structure from disk.
 
@@ -381,7 +377,6 @@ class code_coverage:
             self.hits[ccs.eip].append(ccs)
             self.num += 1
 
-        hits.close()
         return self
 
 

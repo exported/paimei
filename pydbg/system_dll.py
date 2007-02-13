@@ -24,13 +24,8 @@ from my_ctypes import *
 from defines   import *
 from windows_h import *
 
-# macos compatability.
-try:
-    kernel32 = windll.kernel32
-    psapi    = windll.psapi
-except:
-    kernel32 = CDLL("libmacdll.dylib")
-    psapi    = kernel32
+kernel32 = windll.kernel32
+psapi    = windll.psapi
 
 from pdx import *
 
@@ -103,12 +98,3 @@ class system_dll:
                 kernel32.UnmapViewOfFile(file_ptr)
 
             kernel32.CloseHandle(file_map)
-
-
-    ####################################################################################################################
-    def __del__ (self):
-        '''
-        Close the handle.
-        '''
-
-        kernel32.CloseHandle(self.handle)

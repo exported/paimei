@@ -11,48 +11,22 @@ import utils
 import sys
 import getopt
 
-USAGE = "USAGE: heap_trace.py <-p|--pid PID> | <-l|--load filename>"                \
+USAGE = "USAGE: heap_trace.py [<-p|--pid PID> <-l|--load filename>"                 \
         "\n    [-g|--graph]            enable graphing"                             \
-        "\n    [-m|--monitor]          enabe heap integrity checking"               \
         "\n    [-h|--host udraw host]  udraw host (for graphing), def:127.0.0.1"    \
         "\n    [-o|--port udraw port]  udraw port (for graphing), def:2542"
 
 ERROR = lambda msg: sys.stderr.write("ERROR> " + msg + "\n") or sys.exit(1)
 
-class __alloc:
-    call_stack = []
-    size       = 0
 
+def outstanding_bytes ():
+    outstanding = 0
 
-def access_violation (dbg):
-    crash_bin = utils.crash_binning.crash_binning()
-    crash_bin.record_crash(dbg)
+    for node in graph.nodes.values():
+        if hasattr(node, "size"):
+            outstanding += node.size
 
-    print "***** process access violated *****"
-    print crash_bin.crash_synopsis()
-    dbg.terminate_process()
-
-
-def dll_load_handler (dbg):
-    global hooks
-
-    try:
-        last_dll = dbg.get_system_dll(-1)
-    except:
-        return
-
-    if last_dll.name.lower() == "ntdll.dll":
-        addrRtlAllocateHeap   = dbg.func_resolve_debuggee("ntdll", "RtlAllocateHeap")
-        addrRtlFreeHeap       = dbg.func_resolve_debuggee("ntdll", "RtlFreeHeap")
-        addrRtlReAllocateHeap = dbg.func_resolve_debuggee("ntdll", "RtlReAllocateHeap")
-
-        hooks.add(dbg, addrRtlAllocateHeap,   3, None, RtlAllocateHeap)
-        hooks.add(dbg, addrRtlFreeHeap,       3, None, RtlFreeHeap)
-        hooks.add(dbg, addrRtlReAllocateHeap, 4, None, RtlReAllocateHeap)
-
-        print "rtl heap manipulation routines successfully hooked"
-
-    return DBG_CONTINUE
+    return outstanding
 
 
 def graph_connect (dbg, buff_addr, size, realloc=False):
@@ -97,81 +71,11 @@ def graph_update (id, focus_first=False):
             udraw.focus_node(id)
 
 
-def monitor_add (dbg, address, size):
-    global monitor, allocs
-
-    if not monitor:
-        return
-
-    alloc            = __alloc()
-    alloc.size       = size
-    alloc.call_stack = dbg.stack_unwind()
-    allocs[address]  = alloc
-
-    dbg.bp_set_mem(address+size+1, 1, handler=monitor_bp)
-
-
-def monitor_bp (dbg):
-    global allocs
-
-    print "heap bound exceeded at %08x by %08x" % (dbg.violation_address, dbg.exception_address)
-
-    for call in dbg.stack_unwind():
-        print "\t%08x" % call
-
-    # determine which chunk was violated.
-    for addr, alloc in allocs.iteritems():
-        if addr + alloc.size < dbg.violation_address < addr + alloc.size + 4:
-            violated_chunk = addr
-            break
-
-    print "violated chunk:"
-
-    print "0x%08x: %d" % (violated_chunk, allocs[violated_chunk].size)
-
-    for call in allocs[violated_chunk].call_stack:
-        print "\t%08x" % call
-
-    raw_input("")
-
-    # XXX - add check for Rtl addresses in call stack and ignore
-
-
-def monitor_print ():
-    for addr, alloc in allocs.iteritems():
-        print "0x%08x: %d" % (addr, alloc.size)
-
-        for call in alloc.call_stack:
-            print "\t%08x" % call
-
-
-def monitor_remove (dbg, address):
-    global monitor, allocs
-
-    if not monitor:
-        return
-
-    del allocs[address]
-    monitor_print()
-
-
-def outstanding_bytes ():
-    outstanding = 0
-
-    for node in graph.nodes.values():
-        if hasattr(node, "size"):
-            outstanding += node.size
-
-    return outstanding
-
-
 def RtlAllocateHeap (dbg, args, ret):
     global graph
 
     # heap id, flags, size
     print "[%04d] %08x: RtlAllocateHeap(%08x, %08x, %d) == %08x" % (len(graph.nodes), dbg.context.Eip, args[0], args[1], args[2], ret)
-
-    monitor_add(dbg, ret, args[2])
 
     graph_connect(dbg, ret, args[2])
     graph_update(dbg.context.Eip)
@@ -183,8 +87,6 @@ def RtlFreeHeap (dbg, args, ret):
     # heap id, flags, address
     print "[%04d] %08x: RtlFreeHeap(%08x, %08x, %08x) == %08x" % (len(graph.nodes), dbg.context.Eip, args[0], args[1], args[2], ret)
     print "%d bytes outstanding" % outstanding_bytes()
-
-    monitor_remove(dbg, args[2])
 
     for edge in graph.edges_to(args[2]):
         graph.del_edge(edge.id)
@@ -199,17 +101,38 @@ def RtlReAllocateHeap (dbg, args, ret):
     # heap id, flags, address, new size
     print "[%04d] %08x: RtlReAllocateHeap(%08x, %08x, %08x, %d) == %08x" % (len(graph.nodes), dbg.context.Eip, args[0], args[1], args[2], args[3], ret)
 
-    monitor_remove(dbg, args[2])
-    monitor_add(dbg, ret, args[3])
-
     graph.del_node(args[2])
     graph_connect(dbg, ret, args[3], realloc=True)
     graph_update(dbg.context.Eip)
 
 
+def access_violation (dbg):
+    crash_bin = utils.crash_binning.crash_binning()
+    crash_bin.record_crash(dbg)
+
+    print crash_bin.crash_synopsis()
+    dbg.terminate_process()
+
+
+def dll_load_handler (dbg):
+    global hooks
+
+    last_dll = dbg.get_system_dll(-1)
+    if last_dll.name.lower() == "ntdll.dll":
+        addrRtlAllocateHeap   = dbg.func_resolve_debuggee("ntdll", "RtlAllocateHeap")
+        addrRtlFreeHeap       = dbg.func_resolve_debuggee("ntdll", "RtlFreeHeap")
+        addrRtlReAllocateHeap = dbg.func_resolve_debuggee("ntdll", "RtlReAllocateHeap")
+
+        hooks.add(dbg, addrRtlAllocateHeap,   3, None, RtlAllocateHeap)
+        hooks.add(dbg, addrRtlFreeHeap,       3, None, RtlFreeHeap)
+        hooks.add(dbg, addrRtlReAllocateHeap, 4, None, RtlReAllocateHeap)
+
+    return DBG_CONTINUE
+
+
 # parse command line options.
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "gh:o:l:mp:", ["graph", "host=", "monitor", "port=", "pid="])
+    opts, args = getopt.getopt(sys.argv[1:], "gh:o:l:p:", ["graph=", "host=", "port=", "pid="])
 except getopt.GetoptError:
     ERROR(USAGE)
 
@@ -222,16 +145,13 @@ pid      = None
 udraw    = None
 graph    = pgraph.graph()
 hooks    = utils.hook_container()
-monitor  = False
-allocs   = {}
 
 for opt, arg in opts:
-    if opt in ("-g", "--graph"):   udraw    = True
-    if opt in ("-h", "--host"):    host     = arg
-    if opt in ("-o", "--port"):    port     = int(arg)
-    if opt in ("-l", "--load"):    filename = arg
-    if opt in ("-p", "--pid"):     pid      = int(arg)
-    if opt in ("-m", "--monitor"): monitor = True
+    if opt in ("-g", "--graph"): udraw    = True
+    if opt in ("-h", "--host"):  host     = arg
+    if opt in ("-o", "--port"):  port     = int(arg)
+    if opt in ("-l", "--load"):  filename = arg
+    if opt in ("-p", "--pid"):   pid      = int(arg)
 
 if not pid and not filename:
     ERROR(USAGE)

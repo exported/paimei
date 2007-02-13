@@ -68,15 +68,25 @@ class process_stalker:
     target_id           = None
 
     ####################################################################################################################
-    def __init__ (self, depth, filter_list, log, main, mysql, pida_modules, pydbg, tag_id, target_id, print_bps=True, \
-                        attach=0, load=None, args=None, heavy=False, ignore_first_chance=True, restore=False):
+    def __init__ (self, depth, filter_list, log, main, mysql, pida_modules, pydbg, tag_id, target_id, \
+                        print_bps=True, attach=0, load=None, args=None, heavy=False, ignore_first_chance=True, restore=False):
         '''
         Initialize the process stalker object, not all arguments are required.
 
+        @type  attach:              Integer
+        @param attach:              (Optional, def=0) Process ID of target to attach to
+        @type  load:                String
+        @param load:                (Optional, def=None) Command line to executable when loading target
+        @type  args:                String
+        @param args:                (Optional, def=None) Optional command line arguments to use when loading target
         @type  depth:               Integer (self.FUNCTIONS=0 or self.BASIC_BLOCKS=1)
         @param depth:               0 for function level stalking, 1 for basic block level stalking
         @type  filter_list:         List
         @param filter_list:         List of (target id, tag id) tuples to filter from stalking
+        @type  heavy:               Boolean
+        @param heavy:               (Optional, def=False) Controls whether or not context data is recorded
+        @type  ignore_first_chance: Boolean
+        @param ignore_first_chance: (Optional, def=True) Controls reporting of first chance exceptions
         @type  log:                 Function Pointer
         @param log:                 Pointer to log routine that takes a single parameter, the log message
         @type  main:                String
@@ -85,26 +95,16 @@ class process_stalker:
         @param mysql:               Connection to MySQL server
         @type  pida_modules:        Dictionary
         @param pida_modules:        Dictionary of loaded PIDA modules, keyed by module name
+        @type  print_bps:           Boolean
+        @param print_bps:           (Optional, def=False) Controls whether or not to log individual breakpoint hits
         @type  pydbg:               PyDbg
-        @param pydbg:               PyDbg instance
+        @param pydbg:               Self explanatory
+        @type  restore:             Boolean
+        @param restore:             (Optional, def=False) Controls whether or not to restore hit breakpoints
         @type  tag_id:              Integer
         @param tag_id:              ID of tag we are storing hits in
         @type  target_id:           Integer
         @param target_id:           ID ot target that contains the tag we are storing hits in
-        @type  print_bps:           Boolean
-        @param print_bps:           (Optional, def=False) Controls whether or not to log individual breakpoint hits
-        @type  attach:              Integer
-        @param attach:              (Optional, def=0) Process ID of target to attach to
-        @type  load:                String
-        @param load:                (Optional, def=None) Command line to executable when loading target
-        @type  args:                String
-        @param args:                (Optional, def=None) Optional command line arguments to use when loading target
-        @type  heavy:               Boolean
-        @param heavy:               (Optional, def=False) Controls whether or not context data is recorded
-        @type  ignore_first_chance: Boolean
-        @param ignore_first_chance: (Optional, def=True) Controls reporting of first chance exceptions
-        @type  restore:             Boolean
-        @param restore:             (Optional, def=False) Controls whether or not to restore hit breakpoints
         '''
 
         self.attach              = attach
@@ -242,6 +242,7 @@ class process_stalker:
                 for mod32 in self.pydbg.iterate_modules():
                     if mod32.szModule.lower() == module.lower():
                         self.pida_modules[module].rebase(mod32.modBaseAddr)
+                        break
 
             #
             # function level tracking.

@@ -30,22 +30,17 @@ import utils
 class udraw_connect_dialog(wx.Dialog):
     def __init__(self, *args, **kwds):
         self.parent = kwds["parent"]
-
+        
         # begin wxGlade: udraw_connect_dialog.__init__
         kwds["style"] = wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
-
+        
         self.udraw_logo = wx.StaticBitmap(self, -1, wx.Bitmap(self.parent.cwd + "/images/udraw.bmp", wx.BITMAP_TYPE_ANY))
         self.host_static = wx.StaticText(self, -1, "Host:")
+        self.host = wx.TextCtrl(self, -1, "127.0.0.1")
         self.port_static = wx.StaticText(self, -1, "Port:")
+        self.port = wx.TextCtrl(self, -1, "2542")
         self.connect = wx.Button(self, -1, "Connect")
-
-        # if the main_frame already contains udraw values, use them.
-        if self.parent.udraw_host: self.host = wx.TextCtrl(self, -1, self.parent.udraw_host)
-        else:                      self.host = wx.TextCtrl(self, -1, "127.0.0.1")
-
-        if self.parent.udraw_port: self.port = wx.TextCtrl(self, -1, str(self.parent.udraw_port))
-        else:                      self.port = wx.TextCtrl(self, -1, "2542")
 
         self.__set_properties()
         self.__do_layout()
@@ -94,19 +89,12 @@ class udraw_connect_dialog(wx.Dialog):
             self.Destroy()
             return
 
-        # bubble up the form values to the main frame for possible persistent storage.
-        self.parent.udraw_host = host
-        self.parent.udraw_port = port
-
-        self.udraw_connect(host, port)
-        self.Destroy()
-
-    def udraw_connect (self, host, port):
         try:
             self.parent.udraw = utils.udraw_connector(host, port)
         except:
             self.parent.status_bar.SetStatusText("Failed connecting to uDraw(Graph) server.")
+            self.Destroy()
             return
-
+            
         self.parent.status_bar.SetStatusText("Successfully connected to uDraw(Graph) server at %s." % host)
-        self.parent.status_bar.SetStatusText("uDraw: %s" % host, 4)
+        self.Destroy()

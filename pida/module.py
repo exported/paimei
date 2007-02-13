@@ -120,10 +120,7 @@ class module (pgraph.graph):
 
                 if from_func:
                     # GHETTO - add the actual source EA to the function.
-                    if not self.nodes[from_func.startEA].outbound_eas.has_key(ref):
-                        self.nodes[from_func.startEA].outbound_eas[ref] = []
-
-                    self.nodes[from_func.startEA].outbound_eas[ref].append(func.ea_start)
+                    self.nodes[from_func.startEA].outbound_eas[ref] = func.ea_start
 
                     edge = pgraph.edge.edge(from_func.startEA, func.ea_start)
 

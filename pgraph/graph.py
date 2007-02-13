@@ -344,14 +344,14 @@ class graph (object):
 
 
     ####################################################################################################################
-    def graph_down (self, from_node_id, max_depth=-1):
+    def graph_down (self, from_node_id, max_depth):
         '''
         Create a new graph, looking down, from the specified node id to the specified depth.
 
         @type  from_node_id: pgraph.node
         @param from_node_id: Node to use as start of down graph
         @type  max_depth:    Integer
-        @param max_depth:    (Optional, Def=-1) Number of levels to include in down graph (-1 for infinite)
+        @param max_depth:    Number of levels to include in down graph (-1 for infinite)
 
         @rtype:  pgraph.graph
         @return: Down graph around specified node.
@@ -461,14 +461,14 @@ class graph (object):
 
 
     ####################################################################################################################
-    def graph_up (self, from_node_id, max_depth=-1):
+    def graph_up (self, from_node_id, max_depth):
         '''
         Create a new graph, looking up, from the specified node id to the specified depth.
 
         @type  from_node_id: pgraph.node
         @param from_node_id: Node to use as start of up graph
         @type  max_depth:    Integer
-        @param max_depth:    (Optional, Def=-1) Number of levels to include in up graph (-1 for infinite)
+        @param max_depth:    Number of levels to include in up graph (-1 for infinite)
 
         @rtype:  pgraph.graph
         @return: Up graph to the specified node.

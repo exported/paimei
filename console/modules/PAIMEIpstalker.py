@@ -41,7 +41,7 @@ class PAIMEIpstalker(wx.Panel):
         "hit_function_count"    : "Total number of hit functions.",
         "hit_basic_block_count" : "Total number of hit basic blocks.",
         "print_bps"             : "Boolean flag controlling whether or not to log individual breakpoints hits. This is an advanced option for which no GUI control exists. It is useful for removing the GUI latency in situations where stalking is producing a large volume of breakpoint hits.",
-        "watch"                 : "Instead of attaching to or loading a target process, this option allows you to specify a process name to continuously watch for and attach to as soon as it is spawned. The process name is case insensitive, but you *must* specify the full name and extension. Example: winmine.exe",
+        "watch(process_name)"   : "Instead of attaching to or loading a target process, this option allows you to specify a process name to continuously watch for and attach to as soon as it is spawned. The process name is case insensitive, but you *must* specify the full name and extension. Example: winmine.exe",
     }
 
     list_book             = None        # handle to list book.

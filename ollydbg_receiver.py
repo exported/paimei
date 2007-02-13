@@ -29,14 +29,11 @@ import socket
 import os
 import getopt
 
-from ctypes import *
-from SendKeys import SendKeys
-
 import pida
 import pgraph
 import utils
 
-USAGE = "ollydbg_receiver.py [-h | --host <udraw host>] [-p | --port <udraw port>] [-i | --ida_sync]"
+USAGE = "ollydbg_receiver.py [-h | --host <udraw host>] [-p | --port <udraw port>]"
 
 PURE_PROXIMITY       = 0
 PERSISTANT_PROXIMITY = 1
@@ -56,8 +53,6 @@ udraw_call_graph     = None
 udraw_cfg            = None
 new_graph            = True
 last_bb              = 0
-ida_sync             = False
-ida_handle           = None
 
 ########################################################################################################################
 
@@ -68,48 +63,29 @@ def udraw_node_selections_labels (udraw, args):
 def udraw_node_double_click (udraw, args):
     print "udraw_node_double_click", args
 
-
-WNDENUMPROC = CFUNCTYPE(c_int, c_int, c_int)
-SW_SHOW     = 5
-
-def enum_windows_proc (hwnd, lparam):
-    global ida_handle
-
-    title = create_string_buffer(1024)
-    
-    windll.user32.GetWindowTextA(hwnd, title, 255)
-    
-    if title.value.lower().count(module.lower()) and not ida_handle:
-        ida_handle = hwnd
-
 ########################################################################################################################
 
 # parse command line options.
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "h:ip:", ["host=","ida_sync","port="])
+    opts, args = getopt.getopt(sys.argv[1:], "h:p:", ["host=","port="])
 except getopt.GetoptError:
     sys.stderr.write(USAGE + "\n\n")
     sys.exit(1)
 
 for o, a in opts:
-    if o in ("-h", "--host"):     udraw_host = a
-    if o in ("-p", "--port"):     udraw_port = int(a)
-    if o in ("-i", "--ida_sync"): ida_sync   = True
+    if o in ("-h", "--host"): udraw_host = a
+    if o in ("-p", "--port"): udraw_port = int(a)
 
 try:
     udraw = utils.udraw_connector(udraw_host, udraw_port)
     udraw.set_command_handler("node_double_click",      udraw_node_double_click)
     udraw.set_command_handler("node_selections_labels", udraw_node_selections_labels)
-
-    # thread out the udraw connector message loop.
-    thread.start_new_thread(udraw.message_loop, (None, None))
 except socket.error, err:
     sys.stderr.write("Socket error: %s.\nIs uDraw(Graph) running on %s:%d?\n" % (err[1], udraw_host, udraw_port))
-    udraw = None
-    
-    # nothing to do... exit.
-    if not ida_sync:
-        sys.exit(1)
+    sys.exit(1)
+
+# thread out the udraw connector message loop.
+thread.start_new_thread(udraw.message_loop, (None, None))
 
 try:
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -147,29 +123,6 @@ while 1:
             offset = long(offset, 16)
         except:
             print "malformed data received: '%s'" % received
-            continue
-
-        #
-        # if an IDA window containing the module is open, update the address.
-        #
-
-        if ida_sync:
-            if not ida_handle:
-                try:    windll.user32.EnumWindows(WNDENUMPROC(enum_windows_proc), 0)
-                except: pass
-                    
-            windll.user32.SetForegroundWindow(ida_handle)
-            windll.user32.ShowWindow(ida_handle, SW_SHOW)
-            #SendKeys("+{F2}Jump+9MinEA+9+0{+}0x%08x+0;{TAB}" % (offset-0x1000), pause=0)
-            SendKeys("+{F2}Jump+9MinEA+9+0{+}0x000279e7+0;{TAB}{ENTER}", pause=0)
-            print "jumping to offset 0x%08x in %s" % ((offset-0x1000), module)
-
-
-        #
-        # ENSURE UDRAW IS PRESENT
-        #
-        
-        if not udraw:
             continue
 
         # if we haven't already loaded the specified module, do so now.

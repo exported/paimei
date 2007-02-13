@@ -65,9 +65,6 @@ class PAIMEIexplorer (wx.Panel):
         self.__do_layout()
         # end wxGlade
 
-        # set the default sash position to be 100 pixels from the bottom (small log window).
-        self.log_splitter.SetSashPosition(-100)
-
         self.list_book    = kwds["parent"]             # handle to list book.
         self.main_frame   = self.list_book.top         # handle to top most frame.
 

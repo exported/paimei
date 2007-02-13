@@ -19,7 +19,6 @@
     </ul>
     <li><a href="console_modules.html">Console (GUI) and Modules</a></li>
     <li><a href="developer_docs.html">Developer Docs</a></li>
-    <li><a href="authors_and_contributors.html">Authors and Contributors</a></li>
 </ol>
 
 <table border=0 cellpadding=0 cellspacing=0><tr><td width="100%">
@@ -93,8 +92,6 @@ The PIDA load script, <i>pida_load.py</i>, is more of an example than anything e
 <b>Interface:</b> IDA, command line<br>
 <b>Requires:</b> PyDbg, IDA Python<br><br>
 
-<font color="#ff0000"><b>Note:</b></font> Seeing as how I was the only person capable of using this tool, I built a GUI version of this tool which is available through the PaiMei console and thereby deprecates the command line version.
-<br><br>
 This is a two part utility designed for locating "low hanging fruit" vulnerabilities in Windows software. To use this utility, you must first run the <i>proc_peek_recon.py</i> IDA Python script, again <b>after</b> IDA has finished its auto-analysis. A <i>.recon</i> file will be generated that contains the locations (I call these "peek points") of various potentially interesting locations within the binary. Example locations include discovered inline memcpy()'s, calls to various routines that take format strings <b>and</b> are passed a <i>%s</i> format string token as well as calls to potentially dangerous API such as strcat, strcpy and the like. For the full list, see the source code. It's by no means an exhaustive list in the current release.
 
 <br><br>

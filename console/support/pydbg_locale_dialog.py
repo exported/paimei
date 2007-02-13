@@ -34,18 +34,13 @@ class pydbg_locale_dialog(wx.Dialog):
         # begin wxGlade: pydbg_locale_dialog.__init__
         kwds["style"] = wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
-
+        
         self.pydbg_logo = wx.StaticBitmap(self, -1, wx.Bitmap(self.parent.cwd + "/images/pydbg.bmp", wx.BITMAP_TYPE_ANY))
         self.host_static = wx.StaticText(self, -1, "Host:")
+        self.host = wx.TextCtrl(self, -1, "localhost")
         self.port_static = wx.StaticText(self, -1, "Port:")
+        self.port = wx.TextCtrl(self, -1, "")
         self.set_locale = wx.Button(self, -1, "Set Locale")
-
-        # if the main_frame already contains pydbg locale values, use them.
-        if self.parent.pydbg_host: self.host = wx.TextCtrl(self, -1, self.parent.pydbg_host)
-        else:                      self.host = wx.TextCtrl(self, -1, "localhost")
-
-        if self.parent.pydbg_port: self.port = wx.TextCtrl(self, -1, str(self.parent.pydbg_port))
-        else:                      self.port = wx.TextCtrl(self, -1, "")
 
         self.__set_properties()
         self.__do_layout()
@@ -93,20 +88,13 @@ class pydbg_locale_dialog(wx.Dialog):
         except:
             pass
 
-        # bubble up the form values to the main frame for possible persistent storage.
-        self.parent.pydbg_host = host
-        self.parent.pydbg_port = port
-
-        self.pydbg_set_locate(host, port)
-        self.Destroy()
-
-    def pydbg_set_locale (self, host, port):
         if host not in ("localhost", "127.0.0.1") and type(port) is int:
             try:
                 self.parent.pydbg = pydbg_client(host, port)
                 self.parent.status_bar.SetStatusText("Successfully connected to PyDbg server on %s:%d" % (host, port))
-                self.parent.status_bar.SetStatusText("PyDbg: %s" % host, 3)
             except:
                 self.parent.status_bar.SetStatusText("Failed connecting to PyDbg server on %s:%d" % (host, port))
         else:
             self.parent.pydbg = pydbg()
+
+        self.Destroy()

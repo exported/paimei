@@ -20,7 +20,7 @@ find ./ -name .svn -exec rm -rf {} \;
 ./__build_installer.bat
 ./__generate_epydocs.bat
 
-mv dist/PaiMei-1.2.win32.exe installers
+mv dist/PaiMei-1.0.win32.exe installers
 
 rm -rf build
 rm -rf dist

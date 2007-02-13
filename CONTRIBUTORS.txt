@@ -12,23 +12,12 @@ Cameron Hotchkies <nummish@0x90.org>
     - PIDA enhancements.
     - General ideas, beta testing and morale support.
 
-Charlie Miller <charlesamiller@hotmail.com>
-    - Bug fix in PyDbg context dump (EBP was being resolved as ESI).
-
 Gerardo Richarte <gera@corest.com>
     - Ideas, bug reports and fixes.
     - Generally being a funny guy.
 
 Igor Skochinsky <http://www.openrce.org/profile/view/igorsk>
     - Various bug reports, patches and support.
-
-Jared DeMott <jdemott@appliedsec.com>
-    - Helped locate and fix some handle leaks in pstalker.
-
-Matthew Mastracci <matthew@mastracci.com>
-    - pydasm memory leak fix.
-    - PyDbg get_register() addition.
-    - Robustness improvements to PyDbg.disasm().
 
 Mathew Murphy <mmurphy@tippingpoint.com>
     - Memory and handle leak fixes.
@@ -47,10 +36,3 @@ Peter Silberman <peter.silberman@gmail.com>
     - PAIMEIdiff.
     - Various framework enhancements.
     - General ideas, beta testing and morale support.
-
-Rinat Zakirov <rinatzakirov@gmail.com>
-    - Click to sort columns to pstalker module.
-
-Thomas Ptacek <http://www.matasano.com/log/>
-    - Timestamp column to pstalker module.
-    - General ideas and public support.

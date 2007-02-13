@@ -24,22 +24,14 @@
 
 import sys
 import signal
-import struct
-import copy
 
 from my_ctypes  import *
 from defines    import *
 from windows_h  import *
 from system_dll import *
 
-# macos compatability.
-try:
-    kernel32 = windll.kernel32
-    advapi32 = windll.advapi32
-    ntdll    = windll.ntdll
-except:
-    kernel32 = CDLL("libmacdll.dylib")
-    advapi32 = kernel32
+kernel32 = windll.kernel32
+advapi32 = windll.advapi32
 
 from pdx import *
 
@@ -65,9 +57,6 @@ class pydbg_core(object):
     callbacks         = {}         # exception callback handler dictionary
     system_dlls       = []         # list of loaded system dlls
     dirty             = False      # flag specifying that the memory space of the debuggee was modified
-    system_break      = None       # the address at which initial and forced breakpoints occur at
-    peb               = None       # process environment block address
-    tebs              = {}         # dictionary of thread IDs and their thread environment block addresses
 
     # internal variables specific to the last triggered exception.
     context           = None       # thread context of offending thread
@@ -95,8 +84,6 @@ class pydbg_core(object):
         self.callbacks         = {}         # exception callback handler dictionary
         self.system_dlls       = []         # list of loaded system dlls
         self.dirty             = False      # flag specifying that the memory space of the debuggee was modified
-        self.peb               = None       # process environment block address
-        self.tebs              = {}         # dictionary of thread IDs and their thread environment block addresses
 
         # internal variables specific to the last triggered exception.
         self.context           = None       # thread context of offending thread
@@ -113,10 +100,6 @@ class pydbg_core(object):
         system_info = SYSTEM_INFO()
         kernel32.GetSystemInfo(byref(system_info))
         self.page_size = system_info.dwPageSize
-
-        # determine the system DbgBreakPoint address. this is the address at which initial and forced breaks happen.
-        # XXX - need to look into fixing this for pydbg client/server.
-        self.system_break = self.func_resolve("ntdll.dll", "DbgBreakPoint")
 
         self.core_log("system page size is %d" % self.page_size)
 
@@ -152,17 +135,11 @@ class pydbg_core(object):
         @return: MODULEENTRY32 strucutre that contains the address specified or None if not found.
         '''
 
-        found = None
-
         for module in self.iterate_modules():
             if module.modBaseAddr < address < module.modBaseAddr + module.modBaseSize:
-                # we have to make a copy of the 'module' since it is an iterator and will be blown away.
-                # the reason we can't "break" out of the loop is because there will be a handle leak.
-                # and we can't use enumerate_modules() because we need the entire module structure.
-                # so there...
-                found = copy.copy(module)
+                return module
 
-        return found
+        return None
 
 
     ####################################################################################################################
@@ -194,28 +171,6 @@ class pydbg_core(object):
             self.debug_set_process_kill_on_exit(False)
         except:
             pass
-
-        # enumerate the TEBs and add them to the internal dictionary.
-        for thread_id in self.enumerate_threads():
-            thread_handle  = self.open_thread(thread_id)
-            thread_context = self.get_thread_context(thread_handle)
-            selector_entry = LDT_ENTRY()
-
-            if not kernel32.GetThreadSelectorEntry(thread_handle, thread_context.SegFs, byref(selector_entry)):
-                self.win32_error("GetThreadSelectorEntry()")
-
-            self.close_handle(thread_handle)
-
-            teb  = selector_entry.BaseLow
-            teb += (selector_entry.HighWord.Bits.BaseMid << 16) + (selector_entry.HighWord.Bits.BaseHi << 24)
-
-            # add this TEB to the internal dictionary.
-            self.tebs[thread_id] = teb
-
-            # if the PEB has not been set yet, do so now.
-            if not self.peb:
-                self.peb = self.read_process_memory(teb + 0x30, 4)
-                self.peb = struct.unpack("<L", self.peb)[0]
 
         return self.ret_self()
 
@@ -377,7 +332,6 @@ class pydbg_core(object):
                 self.callbacks[USER_CALLBACK_DEBUG_EVENT](self)
 
             # iterate through a debug event.
-
             self.debug_event_iteration()
 
             # resume keyboard interruptability.
@@ -565,24 +519,6 @@ class pydbg_core(object):
         @return: Debug event continue status.
         '''
 
-        # resolve the newly created threads TEB and add it to the internal dictionary.
-        thread_id      = self.dbg.dwThreadId
-        thread_handle  = self.dbg.u.CreateThread.hThread
-        thread_context = self.get_thread_context(thread_handle)
-        selector_entry = LDT_ENTRY()
-
-        if not kernel32.GetThreadSelectorEntry(thread_handle, thread_context.SegFs, byref(selector_entry)):
-            self.win32_error("GetThreadSelectorEntry()")
-
-        # done with the opened thread handle.
-        self.close_handle(thread_handle)
-
-        teb  = selector_entry.BaseLow
-        teb += (selector_entry.HighWord.Bits.BaseMid << 16) + (selector_entry.HighWord.Bits.BaseHi << 24)
-
-        # add this TEB to the internal dictionary.
-        self.tebs[thread_id] = teb
-
         return DBG_CONTINUE
 
 
@@ -610,10 +546,6 @@ class pydbg_core(object):
         @rtype:  DWORD
         @return: Debug event continue status.
         '''
-
-        # remove the TEB entry for the exiting thread id.
-        if self.tebs.has_key(self.dbg.dwThreadId):
-        	del(self.tebs[self.dbg.dwThreadId])
 
         return DBG_CONTINUE
 
@@ -655,7 +587,6 @@ class pydbg_core(object):
             pass
         else:
             self.system_dlls.remove(unloaded)
-            del(unloaded)
 
         return DBG_CONTINUE
 
@@ -706,120 +637,6 @@ class pydbg_core(object):
         '''
 
         return DBG_EXCEPTION_NOT_HANDLED
-
-
-    ####################################################################################################################
-    def func_resolve (self, dll, function):
-        '''
-        Utility function that resolves the address of a given module / function name pair under the context of the
-        debugger.
-
-        @see: func_resolve_debuggee()
-
-        @type  dll:      String
-        @param dll:      Name of the DLL (case-insensitive)
-        @type  function: String
-        @param function: Name of the function to resolve (case-sensitive)
-
-        @rtype:  DWORD
-        @return: Address
-        '''
-
-        handle  = kernel32.LoadLibraryA(dll)
-        address = kernel32.GetProcAddress(handle, function)
-
-        kernel32.FreeLibrary(handle)
-
-        return address
-
-
-    ####################################################################################################################
-    def func_resolve_debuggee (self, dll_name, func_name):
-        '''
-        Utility function that resolves the address of a given module / function name pair under the context of the
-        debuggee.
-
-        @author: Otto Ebeling
-        @see:    func_resolve()
-        @todo:   Add support for followed imports.
-
-        @type  dll_name:  String
-        @param dll_name:  Name of the DLL (case-insensitive, ex:ws2_32.dll)
-        @type  func_name: String
-        @param func_name: Name of the function to resolve (case-sensitive)
-
-        @rtype:  DWORD
-        @return: Address of the symbol in the target process address space if it can be resolved, None otherwise
-        '''
-
-        dll_name = dll_name.lower()
-
-        # we can't make the assumption that all DLL names end in .dll, for example Quicktime libs end in .qtx / .qts
-        # so instead of this old line:
-        #     if not dll_name.endswith(".dll"):
-        # we'll check for the presence of a dot and will add .dll as a conveneince.
-        if not dll_name.count("."):
-            dll_name += ".dll"
-
-        for module in self.iterate_modules():
-            if module.szModule.lower() == dll_name:
-                base_address = module.modBaseAddr
-                dos_header   = self.read_process_memory(base_address, 0x40)
-
-                # check validity of DOS header.
-                if len(dos_header) != 0x40 or dos_header[:2] != "MZ":
-                    continue
-
-                e_lfanew   = struct.unpack("<I", dos_header[0x3c:0x40])[0]
-                pe_headers = self.read_process_memory(base_address + e_lfanew, 0xF8)
-
-                # check validity of PE headers.
-                if len(pe_headers) != 0xF8 or pe_headers[:2] != "PE":
-                    continue
-
-                export_directory_rva = struct.unpack("<I", pe_headers[0x78:0x7C])[0]
-                export_directory_len = struct.unpack("<I", pe_headers[0x7C:0x80])[0]
-                export_directory     = self.read_process_memory(base_address + export_directory_rva, export_directory_len)
-                num_of_functions     = struct.unpack("<I", export_directory[0x14:0x18])[0]
-                num_of_names         = struct.unpack("<I", export_directory[0x18:0x1C])[0]
-                address_of_functions = struct.unpack("<I", export_directory[0x1C:0x20])[0]
-                address_of_names     = struct.unpack("<I", export_directory[0x20:0x24])[0]
-                address_of_ordinals  = struct.unpack("<I", export_directory[0x24:0x28])[0]
-                name_table           = self.read_process_memory(base_address + address_of_names, num_of_names * 4)
-
-                # perform a binary search across the function names.
-                low  = 0
-                high = num_of_names
-
-                while low <= high:
-                    # python does not suffer from integer overflows:
-                    #     http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
-                    middle          = (low + high) / 2
-                    current_address = base_address + struct.unpack("<I", name_table[middle*4:(middle+1)*4])[0]
-
-                    # we use a crude approach here. read 256 bytes and cut on NULL char. not very beautiful, but reading
-                    # 1 byte at a time is very slow.
-                    name_buffer = self.read_process_memory(current_address, 256)
-                    name_buffer = name_buffer[:name_buffer.find("\0")]
-
-                    if name_buffer < func_name:
-                        low = middle + 1
-                    elif name_buffer > func_name:
-                        high = middle - 1
-                    else:
-                        # MSFT documentation is misleading - see http://www.bitsum.com/pedocerrors.htm
-                        bin_ordinal      = self.read_process_memory(base_address + address_of_ordinals + middle * 2, 2)
-                        ordinal          = struct.unpack("<H", bin_ordinal)[0]   # ordinalBase has already been subtracted
-                        bin_func_address = self.read_process_memory(base_address + address_of_functions + ordinal * 4, 4)
-                        function_address = struct.unpack("<I", bin_func_address)[0]
-
-                        return base_address + function_address
-
-                # function was not found.
-                return None
-
-        # module was not found.
-        return None
 
 
     ####################################################################################################################
@@ -913,6 +730,8 @@ class pydbg_core(object):
         @return:    Thread CONTEXT on success.
         '''
 
+        self.core_log("get_thread_context()")
+
         context = CONTEXT()
         context.ContextFlags = CONTEXT_FULL | CONTEXT_DEBUG_REGISTERS
 
@@ -938,9 +757,8 @@ class pydbg_core(object):
         A simple iterator function that can be used to iterate through all modules the target process has mapped in its
         address space. Yielded objects are of type MODULEENTRY32.
 
-        @author:  Otto Ebeling
-        @see:     enumerate_modules()
-        @warning: break-ing out of loops over this routine will cause a handle leak.
+        @author: Otto Ebeling
+        @see:    enumerate_modules()
 
         @rtype:  MODULEENTRY32
         @return: Iterated module entries.
@@ -966,7 +784,6 @@ class pydbg_core(object):
             if not kernel32.Module32Next(snapshot, byref(current_entry)):
                 break
 
-        # if the above loop is "broken" out of, then this handle leaks.
         kernel32.CloseHandle(snapshot)
 
 
@@ -976,8 +793,7 @@ class pydbg_core(object):
         A simple iterator function that can be used to iterate through all running processes. Yielded objects are of
         type PROCESSENTRY32.
 
-        @see:     enumerate_processes()
-        @warning: break-ing out of loops over this routine will cause a handle leak.
+        @see: enumerate_processes()
 
         @rtype:  PROCESSENTRY32
         @return: Iterated process entries.
@@ -1003,7 +819,6 @@ class pydbg_core(object):
             if not kernel32.Process32Next(snapshot, byref(pe)):
                 break
 
-        # if the above loop is "broken" out of, then this handle leaks.
         kernel32.CloseHandle(snapshot)
 
 
@@ -1013,8 +828,7 @@ class pydbg_core(object):
         A simple iterator function that can be used to iterate through all running processes. Yielded objects are of
         type PROCESSENTRY32.
 
-        @see:     enumerate_threads()
-        @warning: break-ing out of loops over this routine will cause a handle leak.
+        @see: enumerate_threads()
 
         @rtype:  PROCESSENTRY32
         @return: Iterated process entries.
@@ -1041,7 +855,6 @@ class pydbg_core(object):
             if not kernel32.Thread32Next(snapshot, byref(thread_entry)):
                 break
 
-        # if the above loop is "broken" out of, then this handle leaks.
         kernel32.CloseHandle(snapshot)
 
 
@@ -1095,29 +908,14 @@ class pydbg_core(object):
         except:
             pass
 
-        # store the handles we need.
+        '''
+        If the function succeeds, be sure to call the CloseHandle function to close the hProcess and hThread handles when you are finished with them. -bill gates
+        '''
+
+        self.close_handle(pi.hThread)
+
         self.pid       = pi.dwProcessId
         self.h_process = pi.hProcess
-
-        # resolve the PEB address.
-        selector_entry = LDT_ENTRY()
-        thread_context = self.get_thread_context(pi.hThread)
-
-        if not kernel32.GetThreadSelectorEntry(pi.hThread, thread_context.SegFs, byref(selector_entry)):
-            self.win32_error("GetThreadSelectorEntry()")
-
-        teb  = selector_entry.BaseLow
-        teb += (selector_entry.HighWord.Bits.BaseMid << 16) + (selector_entry.HighWord.Bits.BaseHi << 24)
-
-        # add this TEB to the internal dictionary.
-        self.tebs[pi.dwThreadId] = teb
-
-        self.peb = self.read_process_memory(teb + 0x30, 4)
-        self.peb = struct.unpack("<L", self.peb)[0]
-
-        # if the function (CreateProcess) succeeds, be sure to call the CloseHandle function to close the hProcess and
-        # hThread handles when you are finished with them. -bill gates
-        self.close_handle(pi.hThread)
 
 
     ####################################################################################################################
@@ -1170,42 +968,14 @@ class pydbg_core(object):
 
 
     ####################################################################################################################
-    def read_msr (self, address):
-        '''
-        Read data from the specified MSR address.
-
-        @see: write_msr
-
-        @type  address: DWORD
-        @param address: MSR address to read from.
-
-        @rtype:  tuple
-        @return: (read status, msr structure)
-        '''
-
-        msr         = SYSDBG_MSR()
-        msr.Address = 0x1D9
-        msr.Data    = 0xFF  # must initialize this value.
-
-        status = ntdll.NtSystemDebugControl(SysDbgReadMsr,
-                                            byref(msr),
-                                            sizeof(SYSDBG_MSR),
-                                            byref(msr),
-                                            sizeof(SYSDBG_MSR),
-                                            0);
-
-        return (status, msr)
-
-
-    ####################################################################################################################
     def read_process_memory (self, address, length):
         '''
         Read from the debuggee process space.
 
         @type  address: DWORD
-        @param address: Address to read from.
+        @param address: Address to read from
         @type  length:  Integer
-        @param length:  Length, in bytes, of data to read.
+        @param length:  Length, in bytes, of data to read
 
         @raise pdx: An exception is raised on failure.
         @rtype:     Raw
@@ -1266,7 +1036,7 @@ class pydbg_core(object):
         Resume the specified thread.
 
         @type  thread_id: DWORD
-        @param thread_id: ID of thread to resume.
+        @param thread_id: ID of thread to resume
 
         @raise pdx: An exception is raised on failure.
         @rtype:     pydbg_core
@@ -1505,17 +1275,12 @@ class pydbg_core(object):
 
 
     ####################################################################################################################
-    def terminate_process (self, exit_code=0, method="terminateprocess"):
+    def terminate_process (self, exit_code=0):
         '''
-        Terminate the debuggee using the specified method.
-
-        "terminateprocess": Terminate the debuggee by calling TerminateProcess(debuggee_handle).
-        "exitprocess":      Terminate the debuggee by setting its current EIP to ExitProcess().
+        Terminate the debuggee.
 
         @type  exit_code: Integer
         @param exit_code: (Optional, def=0) Exit code
-        @type  method:    String
-        @param method:    (Optonal, def="terminateprocess") Termination method. See __doc__ for more info.
 
         @raise pdx: An exception is raised on failure.
         '''
@@ -1523,14 +1288,8 @@ class pydbg_core(object):
         self.set_debugger_active(False)
 
         try:
-            if method == "exitprocess":
-                self.context.Eip = self.func_resolve_debuggee("kernel32", "ExitProcess")
-                self.set_thread_context(self.context)
-
-            # fall back to "terminateprocess".
-            else:
-                if not kernel32.TerminateProcess(self.h_process, exit_code):
-                    raise pdx("TerminateProcess(%d)" % exit_code, True)
+            if not kernel32.TerminateProcess(self.h_process, exit_code):
+                raise pdx("TerminateProcess(%d)" % exit_code, True)
         finally:
                 self.close_handle(self.h_process)
 
@@ -1678,36 +1437,6 @@ class pydbg_core(object):
         '''
 
         return self.write_process_memory(address, data, length)
-
-
-    ####################################################################################################################
-    def write_msr (self, address, data):
-        '''
-        Write data to the specified MSR address.
-
-        @see: read_msr
-
-        @type  address: DWORD
-        @param address: MSR address to write to.
-        @type  data:    QWORD
-        @param data:    Data to write to MSR address.
-
-        @rtype:  tuple
-        @return: (read status, msr structure)
-        '''
-
-        msr         = SYSDBG_MSR()
-        msr.Address = address
-        msr.Data    = data
-
-        status = ntdll.NtSystemDebugControl(SysDbgWriteMsr,
-                                            byref(msr),
-                                            sizeof(SYSDBG_MSR),
-                                            0,
-                                            0,
-                                            0);
-
-        return status
 
 
     ####################################################################################################################

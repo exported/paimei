@@ -27,7 +27,7 @@ import time
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
-class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
+class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin):
     '''
     Our custom list control containing the hits for the current target/tag.
     '''
@@ -41,18 +41,12 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
 
         ListCtrlAutoWidthMixin.__init__(self)
 
-        self.items_sort_map = {}
-        self.itemDataMap    = self.items_sort_map
-
-        ColumnSorterMixin.__init__(self, 7)
-
         self.InsertColumn(0, "#")
-        self.InsertColumn(1, "Time")
-        self.InsertColumn(2, "EIP")
-        self.InsertColumn(3, "TID")
-        self.InsertColumn(4, "Module")
-        self.InsertColumn(5, "Func?")
-        self.InsertColumn(6, "Tag")
+        self.InsertColumn(1, "EIP")
+        self.InsertColumn(2, "TID")
+        self.InsertColumn(3, "Module")
+        self.InsertColumn(4, "Func?")
+        self.InsertColumn(5, "Tag")
 
 
     ####################################################################################################################
@@ -73,16 +67,8 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
         hits = mysql.cursor(MySQLdb.cursors.DictCursor)
         hits.execute("SELECT hits.*, tags.tag FROM cc_hits AS hits, cc_tags AS tags WHERE hits.tag_id = '%d' AND tags.id = '%d' ORDER BY num ASC" % (tag_id, tag_id))
 
-        idx      = len(self.hits_by_index)
-        hitlist  = hits.fetchall()
-
-        # XXX - need to fix this logic, it craps out some times
-        try:
-            min_time = min([h["timestamp"] for h in hitlist if h["timestamp"] != 0])
-        except:
-            min_time = 0
-
-        for hit in hitlist:
+        idx = len(self.hits_by_index)
+        for hit in hits.fetchall():
             self.hits_by_index[idx] = hit
 
             if self.eips.count(hit["eip"]) == 0:
@@ -94,27 +80,13 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
             if hit["is_function"]: is_function = "Y"
             else:                  is_function = ""
 
-            timestamp = int(hit["timestamp"]) - min_time
-
             self.InsertStringItem(idx, "")
             self.SetStringItem(idx, 0, "%d"   % hit["num"])
-            self.SetStringItem(idx, 1, "+%ds" % timestamp)
-            self.SetStringItem(idx, 2, "%08x" % hit["eip"])
-            self.SetStringItem(idx, 3, "%d"   % hit["tid"])
-            self.SetStringItem(idx, 4,          hit["module"])
-            self.SetStringItem(idx, 5, "%s"   % is_function)
-            self.SetStringItem(idx, 6,          hit["tag"])
-
-            self.items_sort_map[idx] = ( \
-                int(hit["num"]),
-                "+%ds" % timestamp,
-                "%08x" % hit["eip"],
-                int(hit["tid"]),
-                hit["module"],
-                "%s"   % is_function,
-                hit["tag"])
-
-            self.SetItemData(idx, idx)
+            self.SetStringItem(idx, 1, "%08x" % hit["eip"])
+            self.SetStringItem(idx, 2, "%d"   % hit["tid"])
+            self.SetStringItem(idx, 3,          hit["module"])
+            self.SetStringItem(idx, 4, "%s"   % is_function)
+            self.SetStringItem(idx, 5,          hit["tag"])
 
             self.eips.append(hit["eip"])
             idx += 1
@@ -142,15 +114,6 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
 
 
     ####################################################################################################################
-    def GetListCtrl (self):
-        '''
-        Used by the ColumnSorterMixin, see wx/lib/mixins/listctrl.py
-        '''
-
-        return self
-
-
-    ####################################################################################################################
     def load_hits (self, tag_id):
         '''
         '''
@@ -173,9 +136,7 @@ class HitsListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin):
     def on_select (self, event):
         self.selected = event.GetItem()
 
-        hit = self.hits_by_index[self.GetItemData(self.selected.GetId())]
-
-        separator = "-" * 72
+        hit = self.hits_by_index[self.selected.GetId()]
 
         context_dump  = "%s\n" % time.ctime(hit["timestamp"])
         context_dump += "EIP: %08x\n" % hit["eip"]

@@ -19,35 +19,24 @@
         <li><a href="#PAIMEIdocs">PAIMEIdocs</a>
         <li><a href="#PAIMEIexplore">PAIMEIexplore</a>
         <li><a href="#PAIMEIfilefuzz">PAIMEIfilefuzz</a>
-        <li><a href="#PAIMEIpeek">PAIMEIpeek</a>
         <li><a href="#PAIMEIpstalker">PAIMEIpstalker</a>
     </ul>
     <li><a href="developer_docs.html">Developer Docs</a></li>
-    <li><a href="authors_and_contributors.html">Authors and Contributors</a></li>
 </ol>
 
 <table border=0 cellpadding=0 cellspacing=0><tr><td width="100%">
 <a name="console_menus"></a><h2>Console Menus</h2>
 <h3>Connectons\MySQL Connect</h3>
-Establish a console wide connection to your database server. A MySQL connection is required for example in the pstalker and peek modules.
+Establish a console wide connection to your database server. A MySQL connection is required for example in the pstalker module.
 
 <h3>Connectons\PyDbg Locale</h3>
 This option controls the console wide PyDbg setting of whether to debug remotely or locally. In the public release of PaiMei, only local debugging is supported and therefore you should never need to change this option.
-
-<h3>Connectons\Set Username</h3>
-Set your console-wide username which can then be used by any loaded module. The PAIMEIpeek module for example relies on this value to associate recorded actions with individual users.
 
 <h3>Connectons\uDraw(Graph) Connect</h3>
 Establish a console wide socket connection to udraw(Graph). A connection to uDraw is required only if you plan on doing dynamic graphing. The pstalker "uDraw Sync" command for example requires uDraw connectivity. <b>Note:</b> uDraw must be started with the <i>-server</i> option in order to be in listening mode. Example:
 <pre>
     "C:\Program Files\uDraw(Graph)\bin\uDrawGraph.exe" -server
 </pre>
-
-<h3>Connectons\Save Options</h3>
-Save the current MySQL, uDraw and PyDbg connection settings as well as the current username to a serialized file on disk. This file is automatically parsed on startup to restore the set values but <b>NOT</b> the actual connections. See the next menu option for a shortcut to restoring connections.
-
-<h3>Connectons\Restore Connections</h3>
-Restore console-wide connectivity based on saved settings. Connections to MySQL, uDraw and PyDbg are automatically restored. See the status bar for the connection status.
 
 <h3>Advanced\Clear Log</h3>
 Clear the log window of the currently selected module.
@@ -74,8 +63,8 @@ The public release of this module is sort of the "hello world" of the PaiMei con
 <a name="PAIMEIfilefuzz"></a><h2>PAIMEIfilefuzz</h2>
 
 The file fuzz module is intended to demonstrate the use of the PaiMei framework for developing fuzzers. It is simple in design and operation but can be very effective at generating and running fuzzer test cases against any target application. The general workflow associated with this tool is broken down into two steps, test case generation and test case execution.
-
-<h3>Test Case Generation</h3>
+<br><br>
+<b>Test Case Generation</b>:
 <ol>
     <li> Add your source file path to the "Source File Name" input control.
     <li> Add the destination path of the generated files to the "Destination Directory" input control.
@@ -88,8 +77,7 @@ The file fuzz module is intended to demonstrate the use of the PaiMei framework 
     <li> Enter the ending file offset to stop modifications in the "Range End" input control, leave blank to modify until the end of the file.
     <li> In the "Fuzz" section hit "Generate" to begin generating files.
 </ol>
-
-<h3>Test Case Execution</h3>
+<b>Test Case Execution</b>:
 <ol>
     <li> After generation, the list of test cases should populate the "Fuzz" list box.  If you would like to run previously generated, or independently generated, test cases add the path to the "Destination Directory" and click "Refresh List".
     <ol>
@@ -100,32 +88,6 @@ The file fuzz module is intended to demonstrate the use of the PaiMei framework 
     <li> Set the desired timeout value in the "Timeout" input box (a good choice for most target is ~5 seconds).
     <li> In the "Fuzz" section hit "Run".
 </ol>
-
-<a name="PAIMEIpeek"></a><h2>PAIMEIpeek</h2>
-The peek module is intended to replace the earlier command line version that turned out to be usable only by its author. The primary usage of this tool is for locating "low hanging fruit" vulnerabilities in closed-source Windows software. There are three phases to using the peek tool:
-
-<h3>Reconnaissance</h3>
-You must begin by first running the <i>proc_peek_recon_db.py</i> IDA Python script, <b>after</b> IDA has finished its auto-analysis. The script asks for your MySQL server information and then determines / transfers a list of various potentially interesting locations within the binary (I call these "RECON points"). Example locations include discovered inline memcpy()'s, calls to various routines that take format strings <b>and</b> are passed a <i>%s</i> format string token as well as calls to potentially dangerous API such as strcat, strcpy and the like. For the full list, see the source code. It's by no means an exhaustive list in the current release.
-
-<h3>Capture</h3>
-With the RECON data in place, load the PAIMEIpeek module, hit "Select Module" and choose the appropriate module name. The list of discovered points will be enumerated in the list control. You can manually add to this list by hitting the "Add RECON Point" button.
-<br><br>
-The "Options" button pops up a dialog where you can specify the same options that the original command line version of this tool provided. The first check box controls whether or not to display context dumps in the log window at run-time. The next check box controls whether or not to hook and log the contents of the packets received by the Winsock recv() and recv_from() API. The next option allows you to specify an output file to store a copy of all log messages to. Finally, the Boron tag field allows you to specify a string to search all context dumps for. Boron tagging is a term coined by Greg Hoglund, you can read more about this concept in the sample chapter <a href="http://www.informit.com/articles/printerfriendly.asp?p=353553&rl=1">Reverse Engineering and Program Understanding</a> from his book <a href="http://www.amazon.com/exec/obidos/redirect?path=ASIN/0201786958&link_code=as2&camp=1789&tag=openreverseco-20&creative=9325">Exploiting Software</a>.
-<br><br>
-With your options set you are now ready to hit the "Peek!" button to select an existing process to attach to or a new process to load. PyDbg is then used to set breakpoints on each of the RECON points and monitor the output. When you are satisfied detach PyDbg from the target by hitting "Stop" (the Peek! button toggles back and forth depending on status). Your captured data is now refreshed into the list control and you are ready for analysis.
-
-<h3>Analysis</h3>
-Selecting a row from the list control fills the "Hits" columns with an entry for every time the selected RECON point was hit. Select one of the entries in the hits column to display the captured data in the "Peek Point Data" text control. Use the TAB, SHIFT-TAB, UP, DOWN, PAGE-UP and PAGE-DOWN keys to quickly navigate the interface.
-<br><br>
-The right-click context menu on the RECON list control allows you to edit, delete or self-assign an individual RECON point. In the edit dialog use the "Status" dropdown to set the state of the selected point. The states are as follows:
-<ul>
-    <li> new: No one has looked at this point yet.
-    <li> uncontrollable: According to empirical data, we can't influence the data at this point.
-    <li> clear: The point was examined thoroughly and determined that no vulnerability was present.
-    <li> unsure: More research on this point is necessary.
-    <li> vulnerable: This RECON point is in some way involved in an exposed vulnerability.
-</ul>
-The states "uncontrollable", "clear" and "vulnerable" are <b>CLOSED</b> states. The states "new" and "unsure" are <b>OPEN</b> states. The progress bar under the RECON list control shows how many RECON points have been closed out. As the progress bar begins to fill, your chances of discovering a "low hanging fruit" vulnerability starts to diminish.
 
 <a name="PAIMEIpstalker"></a><h2>PAIMEIpstalker</h2>
 The pstalker module is intended to replace the earlier developed <a href="http://www.openrce.org/downloads/details/171/Process_Stalker">Process Stalker</a> code coverage tool. While the currently exposed feature set is not as robust at what was previously possible using the various command line utilities, one of the biggest improvements to Process Stalker is the storage of metadata to MySQL as opposed to multiple files that can quickly get disorganized and confusing.

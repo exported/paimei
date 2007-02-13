@@ -85,16 +85,6 @@ class MODULEENTRY32(Structure):
 ]
 
 ###
-### manually declare various structures as needed.
-###
-
-class SYSDBG_MSR(Structure):
-    _fields_ = [
-        ("Address", c_ulong),
-        ("Data",    c_ulonglong),
-]
-
-###
 ### manually declare various #define's as needed.
 ###
 
@@ -156,7 +146,3 @@ SE_PRIVILEGE_ENABLED           = 0x00000002
 SW_SHOW                        = 0x00000005
 THREAD_ALL_ACCESS              = 0x001F03FF
 TOKEN_ADJUST_PRIVILEGES        = 0x00000020
-
-# for NtSystemDebugControl()
-SysDbgReadMsr                  = 16
-SysDbgWriteMsr                 = 17

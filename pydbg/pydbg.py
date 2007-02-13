@@ -30,11 +30,7 @@ from my_ctypes import *
 from defines   import *
 from windows_h import *
 
-# macos compatability.
-try:
-    kernel32 = windll.kernel32
-except:
-    kernel32 = CDLL("libmacdll.dylib")
+kernel32 = windll.kernel32
 
 from breakpoint              import *
 from hardware_breakpoint     import *
@@ -553,7 +549,7 @@ class pydbg(pydbg_core):
         # set the thread context.
         self.set_thread_context(context)
 
-        context = self.get_thread_context(self.h_thread)
+        #context = self.get_thread_context(self.h_thread)
         #print "Dr0 = %08x" % context.Dr0
         #print "Dr1 = %08x" % context.Dr1
         #print "Dr2 = %08x" % context.Dr2
@@ -724,22 +720,13 @@ class pydbg(pydbg_core):
 
         # update our internal member variables.
         self.instruction = pydasm.get_instruction(data, pydasm.MODE_32)
+        self.mnemonic    = pydasm.get_mnemonic_string(self.instruction, pydasm.FORMAT_INTEL)
+        self.op1         = pydasm.get_operand_string(self.instruction, 0, pydasm.FORMAT_INTEL, address)
+        self.op2         = pydasm.get_operand_string(self.instruction, 1, pydasm.FORMAT_INTEL, address)
+        self.op3         = pydasm.get_operand_string(self.instruction, 2, pydasm.FORMAT_INTEL, address)
 
-        if not self.instruction:
-            self.mnemonic = "[UNKNOWN]"
-            self.op1      = ""
-            self.op2      = ""
-            self.op3      = ""
-
-            return "[UNKNOWN]"
-        else:
-            self.mnemonic = pydasm.get_mnemonic_string(self.instruction, pydasm.FORMAT_INTEL)
-            self.op1      = pydasm.get_operand_string(self.instruction, 0, pydasm.FORMAT_INTEL, address)
-            self.op2      = pydasm.get_operand_string(self.instruction, 1, pydasm.FORMAT_INTEL, address)
-            self.op3      = pydasm.get_operand_string(self.instruction, 2, pydasm.FORMAT_INTEL, address)
-
-            # the rstrip() is for removing extraneous trailing whitespace that libdasm sometimes leaves.
-            return pydasm.get_instruction_string(self.instruction, pydasm.FORMAT_INTEL, address).rstrip(" ")
+        # the rstrip() is for removing extraneous trailing whitespace that libdasm sometimes leaves.
+        return pydasm.get_instruction_string(self.instruction, pydasm.FORMAT_INTEL, address).rstrip(" ")
 
 
     ####################################################################################################################
@@ -850,7 +837,7 @@ class pydbg(pydbg_core):
         context_dump += "  EDX: %08x (%10d) -> %s\n" % (context.Edx, context.Edx, context_list["edx"])
         context_dump += "  EDI: %08x (%10d) -> %s\n" % (context.Edi, context.Edi, context_list["edi"])
         context_dump += "  ESI: %08x (%10d) -> %s\n" % (context.Esi, context.Esi, context_list["esi"])
-        context_dump += "  EBP: %08x (%10d) -> %s\n" % (context.Ebp, context.Ebp, context_list["ebp"])
+        context_dump += "  EBP: %08x (%10d) -> %s\n" % (context.Ebp, context.Ebp, context_list["esi"])
         context_dump += "  ESP: %08x (%10d) -> %s\n" % (context.Esp, context.Esp, context_list["esp"])
 
         for offset in xrange(0, stack_depth + 1):
@@ -866,7 +853,7 @@ class pydbg(pydbg_core):
 
 
     ####################################################################################################################
-    def dump_context_list (self, context=None, stack_depth=5, print_dots=True, hex_dump=False):
+    def dump_context_list (self, context=None, stack_depth=5, print_dots=True):
         '''
         Return an informational list of items describing the CPU context of the current thread. Information includes:
             - Disassembly at current EIP
@@ -881,8 +868,6 @@ class pydbg(pydbg_core):
         @param stack_depth: (Optional, def:5) Number of dwords to dereference off of the stack (not including ESP)
         @type  print_dots:  Bool
         @param print_dots:  (Optional, def:True) Controls suppression of dot in place of non-printable
-        @type  hex_dump:   Bool
-        @param hex_dump:   (Optional, def=False) Return a hex dump in the absense of string detection
 
         @rtype:  Dictionary
         @return: Dictionary of information about current thread context.
@@ -895,26 +880,21 @@ class pydbg(pydbg_core):
         context_list = {}
 
         context_list["eip"] = self.disasm(context.Eip)
-        context_list["eax"] = self.smart_dereference(context.Eax, print_dots, hex_dump)
-        context_list["ebx"] = self.smart_dereference(context.Ebx, print_dots, hex_dump)
-        context_list["ecx"] = self.smart_dereference(context.Ecx, print_dots, hex_dump)
-        context_list["edx"] = self.smart_dereference(context.Edx, print_dots, hex_dump)
-        context_list["edi"] = self.smart_dereference(context.Edi, print_dots, hex_dump)
-        context_list["esi"] = self.smart_dereference(context.Esi, print_dots, hex_dump)
-        context_list["ebp"] = self.smart_dereference(context.Ebp, print_dots, hex_dump)
-        context_list["esp"] = self.smart_dereference(context.Esp, print_dots, hex_dump)
+        context_list["eax"] = self.smart_dereference(context.Eax, print_dots)
+        context_list["ebx"] = self.smart_dereference(context.Ebx, print_dots)
+        context_list["ecx"] = self.smart_dereference(context.Ecx, print_dots)
+        context_list["edx"] = self.smart_dereference(context.Edx, print_dots)
+        context_list["edi"] = self.smart_dereference(context.Edi, print_dots)
+        context_list["esi"] = self.smart_dereference(context.Esi, print_dots)
+        context_list["ebp"] = self.smart_dereference(context.Ebp, print_dots)
+        context_list["esp"] = self.smart_dereference(context.Esp, print_dots)
 
         for offset in xrange(0, stack_depth + 1):
-            try:
-                esp = self.flip_endian_dword(self.read_process_memory(context.Esp + offset * 4, 4))
-
-                context_list["esp+%02x"%(offset*4)]          = {}
-                context_list["esp+%02x"%(offset*4)]["value"] = esp
-                context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots, hex_dump)
-            except:
-                context_list["esp+%02x"%(offset*4)]          = {}
-                context_list["esp+%02x"%(offset*4)]["value"] = 0
-                context_list["esp+%02x"%(offset*4)]["desc"]  = "[INVALID]"
+            # no try/except here because ESP *should* always be readable and i'd really like to know if it's not.
+            esp = self.flip_endian_dword(self.read_process_memory(context.Esp + offset * 4, 4))
+            context_list["esp+%02x"%(offset*4)]          = {}
+            context_list["esp+%02x"%(offset*4)]["value"] = esp
+            context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots)
 
         return context_list
 
@@ -1060,26 +1040,23 @@ class pydbg(pydbg_core):
 
         self.pydbg_log("pydbg.exception_handler_breakpoint() at %08x from thread id %d" % (self.exception_address, self.dbg.dwThreadId))
 
-        # breakpoints we did not set.
         if not self.bp_is_ours(self.exception_address):
-            # system breakpoints.
-            if self.exception_address == self.system_break:
+            # the first windows driven system break point.
+            if self.first_breakpoint:
+                self.pydbg_log("first windows driven system breakpoint at %08x" % self.exception_address)
+
                 # pass control to user registered call back.
                 if self.callbacks.has_key(EXCEPTION_BREAKPOINT):
                     continue_status = self.callbacks[EXCEPTION_BREAKPOINT](self)
                 else:
                     continue_status = DBG_CONTINUE
 
-                if self.first_breakpoint:
-                    self.pydbg_log("first windows driven system breakpoint at %08x" % self.exception_address)
-                    self.first_breakpoint = False
+                self.first_breakpoint = False
 
-            # ignore all other breakpoints we didn't explicitly set.
+            # ignore breakpoints we didn't explicitly set.
             else:
                 self.pydbg_log("breakpoint not ours %08x" % self.exception_address)
                 continue_status = DBG_EXCEPTION_NOT_HANDLED
-
-        # breakpoints we did set.
         else:
             # restore the original byte at the breakpoint address.
             self.pydbg_log("restoring original byte at %08x" % self.exception_address)
@@ -1226,12 +1203,6 @@ class pydbg(pydbg_core):
         elif self._restore_breakpoint:
             continue_status = DBG_CONTINUE
 
-            # macos compatability.
-            # need to clear TRAP flag for MacOS. this doesn't hurt Windows aside from a negligible speed hit.
-            context         = self.get_thread_context(self.h_thread)
-            context.EFlags &= ~EFLAGS_TRAP
-            self.set_thread_context(context)
-
         else:
             continue_status = DBG_EXCEPTION_NOT_HANDLED
 
@@ -1257,6 +1228,120 @@ class pydbg(pydbg_core):
         self._restore_breakpoint     = None
 
         return continue_status
+
+
+    ####################################################################################################################
+    def func_resolve (self, dll, function):
+        '''
+        Utility function that resolves the address of a given module / function name pair under the context of the
+        debugger.
+
+        @see: func_resolve_debuggee()
+
+        @type  dll:      String
+        @param dll:      Name of the DLL (case-insensitive)
+        @type  function: String
+        @param function: Name of the function to resolve (case-sensitive)
+
+        @rtype:  DWORD
+        @return: Address
+        '''
+
+        handle  = kernel32.LoadLibraryA(dll)
+        address = kernel32.GetProcAddress(handle, function)
+
+        kernel32.FreeLibrary(handle)
+
+        return address
+
+
+    ####################################################################################################################
+    def func_resolve_debuggee (self, dll_name, func_name):
+        '''
+        Utility function that resolves the address of a given module / function name pair under the context of the
+        debuggee.
+
+        @author: Otto Ebeling
+        @see:    func_resolve()
+        @todo:   Add support for followed imports.
+
+        @type  dll_name:  String
+        @param dll_name:  Name of the DLL (case-insensitive, ex:ws2_32.dll)
+        @type  func_name: String
+        @param func_name: Name of the function to resolve (case-sensitive)
+
+        @rtype:  DWORD
+        @return: Address of the symbol in the target process address space if it can be resolved, None otherwise
+        '''
+
+        dll_name = dll_name.lower()
+
+        # we can't make the assumption that all DLL names end in .dll, for example Quicktime libs end in .qtx / .qts
+        # so instead of this old line:
+        #     if not dll_name.endswith(".dll"):
+        # we'll check for the presence of a dot and will add .dll as a conveneince.
+        if not dll_name.count("."):
+            dll_name += ".dll"
+
+        for module in self.iterate_modules():
+            if module.szModule.lower() == dll_name:
+                base_address = module.modBaseAddr
+                dos_header   = self.read_process_memory(base_address, 0x40)
+
+                # check validity of DOS header.
+                if len(dos_header) != 0x40 or dos_header[:2] != "MZ":
+                    continue
+
+                e_lfanew   = struct.unpack("<I", dos_header[0x3c:0x40])[0]
+                pe_headers = self.read_process_memory(base_address + e_lfanew, 0xF8)
+
+                # check validity of PE headers.
+                if len(pe_headers) != 0xF8 or pe_headers[:2] != "PE":
+                    continue
+
+                export_directory_rva = struct.unpack("<I", pe_headers[0x78:0x7C])[0]
+                export_directory_len = struct.unpack("<I", pe_headers[0x7C:0x80])[0]
+                export_directory     = self.read_process_memory(base_address + export_directory_rva, export_directory_len)
+                num_of_functions     = struct.unpack("<I", export_directory[0x14:0x18])[0]
+                num_of_names         = struct.unpack("<I", export_directory[0x18:0x1C])[0]
+                address_of_functions = struct.unpack("<I", export_directory[0x1C:0x20])[0]
+                address_of_names     = struct.unpack("<I", export_directory[0x20:0x24])[0]
+                address_of_ordinals  = struct.unpack("<I", export_directory[0x24:0x28])[0]
+                name_table           = self.read_process_memory(base_address + address_of_names, num_of_names * 4)
+
+                # perform a binary search across the function names.
+                low  = 0
+                high = num_of_names
+
+                while low <= high:
+                    # python does not suffer from integer overflows:
+                    #     http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
+                    middle          = (low + high) / 2
+                    current_address = base_address + struct.unpack("<I", name_table[middle*4:(middle+1)*4])[0]
+
+                    # we use a crude approach here. read 256 bytes and cut on NULL char. not very beautiful, but reading
+                    # 1 byte at a time is very slow.
+                    name_buffer = self.read_process_memory(current_address, 256)
+                    name_buffer = name_buffer[:name_buffer.find("\0")]
+
+                    if name_buffer < func_name:
+                        low = middle + 1
+                    elif name_buffer > func_name:
+                        high = middle - 1
+                    else:
+                        # MSFT documentation is misleading - see http://www.bitsum.com/pedocerrors.htm
+                        bin_ordinal      = self.read_process_memory(base_address + address_of_ordinals + middle * 2, 2)
+                        ordinal          = struct.unpack("<H", bin_ordinal)[0]   # ordinalBase has already been subtracted
+                        bin_func_address = self.read_process_memory(base_address + address_of_functions + ordinal * 4, 4)
+                        function_address = struct.unpack("<I", bin_func_address)[0]
+
+                        return base_address + function_address
+
+                # function was not found.
+                return None
+
+        # module was not found.
+        return None
 
 
     ####################################################################################################################
@@ -1356,42 +1441,6 @@ class pydbg(pydbg_core):
                 discovered += "."
 
         return discovered
-
-
-    ####################################################################################################################
-    def get_register (self, register):
-        '''
-        Get the value of a register in the debuggee within the context of the self.h_thread.
-
-        @type  register: Register
-        @param register: One of EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP, EIP
-
-        @raise pdx: An exception is raised on failure.
-        @rtype:     DWORD
-        @return:    Value of specified register.
-        '''
-
-        self.pydbg_log("getting %s in thread id %d" % (register, self.dbg.dwThreadId))
-
-        register = register.upper()
-        if register not in ("EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "ESP", "EBP", "EIP"):
-            raise pdx("invalid register specified")
-
-        # ensure we have an up to date thread context.
-        context = self.get_thread_context(self.h_thread)
-
-        if   register == "EAX": return context.Eax
-        elif register == "EBX": return context.Ebx
-        elif register == "ECX": return context.Ecx
-        elif register == "EDX": return context.Edx
-        elif register == "ESI": return context.Esi
-        elif register == "EDI": return context.Edi
-        elif register == "ESP": return context.Esp
-        elif register == "EBP": return context.Ebp
-        elif register == "EIP": return context.Eip
-
-        # this shouldn't ever really be reached.
-        return 0
 
 
     ####################################################################################################################
@@ -1804,7 +1853,7 @@ class pydbg(pydbg_core):
 
 
     ####################################################################################################################
-    def smart_dereference (self, address, print_dots=True, hex_dump=False):
+    def smart_dereference (self, address, print_dots=True):
         '''
         "Intelligently" discover data behind an address. The address is dereferenced and explored in search of an ASCII
         or Unicode string. In the absense of a string the printable characters are returned with non-printables
@@ -1815,8 +1864,6 @@ class pydbg(pydbg_core):
         @param address:    Address to smart dereference
         @type  print_dots: Bool
         @param print_dots: (Optional, def:True) Controls suppression of dot in place of non-printable
-        @type  hex_dump:   Bool
-        @param hex_dump:   (Optional, def=False) Return a hex dump in the absense of string detection
 
         @rtype:  String
         @return: String of data discovered behind dereference.
@@ -1828,11 +1875,10 @@ class pydbg(pydbg_core):
             return "N/A"
 
         # if the address doesn't point into writable memory (stack or heap), then bail.
-        if not mbi.Protect & PAGE_READWRITE:
-            return "N/A"
-
-        # if the address does point to writeable memory, ensure it doesn't sit on the PEB or any of the TEBs.
-        if mbi.BaseAddress == self.peb or mbi.BaseAddress in self.tebs.values():
+        # XXX - there are writable pages above 0x70000000 that aren't going to be stack/heap related, so we ignore them.
+        #       this is a cheap hack, there has to be a better way of doing it. maybe look into NtQuerySystemInformation
+        #       possibly check for MEM_IMAGE as we don't care about those pages even if they are writeable.
+        if not mbi.Protect & PAGE_READWRITE or address > 0x70000000:
             return "N/A"
 
         try:
@@ -1862,16 +1908,10 @@ class pydbg(pydbg_core):
         if not explored_string:
             explored_string = self.get_unicode_string(explored)
 
-        if not explored_string and hex_dump:
-            explored_string = self.hex_dump(explored)
-
         if not explored_string:
             explored_string = self.get_printable_string(explored, print_dots)
 
-        if hex_dump:
-            return "%s --> %s" % (explored_string, location)
-        else:
-            return "%s (%s)" % (explored_string, location)
+        return "%s (%s)" % (explored_string, location)
 
 
     ####################################################################################################################

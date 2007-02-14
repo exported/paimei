@@ -33,6 +33,7 @@ xx.xx.2006 [REV ]
         - Added get_register() routine to compliment set_register().
         - Fixed handle leak in addr_to_module().
         - Added warning about handle leaks when break-ing out of iterate_xxx() routines.
+        - Bug fix during context dump of an exhausted stack.
     pydasm:
         - Bundled new version of pydasm which manually fixes a memory leak that was affecting PaiMei.
 

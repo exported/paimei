@@ -553,7 +553,7 @@ class pydbg(pydbg_core):
         # set the thread context.
         self.set_thread_context(context)
 
-        #context = self.get_thread_context(self.h_thread)
+        context = self.get_thread_context(self.h_thread)
         #print "Dr0 = %08x" % context.Dr0
         #print "Dr1 = %08x" % context.Dr1
         #print "Dr2 = %08x" % context.Dr2
@@ -905,11 +905,16 @@ class pydbg(pydbg_core):
         context_list["esp"] = self.smart_dereference(context.Esp, print_dots, hex_dump)
 
         for offset in xrange(0, stack_depth + 1):
-            # no try/except here because ESP *should* always be readable and i'd really like to know if it's not.
-            esp = self.flip_endian_dword(self.read_process_memory(context.Esp + offset * 4, 4))
-            context_list["esp+%02x"%(offset*4)]          = {}
-            context_list["esp+%02x"%(offset*4)]["value"] = esp
-            context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots, hex_dump)
+            try:
+                esp = self.flip_endian_dword(self.read_process_memory(context.Esp + offset * 4, 4))
+
+                context_list["esp+%02x"%(offset*4)]          = {}
+                context_list["esp+%02x"%(offset*4)]["value"] = esp
+                context_list["esp+%02x"%(offset*4)]["desc"]  = self.smart_dereference(esp, print_dots, hex_dump)
+            except:
+                context_list["esp+%02x"%(offset*4)]          = {}
+                context_list["esp+%02x"%(offset*4)]["value"] = 0
+                context_list["esp+%02x"%(offset*4)]["desc"]  = "[INVALID]"
 
         return context_list
 
@@ -1252,120 +1257,6 @@ class pydbg(pydbg_core):
         self._restore_breakpoint     = None
 
         return continue_status
-
-
-    ####################################################################################################################
-    def func_resolve (self, dll, function):
-        '''
-        Utility function that resolves the address of a given module / function name pair under the context of the
-        debugger.
-
-        @see: func_resolve_debuggee()
-
-        @type  dll:      String
-        @param dll:      Name of the DLL (case-insensitive)
-        @type  function: String
-        @param function: Name of the function to resolve (case-sensitive)
-
-        @rtype:  DWORD
-        @return: Address
-        '''
-
-        handle  = kernel32.LoadLibraryA(dll)
-        address = kernel32.GetProcAddress(handle, function)
-
-        kernel32.FreeLibrary(handle)
-
-        return address
-
-
-    ####################################################################################################################
-    def func_resolve_debuggee (self, dll_name, func_name):
-        '''
-        Utility function that resolves the address of a given module / function name pair under the context of the
-        debuggee.
-
-        @author: Otto Ebeling
-        @see:    func_resolve()
-        @todo:   Add support for followed imports.
-
-        @type  dll_name:  String
-        @param dll_name:  Name of the DLL (case-insensitive, ex:ws2_32.dll)
-        @type  func_name: String
-        @param func_name: Name of the function to resolve (case-sensitive)
-
-        @rtype:  DWORD
-        @return: Address of the symbol in the target process address space if it can be resolved, None otherwise
-        '''
-
-        dll_name = dll_name.lower()
-
-        # we can't make the assumption that all DLL names end in .dll, for example Quicktime libs end in .qtx / .qts
-        # so instead of this old line:
-        #     if not dll_name.endswith(".dll"):
-        # we'll check for the presence of a dot and will add .dll as a conveneince.
-        if not dll_name.count("."):
-            dll_name += ".dll"
-
-        for module in self.iterate_modules():
-            if module.szModule.lower() == dll_name:
-                base_address = module.modBaseAddr
-                dos_header   = self.read_process_memory(base_address, 0x40)
-
-                # check validity of DOS header.
-                if len(dos_header) != 0x40 or dos_header[:2] != "MZ":
-                    continue
-
-                e_lfanew   = struct.unpack("<I", dos_header[0x3c:0x40])[0]
-                pe_headers = self.read_process_memory(base_address + e_lfanew, 0xF8)
-
-                # check validity of PE headers.
-                if len(pe_headers) != 0xF8 or pe_headers[:2] != "PE":
-                    continue
-
-                export_directory_rva = struct.unpack("<I", pe_headers[0x78:0x7C])[0]
-                export_directory_len = struct.unpack("<I", pe_headers[0x7C:0x80])[0]
-                export_directory     = self.read_process_memory(base_address + export_directory_rva, export_directory_len)
-                num_of_functions     = struct.unpack("<I", export_directory[0x14:0x18])[0]
-                num_of_names         = struct.unpack("<I", export_directory[0x18:0x1C])[0]
-                address_of_functions = struct.unpack("<I", export_directory[0x1C:0x20])[0]
-                address_of_names     = struct.unpack("<I", export_directory[0x20:0x24])[0]
-                address_of_ordinals  = struct.unpack("<I", export_directory[0x24:0x28])[0]
-                name_table           = self.read_process_memory(base_address + address_of_names, num_of_names * 4)
-
-                # perform a binary search across the function names.
-                low  = 0
-                high = num_of_names
-
-                while low <= high:
-                    # python does not suffer from integer overflows:
-                    #     http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
-                    middle          = (low + high) / 2
-                    current_address = base_address + struct.unpack("<I", name_table[middle*4:(middle+1)*4])[0]
-
-                    # we use a crude approach here. read 256 bytes and cut on NULL char. not very beautiful, but reading
-                    # 1 byte at a time is very slow.
-                    name_buffer = self.read_process_memory(current_address, 256)
-                    name_buffer = name_buffer[:name_buffer.find("\0")]
-
-                    if name_buffer < func_name:
-                        low = middle + 1
-                    elif name_buffer > func_name:
-                        high = middle - 1
-                    else:
-                        # MSFT documentation is misleading - see http://www.bitsum.com/pedocerrors.htm
-                        bin_ordinal      = self.read_process_memory(base_address + address_of_ordinals + middle * 2, 2)
-                        ordinal          = struct.unpack("<H", bin_ordinal)[0]   # ordinalBase has already been subtracted
-                        bin_func_address = self.read_process_memory(base_address + address_of_functions + ordinal * 4, 4)
-                        function_address = struct.unpack("<I", bin_func_address)[0]
-
-                        return base_address + function_address
-
-                # function was not found.
-                return None
-
-        # module was not found.
-        return None
 
 
     ####################################################################################################################

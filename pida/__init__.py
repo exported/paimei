@@ -65,8 +65,20 @@ def load (file_name, progress_bar=None):
     if progress_bar:
         progress_bar = progress_bar.lower()
 
-    return load_custom(file_name, progress_bar)
-
+    print "FileName: %s" % file_name
+    if file_name.lower().endswith('.pida'):
+        return load_custom(file_name, progress_bar)
+    else:
+        try:
+            import cuchi
+            reload(cuchi)
+            graph = cuchi.module()
+            graph.load(file_name)
+            graph.analyze()
+            return graph
+        except Exception, e:
+            print e
+            raise
 
 ########################################################################################################################
 def dump_custom (file_name, module, progress_bar=None):

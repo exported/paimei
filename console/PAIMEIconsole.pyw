@@ -36,7 +36,7 @@ try:
     import about
 
     missing_requirement = "MySQLdb"
-    import mysql_connect_dialog
+    # import mysql_connect_dialog
 
     missing_requirement = "PaiMei PyDbg"
     import pydbg_locale_dialog

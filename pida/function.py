@@ -94,7 +94,7 @@ class function (pgraph.graph, pgraph.node):
         self.analysis         = analysis
         self.module           = module
         self.id               = None
-        self.ea_start         = None
+        self.ea_start         = ea_start
         self.ea_end           = None
         self.name             = None
         self.is_import        = False
@@ -116,8 +116,11 @@ class function (pgraph.graph, pgraph.node):
 
         # convenience alias.
         self.basic_blocks = self.nodes
+	self.init_from_IDA(ea_start)
 
+    def init_from_IDA(self, ea_start):
         # grab the ida function and frame structures.
+        func_struct = None
         func_struct  = get_func(ea_start)
         frame_struct = get_frame(func_struct)
 
@@ -156,7 +159,9 @@ class function (pgraph.graph, pgraph.node):
         if self.depth & DEPTH_BASIC_BLOCKS:
             self.__init_basic_blocks__()
 
-
+    def init_from_memory(self, data, base):
+        pass
+    
     ####################################################################################################################
     def __init_args_and_local_vars__ (self):
         '''

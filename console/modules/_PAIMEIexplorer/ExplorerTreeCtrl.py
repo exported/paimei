@@ -22,7 +22,6 @@
 
 import wx
 import re
-import MySQLdb
 
 import pida
 
@@ -69,7 +68,7 @@ class ExplorerTreeCtrl (wx.TreeCtrl):
             pass
 
         # function selected.
-        elif type(selected) == pida.function:
+        elif selected.__class__.__name__ == "function":
             disasm = """
             <html>
                 <body text=#eeeeee bgcolor=#000000>
@@ -89,7 +88,7 @@ class ExplorerTreeCtrl (wx.TreeCtrl):
                     ins_disasm = re.sub("(?P<op>^j..?)\s", "<font color=yellow>\g<op> </font>", ins_disasm)
                     ins_disasm = re.sub("(?P<op>^call)\s", "<font color=red>\g<op> </font>",    ins_disasm)
 
-                    disasm += "<font color=#999999>%08x</font>&nbsp;&nbsp;%s<br>" % (ins.ea, ins_disasm)
+                    disasm += "<font color=#999999>%08x</font>&nbsp;&nbsp;%s<br>" % (ins.ea_start, ins_disasm)
 
             disasm += "</font></body></html>"
 
@@ -121,7 +120,7 @@ class ExplorerTreeCtrl (wx.TreeCtrl):
         ### module node.
         ###
 
-        elif type(selected) == pida.module:
+        elif selected.__class__.__name__ == "module":
             # we only have to do this once, that is what the hasattr() check is for.
             if not hasattr(self, "right_click_popup_remove_module"):
                 self.right_click_popup_remove_module = wx.NewId()
@@ -139,7 +138,7 @@ class ExplorerTreeCtrl (wx.TreeCtrl):
         ### function node.
         ###
 
-        elif type(selected) == pida.function:
+        elif selected.__class__.__name__ == "function":
             # we only have to do this once, that is what the hasattr() check is for.
             if not hasattr(self, "right_click_popup_graph_function"):
                 self.right_click_popup_graph_function = wx.NewId()
@@ -157,7 +156,7 @@ class ExplorerTreeCtrl (wx.TreeCtrl):
         ### basic block node.
         ###
 
-        elif type(selected) == pida.function:
+        elif selected.__class__.__name__ == "basic_block":
             return
 
 

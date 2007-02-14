@@ -70,7 +70,7 @@ class PIDAModulesListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin):
             message     = "Select PIDA module",                 \
             defaultDir  = os.getcwd(),                          \
             defaultFile = "",                                   \
-            wildcard    = "*.PIDA",                             \
+            wildcard    = "*.exe;*.PIDA",                             \
             style       = wx.OPEN | wx.CHANGE_DIR | wx.MULTIPLE \
         )
 
@@ -79,7 +79,10 @@ class PIDAModulesListCtrl (wx.ListCtrl, ListCtrlAutoWidthMixin):
 
         for path in dlg.GetPaths():
             try:
-                module_name = path[path.rfind("\\")+1:path.rfind(".pida")].lower()
+                try:
+                    module_name = path[path.rfind("\\")+1:path.rindex(".pida")].lower()
+                except:
+                    module_name = path[path.rfind("\\")+1:].lower()
 
                 if self.top.pida_modules.has_key(module_name):
                     self.top.err("Module %s already loaded ... skipping." % module_name)

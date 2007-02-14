@@ -69,6 +69,7 @@ class instruction:
         '''
 
         self.ea          = ea                            # effective address of instruction
+        self.ea_start    = ea
         self.analysis    = analysis                      # analysis options
         self.basic_block = basic_block                   # pointer to parent container
         self.disasm      = self.get_disasm(ea)           # sanitized disassembly at instruction

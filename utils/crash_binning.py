@@ -20,6 +20,7 @@
 @organization: www.openrce.org
 '''
 
+import sys
 import zlib
 import cPickle
 
@@ -40,7 +41,7 @@ class __crash_bin_struct__:
 
 class crash_binning:
     '''
-    @todo: Add persistant data support (disk / MySQL)
+    @todo: Add MySQL import/export.
     '''
 
     bins       = {}
@@ -90,7 +91,7 @@ class crash_binning:
         crash.context             = pydbg.context
         crash.context_dump        = pydbg.dump_context(pydbg.context, print_dots=False)
         crash.disasm              = pydbg.disasm(crash.exception_address)
-        crash.disasm_around       = pydbg.disasm_around(crash.exception_address)
+        crash.disasm_around       = pydbg.disasm_around(crash.exception_address, 10)
         crash.stack_unwind        = pydbg.stack_unwind()
         crash.seh_unwind          = pydbg.seh_unwind()
         crash.extra               = extra
@@ -129,47 +130,54 @@ class crash_binning:
 
 
     ####################################################################################################################
-    def crash_synopsis (self):
+    def crash_synopsis (self, crash=None):
         '''
-        For the last recorded crash, generate and return a report containing the disassemly around the violating
-        address, the ID of the offending thread, the call stack and the SEH unwind.
+        For the supplied crash, generate and return a report containing the disassemly around the violating address,
+        the ID of the offending thread, the call stack and the SEH unwind. If not crash is specified, then call through
+        to last_crash_synopsis() which returns the same information for the last recorded crash.
+
+        @see: crash_synopsis()
+
+        @type  crash: __crash_bin_struct__
+        @param crash: (Optional, def=None) Crash object to generate report on
+
+        @rtype:  String
+        @return: Crash report
         '''
 
-        if self.last_crash.write_violation:
+        if not crash:
+            return self.last_crash_synopsis()
+
+        if crash.write_violation:
             direction = "write to"
         else:
             direction = "read from"
 
         synopsis = "%s:%08x %s from thread %d caused access violation\nwhen attempting to %s 0x%08x\n\n" % \
             (
-                self.last_crash.exception_module,       \
-                self.last_crash.exception_address,      \
-                self.last_crash.disasm,                 \
-                self.last_crash.violation_thread_id,    \
-                direction,                              \
-                self.last_crash.violation_address       \
+                crash.exception_module,       \
+                crash.exception_address,      \
+                crash.disasm,                 \
+                crash.violation_thread_id,    \
+                direction,                    \
+                crash.violation_address       \
             )
 
-        synopsis += self.last_crash.context_dump
+        synopsis += crash.context_dump
 
         synopsis += "\ndisasm around:\n"
-        for (ea, inst) in self.last_crash.disasm_around:
+        for (ea, inst) in crash.disasm_around:
             synopsis += "\t0x%08x %s\n" % (ea, inst)
 
-        if len(self.last_crash.stack_unwind):
+        if len(crash.stack_unwind):
             synopsis += "\nstack unwind:\n"
-            for entry in self.last_crash.stack_unwind:
+            for entry in crash.stack_unwind:
                 synopsis += "\t%s\n" % entry
 
-        if len(self.last_crash.seh_unwind):
+        if len(crash.seh_unwind):
             synopsis += "\nSEH unwind:\n"
-            for (addr, handler, handler_str) in self.last_crash.seh_unwind:
-                try:
-                    disasm = self.pydbg.disasm(handler)
-                except:
-                    disasm = "[INVALID]"
-
-                synopsis +=  "\t%08x -> %s %s\n" % (addr, handler_str, disasm)
+            for (addr, handler, handler_str) in crash.seh_unwind:
+                synopsis +=  "\t%08x -> %s\n" % (addr, handler_str)
 
         return synopsis + "\n"
 
@@ -225,3 +233,54 @@ class crash_binning:
         self.bins = tmp.bins
 
         return self
+
+
+    ####################################################################################################################
+    def last_crash_synopsis (self):
+        '''
+        For the last recorded crash, generate and return a report containing the disassemly around the violating
+        address, the ID of the offending thread, the call stack and the SEH unwind.
+
+        @see: crash_synopsis()
+
+        @rtype:  String
+        @return: Crash report
+        '''
+
+        if self.last_crash.write_violation:
+            direction = "write to"
+        else:
+            direction = "read from"
+
+        synopsis = "%s:%08x %s from thread %d caused access violation\nwhen attempting to %s 0x%08x\n\n" % \
+            (
+                self.last_crash.exception_module,       \
+                self.last_crash.exception_address,      \
+                self.last_crash.disasm,                 \
+                self.last_crash.violation_thread_id,    \
+                direction,                              \
+                self.last_crash.violation_address       \
+            )
+
+        synopsis += self.last_crash.context_dump
+
+        synopsis += "\ndisasm around:\n"
+        for (ea, inst) in self.last_crash.disasm_around:
+            synopsis += "\t0x%08x %s\n" % (ea, inst)
+
+        if len(self.last_crash.stack_unwind):
+            synopsis += "\nstack unwind:\n"
+            for entry in self.last_crash.stack_unwind:
+                synopsis += "\t%s\n" % entry
+
+        if len(self.last_crash.seh_unwind):
+            synopsis += "\nSEH unwind:\n"
+            for (addr, handler, handler_str) in self.last_crash.seh_unwind:
+                try:
+                    disasm = self.pydbg.disasm(handler)
+                except:
+                    disasm = "[INVALID]"
+
+                synopsis +=  "\t%08x -> %s %s\n" % (addr, handler_str, disasm)
+
+        return synopsis + "\n"

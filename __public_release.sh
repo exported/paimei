@@ -1,9 +1,8 @@
 #!/bin/sh
 
 rm -f file_access_tracker.py
+rm -f stack_integrity_monitor.py
 rm -f struct_spy.py
-rm -f tracer_single_step.py
-rm -f tracer_msr_branch.py
 rm -f pydbg_server.py
 rm -f var_backtrace.py
 rm -f demo_live_graphing.py

@@ -39,29 +39,21 @@ class instruction(object):
     @type bytes:    List
     @type mnem:     String
     @type disasm:   String
-    @type op1:      String
-    @deprecated: This will be replaced by a list of operands, allowing for more flexibility.
-
-    @type op2:      String
-    @deprecated op2: This will be replaced by a list of operands, allowing for more flexibility.
-
-    @type op3:      String
-    @deprecated op3: This will be replaced by a list of operands, allowing for more flexibility.
+        
     '''
 
     __ea            = None                      # effective address of instruction
     __comment       = ""                        # comment at instruction EA
     __bytes         = []                        # instruction raw bytes, mnemonic and operands
     __mnem          = None                      # the mnemonic of the instruction
-    __op1           = None                      # the first operand (optional)
-    __op2           = None                      # the second operand (optional)
-    __op3           = None                      # the third operand (optional)
+    __operands      = None
 
     dbid            = None                      # Database ID
     DSN             = None
     basic_block     = None                      # parent basic_block id
 
     __cached        = False
+    __operand_cache = False
 
     # TODO : remove these bad boys
     refs_string     = None                      # string, if any, that this instruction references
@@ -95,9 +87,6 @@ class instruction(object):
         if results:
             self.__ea       = results['address']
             self.__mnem     = results['mnemonic']
-            self.__op1      = results['operand1']
-            self.__op2      = results['operand2']
-            self.__op3      = results['operand3']
             self.__comment  = results['comment']
 
             bytes = []
@@ -117,6 +106,24 @@ class instruction(object):
         else:
             raise "Error loading instruction [ID:%d] from database [FILE:%s]" % (self.dbid, self.DSN)
 
+    ####################################################################################################################
+    
+    def __load_operands_from_sql(self):
+        pass
+        
+        ss = sql_singleton()
+        
+        results = ss.select_instruction_operands(self.DSN, self.dbid)
+        
+        if results:
+            self.__operands = []
+            
+            for oper in results:
+                new_oper = operand(self.DSN, oper)
+                self.__operands.append(new_oper)
+                
+        self.__operand_cache = True
+    
     ####################################################################################################################
     def flag_dependency (first_instruction, second_instruction):
         '''
@@ -330,127 +337,58 @@ class instruction(object):
         del self.__mnem
 
     ####################################################################################################################
-    # op1 accessors
+    # operands Accessors
 
-    def __getOperand1 (self):
+    def __getOperands (self):
         '''
-        Sets the first operand of the instruction
+        Gets the operands for the instruction
 
-        @rtype:  String
+        @rtype:  [operand]
         @return: The first operand of the instruction
         '''
 
-        if not self.__cached:
-            self.__load_from_sql()
+        if not self.__operand_cache:
+            self.__load_operands_from_sql()
 
-        return self.__op1
+        return self.__operands
 
     ####
 
-    def __setOperand1 (self, value):
+    def __setOperands (self, value):
         '''
         Sets the first operand of the instruction
 
-        @type  value: String
+        @type  value: operand
         @param value: The first operand of the instruction
         '''
 
-        if self.__cached:
-            self.__op1 = value
-
-        ss = sql_singleton()
-        ss.update_instruction_operand(self.DSN, self.dbid, 1, value)
+        raise NotImplementedError, "The operands property is read-only. Use the set_operand() method instead."
 
     ####
 
-    def __deleteOperand1 (self):
+    def __deleteOperands (self):
         '''
         destructs the first operand of the instruction
         '''
-        del self.__op1
+        del self.__operands
 
     ####################################################################################################################
-    # op2 accessors
 
-    def __getOperand2 (self):
+    def set_operand(self, position, value):
         '''
-        Sets the second operand of the instruction
-
-        @rtype:  String
-        @return: The second operand of the instruction
+        Updates the text representation of an operand.
+        
+        @type  position:    Integer
+        @param position:    The position of the operand in the instruction. This is zero based.
+        @type  value:       String
+        @param value:       The new text representation of the operand.
         '''
-
-        if not self.__cached:
-            self.__load_from_sql()
-
-        return self.__op2
-
-    ####
-
-    def __setOperand2 (self, value):
-        '''
-        Sets the second operand of the instruction
-
-        @type  value: String
-        @param value: The second operand of the instruction
-        '''
-
-        if self.__cached:
-            self.__op2 = value
-
-        ss = sql_singleton()
-        ss.update_instruction_operand(self.DSN, self.dbid, 2, value)
-
-    ####
-
-    def __deleteOperand2 (self):
-        '''
-        destructs the second operand of the instruction
-        '''
-        del self.__op2
-
-
-    ####################################################################################################################
-    # op1 accessors
-
-    def __getOperand3 (self):
-        '''
-        Sets the third operand of the instruction
-
-        @rtype:  String
-        @return: The third operand of the instruction
-        '''
-
-        if not self.__cached:
-            self.__load_from_sql()
-
-        return self.__op3
-
-    ####
-
-    def __setOperand3 (self, value):
-        '''
-        Sets the third operand of the instruction
-
-        @type  value: String
-        @param value: The third operand of the instruction
-        '''
-
-        if self.__cached:
-            self.__op3 = value
-
-        ss = sql_singleton()
-        ss.update_instruction_operand(self.DSN, self.dbid, 3, value)
-
-    ####
-
-    def __deleteOperand3 (self):
-        '''
-        destructor for the first operand of the instruction
-        '''
-
-        del self.__op3
-
+    
+        if position < 0 or position >= len(self.operands):
+            raise IndexError, "The operand to be updated does not exist."
+            
+        self.__operands[position].text = value
+    
     ####################################################################################################################
     # xrefs_to accessors
 
@@ -494,14 +432,10 @@ class instruction(object):
 
         ret_val = self.mnem
 
-        if self.op1 != None:
-            ret_val += " " + self.op1
-
-            if self.op2 != None:
-                ret_val += ", " + self.op2
-
-                if self.op3 != None:
-                    ret_val += ", " + self.op3
+        for oper in self.operands:
+            ret_val += " " + oper + ","
+            
+        ret_val = ret_val[:-1]
 
         return ret_val
 
@@ -705,9 +639,7 @@ class instruction(object):
     comment     = property(__getComment,    __setComment,   __deleteComment,    "The instruction comment.")
     bytes       = property(__getBytes,      __setBytes,     __deleteBytes,      "The raw bytes of the instruction.")
     mnem        = property(__getMnemonic,   __setMnemonic,  __deleteMnemonic,   "The instruction mnemonic.")
-    op1         = property(__getOperand1,   __setOperand1,  __deleteOperand1,   "The first operand.")
-    op2         = property(__getOperand2,   __setOperand2,  __deleteOperand2,   "The second operand.")
-    op3         = property(__getOperand3,   __setOperand3,  __deleteOperand3,   "The third operand.")
+    operands    = property(__getOperands,   __setOperands,  __deleteOperands,   "The list of operands. (read-only)")
     disasm      = property(__getDisasm,     __setDisasm,    __deleteDisasm,     "The textual disassembly of the instruction.")
     xrefs_to    = property(__getXrefsTo,    __setXrefsTo,   __deleteXrefsTo,    "The instructions that referenc this instruction.")
     id          = property(__getAddress,    __setAddress,   __deleteAddress,    "The identifier for the class (internal use only).")

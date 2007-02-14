@@ -101,11 +101,36 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         module          int UNSIGNED NOT NULL,
         comment         int UNSIGNED,
         bytes           char(10) NOT NULL,
-        mnemonic        varchar(15) NOT NULL,
-        operand1        varchar(255),
-        operand2        varchar(255),
-        operand3        varchar(255)
+        mnemonic        varchar(15) NOT NULL
         )""","""
+        
+    CREATE TABLE operand (
+        id              INTEGER PRIMARY KEY,
+        instruction     INTEGER NOT NULL,
+        position        INTEGER NOT NULL,
+        operand_text    TEXT
+        )""","""
+        
+    CREATE TABLE operand_expression (
+        operand         INTEGER NOT NULL,
+        expression      INTEGER NOT NULL
+        )""","""
+        
+    CREATE TABLE expression (
+        id              INTEGER PRIMARY KEY,
+        expr_type       INTEGER NOT NULL,
+        symbol          VARCHAR(255),
+        immediate       INTEGER,
+        position        INTEGER NOT NULL,
+        parent_id       INTEGER
+        ) ""","""
+        
+    CREATE TABLE expression_substitutions (
+        instruction     INTEGER,
+        operand         INTEGER,
+        expression      INTEGER,
+        substitution    VARCHAR(255)
+        ) ""","""
 
     CREATE TABLE cross_references (
         id              INTEGER PRIMARY KEY,
@@ -125,11 +150,19 @@ cINSERT_INSTRUCTION                         = "INSERT INTO instruction (address,
 cINSERT_MODULE                              = "INSERT INTO module (name, base, version) VALUES ('%s', %d, '%s');"
 cINSERT_FUNCTION                            = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, '%s');"
 cINSERT_BASIC_BLOCK                         = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);"
+cINSERT_OPERAND                             = "INSERT INTO operand (instruction, position, operand_text) VALUES (%d, %d, %s);"
+
+### OPERAND ###
+
+cSELECT_OPERAND                             = "SELECT operand_text, position FROM operand WHERE id = %d;"   
+
+cUPDATE_OPERAND_TEXT                        = "UPDATE operand SET operand_text=%s where id=%d;"
                                             
 ### INSTRUCTION ###                         
                                             
 cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;"
 cSELECT_INSTRUCTION_XREFS_TO                = "SELECT source FROM cross_references WHERE destination=%d AND reference_type = 8;"
+cSELECT_INSTRUCTION_OPERANDS                = "SELECT id FROM operand WHERE instruction = %d ORDER BY position;"
                                             
 cUPDATE_INSTRUCTION_MNEMONIC                = "UPDATE instruction SET mnemonic=%s where id=%d"
 cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%s WHERE id=%d;"

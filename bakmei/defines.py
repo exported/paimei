@@ -15,9 +15,9 @@
 #
 
 '''
-@author:       Pedram Amini
+@author:       Cameron Hotchkies, Pedram Amini
 @license:      GNU General Public License 2.0 or later
-@contact:      pedram.amini@gmail.com
+@contact:      chotchkies@tippingpoint.com
 @organization: www.openrce.org
 '''
 
@@ -34,7 +34,5 @@ VAR_TYPE_ARGUMENT   = 1
 VAR_TYPE_LOCAL      = 2
 
 DATA_TYPE_PLACEHOLDER = 1
-
-PIDA_VERSION        = 0x1338
 
 BAK_MEI_VERSION     = 1.0

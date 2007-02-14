@@ -103,7 +103,42 @@ class sql_singleton(object):
         INSERT_MODULE                          = cINSERT_MODULE
         INSERT_FUNCTION                        = cINSERT_FUNCTION
         INSERT_BASIC_BLOCK                     = cINSERT_BASIC_BLOCK
+        INSERT_OPERAND                         = cINSERT_OPERAND
 
+        ## OPERAND ###
+
+        def select_operand(self, DSN, operand_id):
+            ret_val = {}
+            
+            sql_query = None
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_OPERAND
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_OPERAND
+                
+            results = curs.execute(sql_query % operand_id).fetchone()
+            
+            ret_val = {'operand_text':results[0], 'position':results[1]}
+
+            return ret_val                        
+            
+        def update_operand_text(self, DSN, operand_id, text):
+            if text:
+                text = "'" + text.replace("'",  "''") + "'"
+            else:
+                text = "NULL"
+                
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_OPERAND_TEXT % (text, operand_id))
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(bakmei.sqlite_queries.cUPDATE_OPERAND_TEXT % (text, operand_id))
+                curs.commit()
+        
         ## INSTRUCTION ###
 
         def select_instruction(self, DSN, instruction_id):
@@ -120,10 +155,29 @@ class sql_singleton(object):
                 
             results = curs.execute(sql_query % instruction_id).fetchone()
             
-            ret_val = {'address':results[0], 'mnemonic':results[1], 'operand1':results[2], 'operand2':results[3], 'operand3':results[4], 'comment':results[5], 'bytes':results[6], 'basic_block':results[7]}
+            ret_val = {'address':results[0], 'mnemonic':results[1], 'comment':results[5], 'bytes':results[6], 'basic_block':results[7]}
 
             return ret_val
+        
+        def select_instruction_operands(self, DSN, instruction_id):
+            ret_val = []
             
+            sql_query = None
+            
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_INSTRUCTION_OPERANDS
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_INSTRUCTION_OPERANDS
+                
+            results = curs.execute(sql_query % instruction_id).fetchall()
+            
+            for result in results:
+                ret_val.append(result[0])                
+            
+            return ret_val   
+                    
         def select_instruction_references_to(self, DSN, instruction_id):
             ret_val = []
             
@@ -794,6 +848,39 @@ class sql_singleton(object):
 
 ############### Wrapper properties to expose methods to the documentation ####################
 
+    def select_operand(self, DSN, operand_id):
+        '''
+        Retrieve the attributes of the operand.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the operand to query.
+        
+        @rtype:                 dict
+        @return:                A dict containing the operand attributes. The keys for the dictionary are "operand_text", "position".
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_operand(DSN, operand_id)  
+
+    def update_operand_text(self, DSN, operand_id, text):
+        '''
+        Update the text of an operand in the database.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to update.
+        @type   mnemonic:       String
+        @param  mnemonic:       The text of the operand.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.update_operand_text(DSN, operand_id, text)  
+        
     def select_instruction(self, DSN, instruction_id):
         '''
         Retrieve the attributes of the instruction.
@@ -804,12 +891,29 @@ class sql_singleton(object):
         @param  instruction_id: The ID of the instruction to query.
         
         @rtype:                 dict
-        @return:                A dict containing the instruction attributes. The keys for the dictionary are "address", "mnemonic", "operand1", "operand2", "operand3", "comment", "bytes", "basic_block".
+        @return:                A dict containing the instruction attributes. The keys for the dictionary are "address", "mnemonic", "comment", "bytes", "basic_block".
         '''
         if sql_singleton.__instance is None:
             raise SingletonInstanceException
         
         return sql_singleton.__instance.select_instruction(DSN, instruction_id)  
+
+    def select_instruction_operands(self, DSN, instruction_id):
+        '''
+        Retrieve the operands of the instruction.
+        
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   instruction_id: Integer
+        @param  instruction_id: The ID of the instruction to query.
+        
+        @rtype:                 [Integer]
+        @return:                A list containing the IDs of the operands belonging to this instruction.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+        
+        return sql_singleton.__instance.select_instruction_operands(DSN, instruction_id)
         
     def select_instruction_references_to(self, DSN, instruction_id):
         '''

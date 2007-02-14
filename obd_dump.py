@@ -363,6 +363,101 @@ def get_string_reference (ea):
             dref += 1
 
     return s
+    
+    # REDEFINE PROPERLY
+    
+NODE_TYPE_OPERATOR_WIDTH_BYTE_1   = 'b1'    # Byte
+NODE_TYPE_OPERATOR_WIDTH_BYTE_2   = 'b2'    # Word
+NODE_TYPE_OPERATOR_WIDTH_BYTE_3   = 'b3'    #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_4   = 'b4'    # Double-Word
+NODE_TYPE_OPERATOR_WIDTH_BYTE_5   = 'b5'    #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_6   = 'b6'    #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_7   = 'b7'    #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_8   = 'b8'    # Quad-Word
+NODE_TYPE_OPERATOR_WIDTH_BYTE_9   = 'b9'    #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_10  = 'b10'   #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_12  = 'b12'   # Packed Real Format mc68040
+NODE_TYPE_OPERATOR_WIDTH_BYTE_14  = 'b14'   #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_16  = 'b16'   #
+NODE_TYPE_OPERATOR_WIDTH_BYTE_VARIABLE  = 'b_var'   # Variable size    
+    
+OPERAND_WIDTH = {
+    0 : ("dt_byte"    , NODE_TYPE_OPERATOR_WIDTH_BYTE_1),     ## 8 bit
+    1 : ("dt_word"    , NODE_TYPE_OPERATOR_WIDTH_BYTE_2),     ## 16 bit
+    2 : ("dt_dword"   , NODE_TYPE_OPERATOR_WIDTH_BYTE_4),     ## 32 bit
+    3 : ("dt_float"   , NODE_TYPE_OPERATOR_WIDTH_BYTE_4),     ## 4 byte
+    4 : ("dt_double"  , NODE_TYPE_OPERATOR_WIDTH_BYTE_8),     ## 8 byte
+    5 : ("dt_tbyte"   , NODE_TYPE_OPERATOR_WIDTH_BYTE_VARIABLE),     ## variable size (ph.tbyte_size)
+    6 : ("dt_packreal", ""),     ## packed real format for mc68040
+    7 : ("dt_qword"   , NODE_TYPE_OPERATOR_WIDTH_BYTE_8),     ## 64 bit
+    8 : ("dt_byte16"  , NODE_TYPE_OPERATOR_WIDTH_BYTE_16),     ## 128 bit
+    9 : ("dt_code"    , ""),     ## ptr to code (not used?)
+    10: ("dt_void"    , ""),     ## none
+    11: ("dt_fword"   , NODE_TYPE_OPERATOR_WIDTH_BYTE_6),     ## 48 bit
+    12: ("dt_bitfild" , ""),     ## bit field (mc680x0)
+    13: ("dt_string"  , ""),     ## pointer to asciiz string
+    14: ("dt_unicode" , ""),     ## pointer to unicode string
+    15: ("dt_3byte"   , NODE_TYPE_OPERATOR_WIDTH_BYTE_3)      ## 3-byte data
+                }    
+NODE_TYPE_MNEMONIC_ID =         0
+NODE_TYPE_SYMBOL_ID =           1
+NODE_TYPE_IMMEDIATE_INT_ID =    2
+NODE_TYPE_IMMEDIATE_FLOAT_ID =  3
+NODE_TYPE_OPERATOR_ID =         4                
+
+####################################################################################################################
+
+def create_operand(instruction_id, ea, position):
+    op  = GetOpnd(ea, position)
+    op = "'" + op.replace("'", "''") + "'"
+    sql = ss.INSERT_OPERAND % (instruction_id, position, op)
+
+    curs.execute(sql)
+    dbid = curs.lastrowid
+    
+    op_type = GetOpType(ea, position)
+    
+    ida_op = get_instruction_operand(get_current_instruction(), position)
+    
+    index = 0
+    
+    op_width = OPERAND_WIDTH[ord(ida_op.dtyp)]
+    
+    if op_width[1] == "":
+        raise NotImplementedError, "Missing operand width for %s" % op_width[0]
+    
+    if op_type == 1:
+        # General Register
+        expr_type = NODE_TYPE_SYMBOL_ID
+        symbol = op
+        immediate = None
+        position = index
+        parent_id = None
+    elif op_type == -9999:
+        expr_type = IMM
+        symbol = None
+        immediate = GetOperandValue(ea, position)
+        position = index
+        parent_id = None
+    else:
+        print "0x%08x: Gonna die..." % ea
+        raise NotImplementedError, "Currently can not process %d operands" % op_type
+
+####################################################################################################################
+
+def create_operands(instruction_id, ea):
+    # instruction mnemonic and operands.
+    op1  = GetOpnd(ea, 0)
+    if op1 != None and op1 != "":
+        create_operand(instruction_id, ea, 0)
+        
+        op2  = GetOpnd(ea, 1)
+        if op2 != None and op2 != "":
+            create_operand(instruction_id, ea, 1)
+    
+            op3  = GetOpnd(ea, 2)
+            if op3 != None and op3 != "":
+                create_operand(instruction_id, ea, 2)
 
 ####################################################################################################################
 
@@ -400,17 +495,7 @@ def create_instruction (ea, basic_block_id, function_id, module_id):
     if comment != None:
         ss.update_instruction_comment(global_DSN, dbid, comment)
 
-    # instruction mnemonic and operands.
-    op1  = GetOpnd(ea, 0)
-    if op1 != None and op1 != "":
-        ss.update_instruction_operand(global_DSN, dbid, 1, op1)
-        op2  = GetOpnd(ea, 1)
-        if op2 != None and op2 != "":
-            ss.update_instruction_operand(global_DSN, dbid, 2, op2)
-            op3  = GetOpnd(ea, 2)
-            if op3 != None and op3 != "":
-                ss.update_instruction_operand(global_DSN, dbid, 3, op3)
-
+    create_operands(dbid, ea)
 
     #TODO process these last?
     # XXX - this is a dirty hack to determine if and any API reference.

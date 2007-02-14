@@ -1,7 +1,6 @@
 #
 # PIDA Basic Block
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
-# Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
@@ -14,261 +13,89 @@
 # Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
+'''
+@author:       Pedram Amini
+@license:      GNU General Public License 2.0 or later
+@contact:      pedram.amini@gmail.com
+@organization: www.openrce.org
+'''
+
+try:
+    from idaapi   import *
+    from idautils import *
+    from idc      import *
+except:
+    pass
+
 import pgraph
-from sql_singleton  import *
-from instruction    import *
-from defines        import *
+
+from instruction import *
+from defines     import *
 
 class basic_block (pgraph.node):
     '''
-    A basic block instruction container.
-    
-    @author:        Cameron Hotchkies, Pedram Amini
-    @license:       GNU General Public License 2.0 or later
-    @contact:       chotchkies@tippingpoint.com
-    @organization:  www.openrce.org
-    
-    @cvar dbid:     Database Identifier
-    @type dbid:     Integer
-    @cvar DSN:      Database location
-    @type DSN:      String    
     '''
 
-    __cached         = False
-    __ea_start       = None
-    __ea_end         = None
-
-    # Database IDs
+    id               = None
+    ea_start         = None
+    ea_end           = None
+    depth            = None
+    analysis         = None
     function         = None
-    module           = None
-    dbid             = None
-    DSN              = None
-
+    instructions     = {}
+    num_instructions = 0
     ext              = {}
 
     ####################################################################################################################
-    def __init__ (self, DSN, database_id):
+    def __init__ (self, ea_start, ea_end, depth=DEPTH_FULL, analysis=ANALYSIS_NONE, function=None):
         '''
-        Initializes a basic block instance.
+        Analyze the basic block from ea_start to ea_end.
 
-        @type  DSN:         String
-        @param DSN:         The data source for the basic block to draw from.
-        @type  database_id: Integer
-        @param database_id: The record ID of the basic block.
+        @see: defines.py
+
+        @type  ea_start: DWORD
+        @param ea_start: Effective address of start of basic block (inclusive)
+        @type  ea_end:   DWORD
+        @param ea_end:   Effective address of end of basic block (inclusive)
+        @type  depth:    Integer
+        @param depth:    (Optional, Def=DEPTH_FULL) How deep to analyze the module
+        @type  analysis: Integer
+        @param analysis: (Optional, Def=ANALYSIS_NONE) Which extra analysis options to enable
+        @type  function: pida.function
+        @param function: (Optional, Def=None) Pointer to parent function container
         '''
 
-        # TODO
         # run the parent classes initialization routine first.
-        # super(basic_block, self).__init__(ea_start)
+        super(basic_block, self).__init__(ea_start)
 
-        self.dbid = database_id
-        self.DSN = DSN
+        heads = [head for head in Heads(ea_start, ea_end + 1) if isCode(GetFlags(head))]
 
-    ####################################################################################################################
-    def __load_from_sql(self):
-        ss = sql_singleton()
-        results = ss.select_basic_block(self.DSN, self.dbid)
-        
-        self.module     = results['module']
-        self.function   = results['function']
-        self.__ea_start = results['start_address']
-        self.__ea_end   = results['end_address']
+        self.id               = ea_start
+        self.ea_start         = ea_start
+        self.ea_end           = ea_end
+        self.depth            = depth
+        self.analysis         = analysis
+        self.function         = function
+        self.num_instructions = len(heads)
+        self.instructions     = {}
+        self.ext              = {}
 
-        self.__cached = True
+        # convenience alias.
+        self.nodes = self.instructions
 
-    ####################################################################################################################
-    # ea_start accessors
+        # bubble up the instruction count to the function. this is in a try except block to catch situations where the
+        # analysis was not bubbled down from a function.
+        try:
+            self.function.num_instructions += self.num_instructions
+        except:
+            pass
 
-    def __getEaStart (self):
-        '''
-        Gets the starting address of the basic block.
+        if self.depth & DEPTH_INSTRUCTIONS:
+            for ea in heads:
+                self.instructions[ea] = instr = instruction(ea, self.analysis, self)
 
-        @rtype:  DWORD
-        @return: The starting address of the basic block.
-        '''
-
-        if not self.__cached:
-            self.__load_from_sql()
-
-        return self.__ea_start
-
-    ####
-
-    def __setEaStart (self, value):
-        '''
-        Sets the starting address of the basic block.
-
-        @type  value: DWORD
-        @param value: The starting address of the basic block.
-        '''
-
-        if self.__cached:
-            self.__ea_start = value
-
-        ss = sql_singleton()
-        ss.update_basic_block_start_address(self.DSN, self.dbid, value)
-        
-    ####
-
-    def __deleteEaStart (self):
-        '''
-        destructs the starting address of the basic block
-        '''
-        del self.__ea_start
 
     ####################################################################################################################
-    # ea_end accessors
-
-    def __getEaEnd (self):
-        '''
-        Gets the ending address of the basic block.
-
-        @rtype:  DWORD
-        @return: The ending address of the basic block.
-        '''
-
-        if not self.__cached:
-            self.__load_from_sql()
-
-        return self.__ea_end
-
-    ####
-
-    def __setEaEnd (self, value):
-        '''
-        Sets the ending address of the basic block.
-
-        @type  value: DWORD
-        @param value: The ending address of the basic block.
-        '''
-
-        if self.__cached:
-            self.__ea_end = value
-
-        ss = sql_singleton()
-        ss.update_basic_block_end_address(self.DSN, self.dbid, value)
-        
-    ####
-
-    def __deleteEaEnd (self):
-        '''
-        destructs the ending address of the basic block
-        '''
-        del self.__ea_end
-
-    ####################################################################################################################
-    # num_instructions accessors
-
-    def __getNumInstructions (self):
-        '''
-        Gets the number of instructions in the basic block.
-
-        @rtype:  Integer
-        @return: The number of instructions in the basic block.
-        '''
-
-        ss = sql_singleton()
-        ret_val = ss.select_basic_block_num_instructions(self.DSN, self.dbid)
-        
-        return ret_val
-
-    ####
-
-    def __setNumInstructions (self, value):
-        '''
-        Sets the number of instructions in the basic block. (This will raise an exception as this is read-only)
-
-        @type  value: Integer
-        @param value: The number of instructions in the basic block.
-        '''
-
-        raise TypeError, "The num_instructions property is read-only"
-
-    ####
-
-    def __deleteNumInstructions (self):
-        '''
-        destructs the number of instructions in the basic block
-        '''
-        pass # dynamically generated property value
-
-    ####################################################################################################################
-    # nodes accessors
-
-    def __getNodes (self):
-        '''
-        Gets the instructions in the basic block.
-
-        @rtype:  [pida.instruction]
-        @return: The instructions in the basic block.
-        '''
-
-        # FIX TODO: should be a dict!
-        
-        return self.sorted_instructions()
-
-    ####
-
-    def __setNodes (self, value):
-        '''
-        Sets the instructions in the basic block. (This will raise an exception as this is read-only)
-
-        @type  value: [pida.instruction]
-        @param value: The number of instructions in the basic block.
-        '''
-
-        raise TypeError, "The nodes property is read-only"
-
-    ####
-
-    def __deleteNodes (self):
-        '''
-        destructs the instructions in the basic block
-        '''
-        pass # dynamically generated property value
-
-    ####################################################################################################################
-    # instructions accessors
-
-    def __getInstructions (self):
-        '''
-        Gets the instructions in the basic block.
-
-        @rtype:  [pida.instruction]
-        @return: The instructions in the basic block.
-        '''
-
-        ins = self.sorted_instructions()
-
-        ret_val = {}
-
-        for i in ins:
-            ret_val[i.address] = i
-
-        return ret_val
-
-    ####
-
-    def __setInstructions (self, value):
-        '''
-        Sets the instructions in the basic block. (This will raise an exception as this is read-only)
-
-        @type  value: [pida.instruction]
-        @param value: The number of instructions in the basic block.
-        '''
-
-        raise TypeError, "The nodes property is read-only"
-
-    ####
-
-    def __deleteInstructions (self):
-        '''
-        destructs the instructions in the basic block
-        '''
-        pass # dynamically generated property value
-
-    ####################################################################################################################
-
     def overwrites_register (self, register):
         '''
         Indicates if the given register is modified by this block.
@@ -285,6 +112,18 @@ class basic_block (pgraph.node):
                 return True
 
         return False
+
+
+    ####################################################################################################################
+    def ordered_instructions(self):
+        '''
+        TODO: deprecated by sorted_instructions().
+        '''
+
+        temp = [key for key in self.instructions.keys()]
+        temp.sort()
+        return [self.instructions[key] for key in temp]
+
 
     ####################################################################################################################
     def render_node_gml (self, graph):
@@ -395,28 +234,13 @@ class basic_block (pgraph.node):
     ####################################################################################################################
     def sorted_instructions (self):
         '''
-        Return a list of the instructions within the basic block, sorted by address.
+        Return a list of the instructions within the graph, sorted by id.
 
         @rtype:  List
         @return: List of instructions, sorted by id.
         '''
 
-        ret_val = []
-        ss = sql_singleton()
-        results = ss.select_basic_block_sorted_instructions(self.DSN, self.dbid)
-        
-        for instruction_id in results:
-            new_instruction = instruction(self.DSN, instruction_id)
-            ret_val.append(new_instruction)
+        instruction_keys = self.instructions.keys()
+        instruction_keys.sort()
 
-        return ret_val
-
-    ####################################################################################################################
-    # PROPERTIES
-
-    num_instructions    = property(__getNumInstructions,    __setNumInstructions,   __deleteNumInstructions,    "The number of instructions in the basic block.")
-    ea_start            = property(__getEaStart,            __setEaStart,           __deleteEaStart,            "The starting address of the basic block.")
-    ea_end              = property(__getEaEnd,              __setEaEnd,             __deleteEaEnd,              "The ending address of the basic block.")
-    nodes               = property(__getNodes,              __setNodes,             __deleteNodes,              "The instructions in the basic block keyed by address.")
-    instructions        = property(__getInstructions,       __setInstructions,      __deleteInstructions,       "The instructions in the basic block keyed by address.")
-    id                  = property(__getEaStart,            __setEaStart,           __deleteEaStart,            "The basic block id (internal use only)")
+        return [self.instructions[key] for key in instruction_keys]

@@ -1,7 +1,6 @@
 #
 # PIDA Module
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
-# Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
@@ -14,279 +13,200 @@
 # Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 
+'''
+@author:       Pedram Amini
+@license:      GNU General Public License 2.0 or later
+@contact:      pedram.amini@gmail.com
+@organization: www.openrce.org
+'''
+
+try:
+    from idaapi   import *
+    from idautils import *
+    from idc      import *
+except:
+    pass
+
 import sys
 import pgraph
-
-from sql_singleton import *
 
 from function import *
 from defines  import *
 
-
 class module (pgraph.graph):
     '''
-    A module is an overall container for all the information stored in a binary, whether it is an executable or a library.
-    
-    @author:       Cameron Hotchkies, Pedram Amini
-    @license:      GNU General Public License 2.0 or later
-    @contact:      chotchkies@tippingpoint.com
-    @organization: www.openrce.org
-    
-    @cvar dbid:    Database Identifier
-    @type dbid:    Integer
-    @cvar DSN:     Database location
-    @type DSN:     String
     '''
 
-    # most of these should be read via properties
-    __name          = None
-    __base          = None
-    __signature     = None
-
-    __nodes         = None
-
-    
-    dbid            = None    
-    DSN             = None
-
-    __cached        = False
-    ext             = {}
-    ####################################################################################################################
-    def __init__ (self, DSN, database_id=1):
-        '''
-        Initializes an instance of a PaiMei module.
-
-        @type  DSN:         String
-        @param DSN:         The database file that the module is stored in.
-        @type  database_id: Integer
-        @param database_id: (Optional) The id of the module in the database.
-        '''
-
-        # TODO : see if these two lines are actually required, I think they were only necessary before the DSN was required
-        ss = sql_singleton()
-        ss.connection(DSN)
-
-        super(module, self).__init__()
-
-        self.dbid = database_id
-        self.DSN = DSN
-
-        # edges have to be built upfront because the superclass relies on them
-        self.__build_edges()
-
+    name      = None
+    base      = None
+    depth     = None
+    analysis  = None
+    signature = None
+    ext       = {}
 
     ####################################################################################################################
-    def __build_edges(self):
-        
-        ss = sql_singleton()
-        results = ss.select_module_function_references(self.DSN, self.dbid)
-        
-        for ed in results:
-            newedge = edge.edge(ed[0], ed[1])
-
-            self.add_edge(newedge)
-
-    #################################################################################################################
-
-    def __load_from_sql(self):
+    def __init__ (self, name="", signature=None, depth=DEPTH_FULL, analysis=ANALYSIS_NONE):
         '''
-	    Loads the information about a module from a SQL datastore.
-	    '''
-        ss = sql_singleton()
-        results = ss.select_module(self.DSN, self.dbid)
-        
-        self.__name         = results["name"]
-        self.__base         = results["base"]
-        self.__signature    = results["signature"]
+        Analysis of an IDA database requires the instantiation of this class and will handle, depending on the requested
+        depth, the analysis of all functions, basic blocks, instructions and more specifically which analysis techniques
+        to apply. For the full list of ananylsis options see defines.py. Specifying ANALYSIS_IMPORTS will require an
+        extra one-time scan through the entire structure to propogate functions (nodes) and cross references (edges) for
+        each reference API call. Specifying ANALYSIS_RPC will require an extra one-time scan through the entire IDA
+        database and will propogate additional function level attributes.
 
-        self.__cached = True
+        The signature attribute was added for use in the PaiMei process stalker module, for ensuring that a loaded
+        DLL is equivalent to the PIDA file with matching name. Setting breakpoints in a non-matching module is
+        obviously no good.
+
+        @see: defines.py
+
+        @type  name:      String
+        @param name:      (Optional) Module name
+        @type  signature: String
+        @param signature: (Optional) Unique file signature to associate with module
+        @type  depth:     Integer
+        @param depth:     (Optional, Def=DEPTH_FULL) How deep to analyze the module
+        @type  analysis:  Integer
+        @param analysis:  (Optional, Def=ANALYSIS_NONE) Which extra analysis options to enable
+        '''
+
+        # run the parent classes initialization routine first.
+        super(module, self).__init__(name)
+
+        self.name      = name
+        self.base      = MinEA() - 0x1000      # XXX - cheap hack
+        self.depth     = depth
+        self.analysis  = analysis
+        self.signature = signature
+        self.ext       = {}
+        self.log       = True
+
+        # convenience alias.
+        self.functions = self.nodes
+
+        # enumerate and add the functions within the module.
+        if self.log:
+            print "Analyzing functions..."
+
+        for ea in Functions(MinEA(), MaxEA()):
+            func = function(ea, self.depth, self.analysis, self)
+            func.shape = "ellipse"
+            self.add_node(func)
+
+        # enumerate and add nodes for each import within the module.
+        if self.depth & DEPTH_INSTRUCTIONS and self.analysis & ANALYSIS_IMPORTS:
+            if self.log:
+                print"Enumerating imports..."
+
+            self.__init_enumerate_imports__()
+
+        # enumerate and propogate attributes for any discovered RPC interfaces.
+        if self.analysis & ANALYSIS_RPC:
+            if self.log:
+                print "Enumerating RPC interfaces..."
+
+            self.__init_enumerate_rpc__()
+
+        # enumerate and add the intramodular cross references.
+        if self.log:
+            print "Enumerating intramodular cross references..."
+
+        for func in self.nodes.values():
+            xrefs = CodeRefsTo(func.ea_start, 0)
+            xrefs.extend(DataRefsTo(func.ea_start))
+
+            for ref in xrefs:
+                from_func = get_func(ref)
+
+                if from_func:
+                    # GHETTO - add the actual source EA to the function.
+                    if not self.nodes[from_func.startEA].outbound_eas.has_key(ref):
+                        self.nodes[from_func.startEA].outbound_eas[ref] = []
+
+                    self.nodes[from_func.startEA].outbound_eas[ref].append(func.ea_start)
+
+                    edge = pgraph.edge.edge(from_func.startEA, func.ea_start)
+
+                    self.add_edge(edge)
+
 
     ####################################################################################################################
-    # name accessors
-
-    def __getName (self):
+    def __init_enumerate_imports__ (self):
         '''
-        The name of the module.
-
-        @rtype:  String
-        @return: The name of the module
+        Enumerate and add nodes / edges for each import within the module. This routine will pass through the entire
+        module structure.
         '''
 
-        if not self.__cached:
-            self.__load_from_sql()
+        for func in self.nodes.values():
+            for bb in func.nodes.values():
+                for instruction in bb.instructions.values():
+                    if instruction.refs_api:
+                        (address, api) = instruction.refs_api
 
-        return self.__name
+                        node = function(address, module=self)
+                        node.color = 0xB4B4DA
+                        self.add_node(node)
 
-    ####
+                        edge = pgraph.edge.edge(func.ea_start, address)
+                        self.add_edge(edge)
 
-    def __setName (self, value):
-        '''
-        Sets the name of the module.
-
-        @type  value: String
-        @param value: The name of the module.
-        '''
-
-        if self.__cached:
-            self.__name = value
-
-        ss = sql_singleton()
-        ss.update_module_name(self.DSN, self.dbid, value)
-                
-    ####
-
-    def __deleteName (self):
-        '''
-        destructs the name of the module
-        '''
-        del self.__name
 
     ####################################################################################################################
-    # base accessors
-
-    def __getBase (self):
+    def __init_enumerate_rpc__ (self):
         '''
-        Gets the base address of the module
+        Enumerate all RPC interfaces and add additional properties to the RPC functions. This routine will pass through
+        the entire IDA database. This was entirely ripped from my RPC enumeration IDC script:
 
-        @rtype:  Dword
-        @return: The base address of the module
-        '''
+            http://www.openrce.org/downloads/details/3/RPC%20Enumerator
 
-        if not self.__cached:
-            self.__load_from_sql()
-
-        return self.__base
-
-    def __setBase (self, value):
-        '''
-        Sets the base address of the module.
-
-        @type  value: Dword
-        @param value: The base address of the module.
+        The approach appears to be stable enough.
         '''
 
-        if self.__cached:
-            self.__base = value
+        # walk through the entire database.
+        # we don't just look at .text as .rdata also been spotted to house RPC structs.
+        for loop_ea in Heads(MinEA(), MaxEA()):
+            ea     = loop_ea;
+            length = Byte(ea);
+            magic  = Dword(ea + 0x18);
 
-        ss = sql_singleton()
-        ss.update_module_base(self.DSN, self.dbid, value)
-        
-    def __deleteBase (self):
-        '''
-        destructs the base address of the module
-        '''
-        del self.__base
+            # RPC_SERVER_INTERFACE found.
+            if length == 0x44 and magic == 0x8A885D04:
+                # grab the rpc interface uuid.
+                uuid = ""
+                for x in xrange(ea+4, ea+4+16):
+                    uuid += chr(Byte(x))
 
-    ####################################################################################################################
-    # signature accessors
+                # jump to MIDL_SERVER_INFO.
+                ea = Dword(ea + 0x3C);
 
-    def __getSignature (self):
-        '''
-        Gets the signature of the module
+                # jump to DispatchTable.
+                ea = Dword(ea + 0x4);
 
-        @rtype:  String
-        @return: The signature of the module
-        '''
+                # enumerate the dispatch routines.
+                opcode = 0
+                while 1:
+                    addr = Dword(ea)
 
-        if not self.__cached:
-            self.__load_from_sql()
+                    if addr == BADADDR:
+                        break
 
-        return self.__signature
+                    # sometimes ida doesn't correctly get the function start thanks to the whole 'mov reg, reg' noop
+                    # nonsense. so try the next instruction.
+                    if not len(GetFunctionName(addr)):
+                        addr = NextNotTail(addr)
 
-    def __setSignature (self, value):
-        '''
-        Sets the signature of the module.
+                    if not len(GetFunctionName(addr)):
+                        break
 
-        @type  value: String
-        @param value: The signature of the module.
-        '''
+                    if self.nodes.has_key(addr):
+                        self.nodes[addr].rpc_uuid   = self.uuid_bin_to_string(uuid)
+                        self.nodes[addr].rpc_opcode = opcode
+                    else:
+                        print "PIDA.MODULE> No function node for RPC routine @%08X" % addr
 
-        if self.__cached:
-            self.__signature = value
+                    ea     += 4
+                    opcode += 1
 
-        ss = sql_singleton()
-        ss.update_module_signature(self.DSN, self.dbid, value)        
-
-    def __deleteSignature (self):
-        '''
-        destructs the signature of the module
-        '''
-        del self.__signature
-
-    ####################################################################################################################
-    # num_functions
-
-    def __getNumFunctions (self):
-        '''
-        The number of instructions in the function
-
-        @rtype:  Integer
-        @return: The number of instructions in the function
-        '''
-
-        ss = sql_singleton()
-        ret_val = ss.select_module_num_functions(self.DSN, self.dbid)        
-
-        return ret_val
-
-    ####
-
-    def __setNumFunctions (self, value):
-        '''
-        Sets the number of instructions (raises an exception - READ ONLY)
-
-        @type  value: Integer
-        @param value: The number of instructions in the function
-        '''
-        raise NotImplementedError, "num_instructions is a read-only property"
-
-    ####
-
-    def __deleteNumFunctions (self):
-        '''
-        destructs the num_instructions
-        '''
-        pass # dynamically generated property value
-
-    ####################################################################################################################
-    # nodes accessors
-
-    def __getNodes (self):
-        '''
-        Gets the signature of the module
-
-        @rtype:  String
-        @return: The signature of the module
-        '''
-
-        if self.__nodes == None:
-            ret_val = {}
-            ss = sql_singleton()
-            results = ss.select_module_functions(self.DSN, self.dbid)
-            
-            for function_id in results:
-                new_function = function(self.DSN, function_id)
-                ret_val[new_function.ea_start] = new_function
-
-            self.__nodes = ret_val
-
-        return self.__nodes
-
-    def __setNodes (self, value):
-        '''
-        Sets the nodes of the module. This will generate an error.
-
-        @type  value: String
-        @param value: The signature of the module.
-        '''
-
-        raise NotImplementedError, "nodes and functions are not directly writable for modules. This is a read-only property"
-
-    def __deleteNodes (self):
-        '''
-        destructs the signature of the module
-        '''
-        del self.__nodes
 
     ####################################################################################################################
     def find_function (self, ea):
@@ -324,8 +244,6 @@ class module (pgraph.graph):
         @type  ea: (Optional, def=Last EA) Dword
         @param ea: Address of instruction to return next instruction from or -1 if not found.
         '''
-
-        # TODO : update this to utilize db back-end
 
         if not ea and self.current_ea:
             ea = self.current_ea
@@ -367,8 +285,6 @@ class module (pgraph.graph):
         @param ea: Address of instruction to return previous instruction to or None if not found.
         '''
 
-        # TODO : update this to utilize database back end.
-
         if not ea and self.current_ea:
             ea = self.current_ea
 
@@ -409,8 +325,6 @@ class module (pgraph.graph):
         # nothing to do.
         if new_base == self.base:
             return
-
-        # TODO: rewrite for SQL backing
 
         # rebase each function in the module.
         for function in self.nodes.keys():
@@ -494,12 +408,3 @@ class module (pgraph.graph):
         (block4, block5, block6) = struct.unpack(">HHL", uuid[8:16])
 
         return "%08x-%04x-%04x-%04x-%04x%08x" % (block1, block2, block3, block4, block5, block6)
-
-    ####################################################################################################################
-    # PROPERTIES
-
-    name            = property(__getName,           __setName,          __deleteName,           "The name of the module.")
-    base            = property(__getBase,           __setBase,          __deleteBase,           "The base address of the module.")
-    signature       = property(__getSignature,      __setSignature,     __deleteSignature,      "The module signature.")
-    nodes           = property(__getNodes,          __setNodes,         __deleteNodes,          "The functions in the module, keyed by the starting address.")
-    num_functions   = property(__getNumFunctions,   __setNumFunctions,  __deleteNumFunctions,   "The number of functions in the module.")

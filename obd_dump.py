@@ -122,7 +122,7 @@ def set_up_cross_references():
 
         except KeyError, details:
             # TODO pick up all this lost code (Mainly thunks and unfunctioned code)
-            print "Missing instruction for 0x%08x / 0x%08x - It's probably not in a defined function. Skipping." % xref            
+            print "Missing instruction for 0x%08x / 0x%08x - It's probably not in a defined function. Skipping." % xref
 
     # Build Data XRefs
 
@@ -335,7 +335,7 @@ def get_stack_variable(ida_op, ea):
     try:
         name = varegex.match(get_struc_name(skvar.id)).group(1)
     except:
-        print "0x%08x: Stack Variable with no name" % ea        
+        print "0x%08x: Stack Variable with no name" % ea
         name = ""
 
     return (name, offset - skvar.soff)
@@ -402,21 +402,21 @@ def create_operand(instruction_id, ea, position):
     if len(tree) == 1:
         print "0x%08x: Gonna die..." % ea
         raise NotImplementedError, "No operands for %d operands" % op_type
-        
+
     #TODO Insert into database
     INSERT_EXPRESSION = "INSERT INTO expression (expr_type, symbol, immediate, position, parent_id) VALUES (%d, %s, %s, %d, %s)"
-    
+
     parent_lookup = {}
     for entry in tree:
-        sql = INSERT_EXPRESSION % (entry[1], ss.sql_safe_str(entry[2]) if entry[2] else "NULL", 
-            ss.sql_safe_str(entry[3]) if entry[3] else "NULL", entry[4], 
+        sql = INSERT_EXPRESSION % (entry[1], ss.sql_safe_str(entry[2]) if entry[2] else "NULL",
+            ss.sql_safe_str(entry[3]) if entry[3] else "NULL", entry[4],
             parent_lookup[entry[5]] if entry[5] else "NULL")
         curs.execute(sql)
         expr_id = curs.lastrowid
         parent_lookup[entry[0]] = expr_id
-        
+
         # TODO : now might be a good time to eliminate dupes
-        
+
 
 ####################################################################################################################
 
@@ -537,7 +537,7 @@ def create_displ_operand(tree, ida_op, temp, ea):
 
         scale = (None, 2, 4, 8)[ord(ida_op.specflag2)>>6]
 
-        if scale:            
+        if scale:
             plus_off = 2+seg_off # seg_off can be changed by the following function
             create_scaled_expression(tree, base_reg, scale, ida_op, seg_off, ea)
             tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr, 4+seg_off, 2+seg_off))

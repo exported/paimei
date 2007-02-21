@@ -19,7 +19,7 @@ class operand(object):
 
     dbid            = None
     DSN             = None
-    
+
     __string_rep    = None
     __cached        = None
     __position      = 0
@@ -34,28 +34,28 @@ class operand(object):
         @type  database_id: Integer
         @param database_id: (Optional) The id of the operand in the database.
         '''
-        
+
         self.dbid = database_id
         self.DSN = DSN
-    
+
     ####################################################################################################################
     def __load_from_sql (self):
         ss = sql_singleton()
-        
+
         results = ss.select_operand(self.DSN, self.dbid)
-        
+
         self.__string_rep   = results["operand_text"]
         self.__position     = results["position"]
-        
-        
+
+
     ####################################################################################################################
     def __str__ (self):
-        
+
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__string_rep
-    
+
     ####################################################################################################################
     # text accessors
 
@@ -69,7 +69,7 @@ class operand(object):
 
         if not self.__cached:
             self.__load_from_sql()
-            
+
         return self.__string_rep
 
     ####

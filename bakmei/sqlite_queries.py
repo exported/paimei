@@ -31,15 +31,15 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         signature       text default '',
         version         varchar(255) NOT NULL
         )""", """
-        
+
     CREATE TABLE sections (
         id              INTEGER PRIMARY KEY,
         module          INTEGER NOT NULL,
         name            varchar(255),
         start           INTEGER,
         type            INTEGER,
-        bytes           BLOB    
-        )""", """        
+        bytes           BLOB
+        )""", """
 
     CREATE TABLE comments (
         id              INTEGER PRIMARY KEY,
@@ -113,19 +113,19 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         bytes           char(10) NOT NULL,
         mnemonic        varchar(15) NOT NULL
         )""","""
-        
+
     CREATE TABLE operand (
         id              INTEGER PRIMARY KEY,
         instruction     INTEGER NOT NULL,
         position        INTEGER NOT NULL,
         operand_text    TEXT
         )""","""
-        
+
     CREATE TABLE operand_expression (
         operand         INTEGER NOT NULL,
         expression      INTEGER NOT NULL
         )""","""
-        
+
     CREATE TABLE expression (
         id              INTEGER PRIMARY KEY,
         expr_type       INTEGER NOT NULL,
@@ -134,7 +134,7 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         position        INTEGER NOT NULL,
         parent_id       INTEGER
         ) ""","""
-        
+
     CREATE TABLE expression_substitutions (
         instruction     INTEGER,
         operand         INTEGER,
@@ -161,19 +161,19 @@ cINSERT_MODULE                              = "INSERT INTO module (name, base, v
 cINSERT_FUNCTION                            = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, '%s');"
 cINSERT_BASIC_BLOCK                         = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);"
 cINSERT_OPERAND                             = "INSERT INTO operand (instruction, position, operand_text) VALUES (%d, %d, %s);"
-                                    
+
 ### OPERAND ###
 
-cSELECT_OPERAND                             = "SELECT operand_text, position FROM operand WHERE id = %d;"                                    
+cSELECT_OPERAND                             = "SELECT operand_text, position FROM operand WHERE id = %d;"
 
 cUPDATE_OPERAND_TEXT                        = "UPDATE operand SET operand_text=%s where id=%d;"
-                                            
-### INSTRUCTION ###                         
-                                            
+
+### INSTRUCTION ###
+
 cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;"
 cSELECT_INSTRUCTION_XREFS_TO                = "SELECT source FROM cross_references WHERE destination=%d AND reference_type = 8;"
 cSELECT_INSTRUCTION_OPERANDS                = "SELECT id FROM operand WHERE instruction = %d ORDER BY position;"
-                                            
+
 cUPDATE_INSTRUCTION_MNEMONIC                = "UPDATE instruction SET mnemonic=%s where id=%d"
 cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%s WHERE id=%d;"
 cUPDATE_INSTRUCTION_OPERAND1                = "UPDATE instruction SET operand1=%s WHERE id=%d;"
@@ -206,11 +206,11 @@ cSELECT_FUNCTION_BASIC_BLOCKS               = "SELECT id FROM basic_block WHERE 
 cSELECT_FUNCTION_NUM_INSTRUCTIONS           = "SELECT count(*) FROM instruction WHERE function = %d;"
 cSELECT_FUNCTION_NUM_VARS                   = "SELECT count(*) FROM function_variables WHERE function = %d AND flags & %d > 0"
 cSELECT_FUNCTION_BASIC_BLOCK_BY_ADDRESS     = "SELECT id FROM basic_block WHERE function = %d AND start_address <= %d AND end_address >= %d"
-                                            
+
 cSELECT_FUNCTION_BASIC_BLOCK_REFERENCES     = "SELECT b.start_address, d.start_address FROM cross_references AS c, basic_block AS b, basic_block AS d WHERE c.source = b.id AND c.destination = d.id AND b.function = %d AND d.function = %d AND c.reference_type = 4"
 cSELECT_FUNCTION_CODE_REF_INSTRUCTION       = "SELECT a.id from cross_references AS c, instruction AS a, instruction AS b WHERE a.id=c.source AND b.id = c.destination AND b.function = %d AND c.reference_type=8;"
 cSELECT_FUNCTION_DATA_REF_INSTRUCTION       = "SELECT a.id from cross_references AS c, instruction AS a, data AS d WHERE a.id=c.source AND d.id = c.destination AND d.address = %d AND c.reference_type=64;"
-                                            
+
 cUPDATE_FUNCTION_START_ADDRESS              = "UPDATE function SET start_address=%d where id=%d"
 cUPDATE_FUNCTION_END_ADDRESS                = "UPDATE function SET end_address=%d where id=%d"
 cUPDATE_FUNCTION_FLAGS                      = "UPDATE function SET flags=%d WHERE id=%d;"
@@ -220,17 +220,17 @@ cUPDATE_FUNCTION_SAVED_REG_SIZE             = "UPDATE frame_info SET saved_reg_s
 cUPDATE_FUNCTION_FRAME_SIZE                 = "UPDATE frame_info SET frame_size=%d where function=%d"
 cUPDATE_FUNCTION_RET_SIZE                   = "UPDATE frame_info SET ret_size=%d where function=%d"
 cUPDATE_FUNCTION_LOCAL_VAR_SIZE             = "UPDATE frame_info SET local_var_size=%d where function=%d"
-                                            
-### MODULE ###                              
-                                            
+
+### MODULE ###
+
 cSELECT_MODULE                              = "SELECT name, base, signature FROM module WHERE id = %d;"
 cSELECT_MODULE_NUM_FUNCTIONS                = "SELECT count(*) FROM function WHERE module = %d;"
 cSELECT_MODULE_FUNCTIONS                    = "SELECT id FROM function WHERE module = %d"
 cSELECT_MODULE_IMPORTED_FUNCTIONS           = "SELECT id FROM function WHERE module = %d AND import IS NOT NULL"
 cSELECT_MODULE_LIBRARY_FUNCTIONS            = "SELECT id FROM function WHERE module = %d AND flags & 4 > 0"
 cSELECT_MODULE_FUNCTION_REFERENCES          = "SELECT b.start_address, d.start_address FROM cross_references AS c, function AS b, function AS d WHERE c.source = b.id AND c.destination = d.id AND b.module = %d AND d.module = %d AND c.reference_type = 1"
-                                            
-                                            
+
+
 cUPDATE_MODULE_NAME                         = "UPDATE module SET name=%s where id=%d"
 cUPDATE_MODULE_BASE                         = "UPDATE module SET base=%s where id=%d"
 cUPDATE_MODULE_SIGNATURE                    = "UPDATE module SET signature=%s where id=%d"

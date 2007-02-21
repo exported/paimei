@@ -32,6 +32,9 @@ class sql_singleton(object):
     # storage for the instance reference
     __instance = None
 
+    def sql_safe_str(string_val):
+        return "'" + string_val.replace("'", "''") + "'"
+
     def extract_DSN_values(DSN):
         '''
         To be honest this is not really a standard DSN format, kind of a hack that looks similar and I call it DSN

@@ -2,6 +2,8 @@
 # Bak Mei - The Pai Mei Backend
 # Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -27,8 +29,16 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         name            varchar(255) NOT NULL,
         base            int UNSIGNED NOT NULL,
         signature       text default '',
-        data            blob,
         version         varchar(255) NOT NULL
+        )""", """
+        
+    CREATE TABLE sections (
+        id              INTEGER PRIMARY KEY,
+        module          INTEGER NOT NULL,
+        name            varchar(255),
+        start           INTEGER,
+        type            INTEGER,
+        bytes           BLOB    
         )""", """
 
     CREATE TABLE comments (

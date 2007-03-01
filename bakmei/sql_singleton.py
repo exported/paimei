@@ -656,7 +656,66 @@ class sql_singleton(object):
             ret_val["signature"]    = results[2]
 
             return ret_val
+            
+        def select_rpc_uuids(self, DSN, module_id):
+            '''
+            Retrieve all the RPC UUIDs for the given module
+            '''
+            ret_val = []
 
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_RPC_UUIDS
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_RPC_UUIDS
+
+            results = curs.execute(sql_query % module_id).fetchall()
+            for result_row in results:
+                ret_val.append(result_row[0])
+
+            return ret_val
+            
+        def select_rpc_functions(self, DSN, module_id):
+            '''
+            Retrieve all the RPC function IDs for the given module        
+            '''
+            ret_val = []
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_RPC_FUNCTIONS
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_RPC_FUNCTIONS
+
+            results = curs.execute(sql_query % module_id).fetchall()
+            
+            for result_row in results:
+                ret_val.append(result_row[0])
+
+            return ret_val
+
+        def select_rpc_functions_by_uuid(self, DSN, module_id, uuid):
+            '''
+            Retrieve all the RPC function IDs for the given UUID in the module    
+            '''
+            ret_val = []
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_RPC_FUNCTIONS_BY_UUID
+            else: #sqlitecSELECT_RPC_FUNCTIONS_BY_UUID
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_RPC_FUNCTIONS_BY_UUID
+
+            results = curs.execute(sql_query % (module_id, "'" + uuid.replace("'", "''") + "'")).fetchall()
+            
+            for result_row in results:
+                ret_val.append(result_row[0])
+
+            return ret_val    
+    
         def select_module_function_references(self, DSN, module_id):
             '''
             Returns a list of tuples consisting of the source function address and the destination function address.
@@ -671,6 +730,7 @@ class sql_singleton(object):
                 sql_query = bakmei.sqlite_queries.cSELECT_MODULE_FUNCTION_REFERENCES
 
             results = curs.execute(sql_query % (module_id, module_id)).fetchall()
+            
             for result_row in results:
                 ret_val.append((result_row[0], result_row[1]))
 
@@ -859,8 +919,8 @@ class sql_singleton(object):
 
         @type   DSN:            String
         @param  DSN:            The database source name.
-        @type   instruction_id: Integer
-        @param  instruction_id: The ID of the operand to query.
+        @type   operand_id:     Integer
+        @param  operand_id:     The ID of the operand to query.
 
         @rtype:                 dict
         @return:                A dict containing the operand attributes. The keys for the dictionary are "operand_text", "position".
@@ -876,10 +936,10 @@ class sql_singleton(object):
 
         @type   DSN:            String
         @param  DSN:            The database source name.
-        @type   instruction_id: Integer
-        @param  instruction_id: The ID of the instruction to update.
-        @type   mnemonic:       String
-        @param  mnemonic:       The text of the operand.
+        @type   operand_id:     Integer
+        @param  operand_id:     The ID of the operand to update.
+        @type   text:           String
+        @param  text:           The text of the operand.
         '''
         if sql_singleton.__instance is None:
             raise SingletonInstanceException
@@ -1461,6 +1521,59 @@ class sql_singleton(object):
             raise SingletonInstanceException
 
         return sql_singleton.__instance.select_module(DSN, module_id)
+        
+    def select_rpc_uuids(self, DSN, module_id):
+        '''
+        Retrieve all the RPC UUIDs for the given module
+
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to search.
+
+        @rtype:             List
+        @return:            A list of all the RPC UUIDs available for the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+
+        return sql_singleton.__instance.select_rpc_uuids(DSN, module_id)
+
+    def select_rpc_functions(self, DSN, module_id):
+        '''
+        Retrieve all the RPC function IDs for the given module
+
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to search.
+
+        @rtype:             List
+        @return:            A list of all the RPC function IDs available for the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+
+        return sql_singleton.__instance.select_rpc_functions(DSN, module_id)
+
+    def select_rpc_functions_by_uuid(self, DSN, module_id, uuid):
+        '''
+        Retrieve all the RPC function IDs for the given UUID in the module
+
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to search.
+        @type   uuid:       String
+        @param  uuid:       The uuid to search for matching functions.
+
+        @rtype:             List
+        @return:            A list of all the RPC function IDs available for the UUID in the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+
+        return sql_singleton.__instance.select_rpc_functions_by_uuid(DSN, module_id)    
 
     def select_module_function_references(self, DSN, module_id):
         '''

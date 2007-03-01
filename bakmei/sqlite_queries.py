@@ -230,6 +230,9 @@ cSELECT_MODULE_IMPORTED_FUNCTIONS           = "SELECT id FROM function WHERE mod
 cSELECT_MODULE_LIBRARY_FUNCTIONS            = "SELECT id FROM function WHERE module = %d AND flags & 4 > 0"
 cSELECT_MODULE_FUNCTION_REFERENCES          = "SELECT b.start_address, d.start_address FROM cross_references AS c, function AS b, function AS d WHERE c.source = b.id AND c.destination = d.id AND b.module = %d AND d.module = %d AND c.reference_type = 1"
 
+cSELECT_RPC_UUIDS                           = "SELECT DISTINCT uuid FROM rpc_data WHERE module = %d;"
+cSELECT_RPC_FUNCTIONS                       = "SELECT function from rpc_data WHERE module = %d ORDER BY uuid, opcode;"
+cSELECT_RPC_FUNCTIONS_BY_UUID               = "SELECT function from rpc_data WHERE module = %d AND uuid = %s ORDER BY opcode;"
 
 cUPDATE_MODULE_NAME                         = "UPDATE module SET name=%s where id=%d"
 cUPDATE_MODULE_BASE                         = "UPDATE module SET base=%s where id=%d"

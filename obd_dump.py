@@ -110,6 +110,7 @@ def set_up_cross_references():
         try:
             id_tuple_source = instruction_address_lookup[xref[0]]
             id_tuple_dest   = instruction_address_lookup[xref[1]]
+ 
             curs.execute(INSERT_INSN_TO_INSN_XREFS % (id_tuple_source[0], id_tuple_dest[0]))
 
             if not basic_block_added.has_key((id_tuple_source[1], id_tuple_dest[1])):

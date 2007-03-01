@@ -291,6 +291,38 @@ class module (pgraph.graph):
         del self.__nodes
 
     ####################################################################################################################
+    # rpc_uuids accessors
+
+    def __getRpcUuids (self):
+        '''
+        Gets the RPC UUIDs for the module
+
+        @rtype:  [function]
+        @return: The imported functions of the module
+        '''
+
+        ss = sql_singleton()
+        ret_val = ss.select_rpc_uuids(self.DSN, self.dbid)
+
+        return ret_val
+
+    def __setRpcUuids (self, value):
+        '''
+        Sets the RPC UUIDs of the module. This will generate an error.
+
+        @type  value: String
+        @param value: The signature of the module.
+        '''
+
+        raise NotImplementedError, "RPC UUIDs are not directly writable for modules. This is a read-only property"
+
+    def __deleteRpcUuids (self):
+        '''
+        destructs the RPC UUIDs
+        '''
+        pass # dynamically generated property
+        
+    ####################################################################################################################
     # imported_functions accessors
 
     def __getImportedFunctions (self):
@@ -387,7 +419,32 @@ class module (pgraph.graph):
 
         return None
 
-
+    ####################################################################################################################
+    def get_rpc_functions(self, uuid=None):
+        '''
+        Returns the list of functions that match the given RPC UUID. If no UUID is given, all RPC functions are 
+        returned.
+        
+        @type  uuid: String
+        @param uuid: (optional) The uuid to retrieve matching RPC functions for.
+        
+        @rtype:  [bakmei.function]
+        @return: A list of functions matching the given RPC UUID. If no UUID was given, all RPC functions.
+        '''
+        ret_val = []
+        
+        ss = sql_singleton()
+        
+        if uuid:
+            results = ss.select_rpc_functions_by_uuid(self.dsn, self.dbid, uuid)
+        else:
+            results = ss.select_rpc_functions(self.dsn, self.dbid)
+            
+        for function_id in results:
+            ret_val.append(function(self.DSN, function_id))            
+            
+        return ret_val
+        
     ####################################################################################################################
     def next_ea (self, ea=None):
         '''
@@ -581,3 +638,4 @@ class module (pgraph.graph):
     num_functions       = property(__getNumFunctions,       __setNumFunctions,      __deleteNumFunctions,       "The number of functions in the module.")
     imported_functions  = property(__getImportedFunctions,  __setImportedFunctions, __deleteImportedFunctions,  "The functions imported from other libraries.")
     library_functions   = property(__getLibraryFunctions,   __setLibraryFunctions,  __deleteLibraryFunctions,   "The library functions compiled inline.")
+    rpc_uuids           = property(__getRpcUuids,           __setRpcUuids,          __deleteRpcUuids,           "All RPC UUIDs for the module.")

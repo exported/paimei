@@ -2,6 +2,8 @@
 # Code Coverage
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -209,11 +211,11 @@ class code_coverage:
 
         @see: import_file()
 
-        @type  name: String
-        @param name: File name to export to
+        @type  file_name:   String
+        @param file_name:   File name to export to
 
-        @rtype:  code_coverage
-        @return: self
+        @rtype:             code_coverage
+        @return:            self
         '''
 
         fh = open(file_name, "wb+")
@@ -296,11 +298,11 @@ class code_coverage:
 
         @see: export_file()
 
-        @type  name: String
-        @param name: File name to import from
+        @type  file_name:   String
+        @param file_name:   File name to import from
 
-        @rtype:  code_coverage
-        @return: self
+        @rtype:             code_coverage
+        @return:            self
         '''
 
         fh  = open(file_name, "rb")

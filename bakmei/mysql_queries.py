@@ -54,6 +54,7 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         end_address     BIGINT UNSIGNED NOT NULL,
         name            varchar(255) NOT NULL,
         import          int UNSIGNED,
+        exported        smallint UNSIGNED,
         flags           int UNSIGNED,
         comment         int UNSIGNED
         )""","""
@@ -198,7 +199,7 @@ cSELECT_BASIC_BLOCK_INSTRUCTION_REFERENCES  = "SELECT b.address, d.address FROM 
 
 ### FUNCTION ###
 
-cSELECT_FUNCTION                            = "SELECT name, module, start_address, end_address, import FROM function WHERE id = %d;"
+cSELECT_FUNCTION                            = "SELECT name, module, start_address, end_address, import, exported FROM function WHERE id = %d;"
 cSELECT_FRAME_INFO                          = "SELECT saved_reg_size, frame_size, ret_size, local_var_size, arg_size FROM frame_info WHERE function = %d;"
 cSELECT_ARGS                                = "SELECT name FROM function_variables WHERE function = %d AND flags = 1;"
 cSELECT_LOCAL_VARS                          = "SELECT name FROM function_variables WHERE function = %d AND flags = 2;"
@@ -214,6 +215,7 @@ cSELECT_FUNCTION_DATA_REF_INSTRUCTION       = "SELECT a.id from cross_references
 cUPDATE_FUNCTION_START_ADDRESS              = "UPDATE function SET start_address=%d where id=%d"
 cUPDATE_FUNCTION_END_ADDRESS                = "UPDATE function SET end_address=%d where id=%d"
 cUPDATE_FUNCTION_FLAGS                      = "UPDATE function SET flags=%d WHERE id=%d;"
+cUPDATE_FUNCTION_EXPORTED                   = "UPDATE function SET exported=%d where id=%d;"
 cUPDATE_FUNCTION_ARG_SIZE                   = "UPDATE frame_info SET arg_size=%d WHERE function=%d;"
 cUPDATE_FUNCTION_NAME                       = "UPDATE function SET name=%s where id=%d"
 cUPDATE_FUNCTION_SAVED_REG_SIZE             = "UPDATE frame_info SET saved_reg_size=%d where function=%d"
@@ -229,6 +231,7 @@ cSELECT_MODULE_FUNCTIONS                    = "SELECT id FROM function WHERE mod
 cSELECT_MODULE_IMPORTED_FUNCTIONS           = "SELECT id FROM function WHERE module = %d AND import IS NOT NULL"
 cSELECT_MODULE_LIBRARY_FUNCTIONS            = "SELECT id FROM function WHERE module = %d AND flags & 4 > 0"
 cSELECT_MODULE_FUNCTION_REFERENCES          = "SELECT b.start_address, d.start_address FROM cross_references AS c, function AS b, function AS d WHERE c.source = b.id AND c.destination = d.id AND b.module = %d AND d.module = %d AND c.reference_type = 1"
+cSELECT_MODULE_INSTRUCTION_BY_ADDRESS       = "SELECT id FROM instruction WHERE module = %d and address = %d;"
 
 cSELECT_RPC_UUIDS                           = "SELECT DISTINCT uuid FROM rpc_data WHERE module = %d;"
 cSELECT_RPC_FUNCTIONS                       = "SELECT function from rpc_data WHERE module = %d ORDER BY uuid, opcode;"

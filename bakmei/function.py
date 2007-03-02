@@ -45,6 +45,7 @@ class function (pgraph.graph, pgraph.node):
     __ea_end            = None
     __name              = None
     __is_import         = False
+    __exported          = False
     __flags             = None
 
     # TODO: implement RPC functionality
@@ -121,6 +122,7 @@ class function (pgraph.graph, pgraph.node):
         self.__ea_start     = results['start_address']
         self.__ea_end       = results['end_address']
         self.__import_id    = results['import_id']
+        self.__exported     = results['exported']
 
         self.__cached = True
 
@@ -436,6 +438,45 @@ class function (pgraph.graph, pgraph.node):
         '''
         del self.__is_import
 
+    ####################################################################################################################
+    # is_export accessors
+
+    def __getIsExport (self):
+        '''
+        Gets the indicator if the function is exported.
+
+        @rtype:  Boolean
+        @return: The indicator if the function is exported.
+        '''
+
+        if not self.__cached:
+            self.__load_from_sql()
+
+        return self.__exported
+
+    ####
+
+    def __setIsExport (self, value):
+        '''
+        Sets the indicator if the function is exported.
+
+        @type  value: Boolean
+        @param value: The indicator if the function is exported.
+        '''
+        if self.__cached:
+            self.__expoorted = value
+
+        ss = sql_singleton()
+        ss.update_function_exported(self.DSN, self.dbid, value)
+
+    ####
+
+    def __deleteIsExport (self):
+        '''
+        destructs the indicator if the function is exported
+        '''
+        del self.__exported
+        
     ####################################################################################################################
     # flags accessors
 
@@ -1051,6 +1092,7 @@ class function (pgraph.graph, pgraph.node):
     ea_end              = property(__getEaEnd,              __setEaEnd,             __deleteEaEnd,              "The ending address of the function.")
     name                = property(__getName,               __setName,              __deleteName,               "The name of the function.")
     is_import           = property(__getIsImport,           __setIsImport,          __deleteIsImport,           "Indicates if the function is imported.")
+    is_export           = property(__getIsExport,           __setIsExport,          __deleteIsExport,           "Indicates if the function is exported.")
     flags               = property(__getFlags,              __setFlags,             __deleteFlags,              "The function flags.")
 
     instructions_to     = property(__getInstructionsTo,     __setInstructionsTo,    __deleteInstructionsTo,     "The instructions that reference this function.")

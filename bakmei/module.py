@@ -408,6 +408,8 @@ class module (pgraph.graph):
         @return: The function that contains the given address or None if not found.
         '''
 
+        # TODO : This can be done faster via sql
+
         for func in self.nodes.values():
             # this check is necessary when analysis_depth == DEPTH_FUNCTIONS
             if func.ea_start == ea:
@@ -418,6 +420,27 @@ class module (pgraph.graph):
                     return func
 
         return None
+
+    ####################################################################################################################
+    def find_instruction (self, ea):
+        '''
+        Locate and return the instruction at the specified address.
+
+        @type  ea: DWORD
+        @param ea: The address of the instruction to find
+
+        @rtype:  bakmei.instruction
+        @return: The instruction that contains the given address or None if not found.
+        '''
+        
+        ss = sql_singleton()
+        
+        insn_id = ss.select_module_instruction_by_address(self.DSN, self.dbid, ea)
+        
+        if insn == None:
+            return None
+            
+        return instruction(self.DSN, insn_id)        
 
     ####################################################################################################################
     def get_rpc_functions(self, uuid=None):
@@ -436,9 +459,9 @@ class module (pgraph.graph):
         ss = sql_singleton()
         
         if uuid:
-            results = ss.select_rpc_functions_by_uuid(self.dsn, self.dbid, uuid)
+            results = ss.select_rpc_functions_by_uuid(self.DSN, self.dbid, uuid)
         else:
-            results = ss.select_rpc_functions(self.dsn, self.dbid)
+            results = ss.select_rpc_functions(self.DSN, self.dbid)
             
         for function_id in results:
             ret_val.append(function(self.DSN, function_id))            

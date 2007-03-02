@@ -2,6 +2,8 @@
 # PIDA Module
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -155,7 +157,7 @@ class module (pgraph.graph):
     def __init_enumerate_rpc__ (self):
         '''
         Enumerate all RPC interfaces and add additional properties to the RPC functions. This routine will pass through
-        the entire IDA database. This was entirely ripped from my RPC enumeration IDC script:
+        the entire IDA database. This was entirely ripped from my RPC enumeration IDC script::
 
             http://www.openrce.org/downloads/details/3/RPC%20Enumerator
 

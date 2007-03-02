@@ -2,10 +2,10 @@
 # IDA Python Open Binary Database Generation Script
 # Dumps the current IDB into a .obd file.
 #
-# $Id$
-#
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 # Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
+#
+# $Id$
 #
 # Portions of this code were taken from Sabre Security IDA to SQL exporter.
 # by Ero Carrera (c) Sabre-Security 2006	[ero.carrera@sabre-security.com]

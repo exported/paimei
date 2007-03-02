@@ -2,6 +2,8 @@
 # pGRAPH
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -58,8 +60,8 @@ class cluster (object):
         '''
         Remove a node from the cluster.
 
-        @type  node: pGRAPH Node
-        @param node: Node to remove from cluster
+        @type  node_id: pGRAPH Node
+        @param node_id: Node to remove from cluster
         '''
 
         for node in self.nodes:

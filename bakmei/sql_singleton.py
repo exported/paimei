@@ -375,7 +375,13 @@ class sql_singleton(object):
                 sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION
 
             results = curs.execute(sql_query % function_id).fetchone()
-            ret_val = {'name':results[0], 'module':results[1], 'start_address':results[2], 'end_address':results[3], 'import_id':results[4]}
+
+            if results[5] and results[5] != 0:
+                exported = True
+            else:
+                exported = False
+
+            ret_val = {'name':results[0], 'module':results[1], 'start_address':results[2], 'end_address':results[3], 'import_id':results[4], 'exported':exported}
 
             return ret_val
 
@@ -572,6 +578,21 @@ class sql_singleton(object):
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_FLAGS % (flags, function_id))
                 curs.commit()
 
+        def update_function_exported(self, DSN, function_id, exported):
+            if exported == True:
+                export_value = 1
+            else:
+                export_value = 0
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_EXPORTED % (exported, function_id))
+
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_EXPORTED % (exported, function_id))
+                curs.commit()
+
         def update_function_arg_size(self, DSN, function_id, size):
             if DSN[:6] == "mysql;":
                 curs = self.connection(DSN).cursor()
@@ -656,7 +677,7 @@ class sql_singleton(object):
             ret_val["signature"]    = results[2]
 
             return ret_val
-            
+
         def select_rpc_uuids(self, DSN, module_id):
             '''
             Retrieve all the RPC UUIDs for the given module
@@ -675,10 +696,10 @@ class sql_singleton(object):
                 ret_val.append(result_row[0])
 
             return ret_val
-            
+
         def select_rpc_functions(self, DSN, module_id):
             '''
-            Retrieve all the RPC function IDs for the given module        
+            Retrieve all the RPC function IDs for the given module
             '''
             ret_val = []
 
@@ -690,7 +711,7 @@ class sql_singleton(object):
                 sql_query = bakmei.sqlite_queries.cSELECT_RPC_FUNCTIONS
 
             results = curs.execute(sql_query % module_id).fetchall()
-            
+
             for result_row in results:
                 ret_val.append(result_row[0])
 
@@ -698,7 +719,7 @@ class sql_singleton(object):
 
         def select_rpc_functions_by_uuid(self, DSN, module_id, uuid):
             '''
-            Retrieve all the RPC function IDs for the given UUID in the module    
+            Retrieve all the RPC function IDs for the given UUID in the module
             '''
             ret_val = []
 
@@ -710,12 +731,12 @@ class sql_singleton(object):
                 sql_query = bakmei.sqlite_queries.cSELECT_RPC_FUNCTIONS_BY_UUID
 
             results = curs.execute(sql_query % (module_id, "'" + uuid.replace("'", "''") + "'")).fetchall()
-            
+
             for result_row in results:
                 ret_val.append(result_row[0])
 
-            return ret_val    
-    
+            return ret_val
+
         def select_module_function_references(self, DSN, module_id):
             '''
             Returns a list of tuples consisting of the source function address and the destination function address.
@@ -730,7 +751,7 @@ class sql_singleton(object):
                 sql_query = bakmei.sqlite_queries.cSELECT_MODULE_FUNCTION_REFERENCES
 
             results = curs.execute(sql_query % (module_id, module_id)).fetchall()
-            
+
             for result_row in results:
                 ret_val.append((result_row[0], result_row[1]))
 
@@ -801,6 +822,27 @@ class sql_singleton(object):
                 ret_val.append(result_row[0])
 
             return ret_val
+
+        def select_module_instruction_by_address(self, DSN, module_id, address):
+            '''
+            Retrieve all the instruction ID that corresponds to the address in the given module
+            '''
+            ret_val = None
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULE_INSTRUCTION_BY_ADDRESS
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULE_INSTRUCTION_BY_ADDRESS
+
+            results = curs.execute(sql_query % (module_id, address)).fetchone()
+
+            # TODO : Test this logic
+            if results == None or len(results) == 0:
+                return None
+
+            return results[0]
 
         def update_module_name(self, DSN, module_id, name):
             if name:
@@ -1192,7 +1234,7 @@ class sql_singleton(object):
         @param  function_id:    The ID of the function to query.
 
         @rtype:                 dict
-        @return:                A dict containing the function attributes. The keys for the dictionary are "name", "module", "start_address", "end_address", "import_id".
+        @return:                A dict containing the function attributes. The keys for the dictionary are "name", "module", "start_address", "end_address", "import_id", "exported".
         '''
         if sql_singleton.__instance is None:
             raise SingletonInstanceException
@@ -1391,6 +1433,22 @@ class sql_singleton(object):
 
         return sql_singleton.__instance.update_function_end_address(DSN, function_id, address)
 
+    def update_function_exported(self, DSN, function_id, exported):
+        '''
+        Update the flags for a function in the database.
+
+        @type   DSN:            String
+        @param  DSN:            The database source name.
+        @type   function_id:    Integer
+        @param  function_id:    The ID of the function to update.
+        @type   exported:       Boolean
+        @param  exported:       The function export status.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+
+        return sql_singleton.__instance.update_function_exported(DSN, function_id, exported)
+
     def update_function_flags(self, DSN, function_id, flags):
         '''
         Update the flags for a function in the database.
@@ -1521,7 +1579,7 @@ class sql_singleton(object):
             raise SingletonInstanceException
 
         return sql_singleton.__instance.select_module(DSN, module_id)
-        
+
     def select_rpc_uuids(self, DSN, module_id):
         '''
         Retrieve all the RPC UUIDs for the given module
@@ -1573,7 +1631,7 @@ class sql_singleton(object):
         if sql_singleton.__instance is None:
             raise SingletonInstanceException
 
-        return sql_singleton.__instance.select_rpc_functions_by_uuid(DSN, module_id)    
+        return sql_singleton.__instance.select_rpc_functions_by_uuid(DSN, module_id)
 
     def select_module_function_references(self, DSN, module_id):
         '''
@@ -1642,6 +1700,25 @@ class sql_singleton(object):
             raise SingletonInstanceException
 
         return sql_singleton.__instance.select_module_library_functions(DSN, module_id)
+
+    def select_module_instruction_by_address(self, DSN, module_id, address):
+        '''
+        Retrieve all the instruction ID that corresponds to the address in the given module
+
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to query.
+        @type   address:    DWORD
+        @param  address:    The address of the instruction.
+
+        @rtype:             Integer
+        @return:            The instruction ID matching the address contained in the module.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+
+        return sql_singleton.__instance.select_module_instruction_by_address(DSN, module_id, address)
 
     def select_module_functions(self, DSN, module_id):
         '''

@@ -659,6 +659,31 @@ class sql_singleton(object):
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_LOCAL_VAR_SIZE % (size, function_id))
                 curs.commit()
 
+        def select_modules(self, DSN):
+            '''
+            Retrieve the name and IDs of all modules in the database.
+            
+            @type   DSN:        String
+            @param  DSN:        The database source name.
+            
+            @rtype:             [(Integer, String)]
+            @return:            A list of tuples containing the module ID and the module name.
+            '''
+            ret_val = []
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                sql_query = bakmei.mysql_queries.cSELECT_MODULES
+            else: #sqlite
+                curs = self.connection(DSN)
+                sql_query = bakmei.sqlite_queries.cSELECT_MODULES
+        
+            results = curs.execute(sql_query).fetchall()
+            
+            for row in results:
+                ret_val.append((row[0], row[1]))
+                
+            return ret_val
+
         ## MODULE ###
 
         def select_module(self, DSN, module_id):
@@ -896,7 +921,10 @@ class sql_singleton(object):
 
             if not self.__sql.has_key(DSN):
                 # Connection missing
-                self.__init_connection(DSN)
+                try:
+                    self.__init_connection(DSN)
+                except sqlite.DatabaseError:
+                    raise InvalidDatabaseException
 
             return self.__sql[DSN]
 
@@ -1561,6 +1589,21 @@ class sql_singleton(object):
 
         return sql_singleton.__instance.update_function_local_var_size(DSN, function_id, size)
 
+    def select_modules(self, DSN):
+        '''
+        Retrieve the name and IDs of all modules in the database.
+        
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        
+        @rtype:             [(Integer, String)]
+        @return:            A list of tuples containing the module ID and the module name.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+
+        return sql_singleton.__instance.select_modules(DSN)
+        
     ## MODULE ###
 
     def select_module(self, DSN, module_id):
@@ -1860,3 +1903,7 @@ class sql_singleton(object):
 class SingletonInstanceException(Exception):
     def __str__(self):
         return "The sql_singleton class must be instantiated before this method can be called."
+        
+class InvalidDatabaseException(Exception):
+    def __str__(self):
+        return "Invalid database path."

@@ -2,6 +2,8 @@
 # PaiMei
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -31,6 +33,7 @@ class PAIMEIdocs(wx.Panel):
                    "General":   "../docs/index.html",
                    "PyDbg":     "../docs/PyDBG/public/trees.html",
                    "PIDA":      "../docs/PIDA/public/trees.html",
+                   "Bak Mei":    "../docs/BakMei/public/trees.html",
                    "pGRAPH":    "../docs/pGRAPH/public/trees.html",
                    "Utilities": "../docs/Utilities/public/trees.html",
                }

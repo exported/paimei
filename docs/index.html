@@ -1,4 +1,5 @@
 <html>
+    <!-- $Id$ -->
 <head>
     <link rel="stylesheet" href="stylesheet.css">
 </head>
@@ -13,6 +14,7 @@
         <li><a href="#introduction">Introduction</a></li>
         <li><a href="#pydbg">PyDbg</a></li>
         <li><a href="#pida">PIDA</a></li>
+        <li><a href="#bakmei">BakMei</a></li>
         <li><a href="#future_development">Future Development</a></li>
     </ul>
     <li><a href="installation.html">Installation</a></li>
@@ -33,6 +35,8 @@ PaiMei, is a reverse engineering framework consisting of multiple extensible com
     <li> <b>PyDbg</b>: A pure Python win32 debugging abstraction class.
     <li> <b>pGRAPH</b>: A graph abstraction layer with seperate classes for nodes, edges and clusters.
     <li> <b>PIDA</b>: Built on top of pGRAPH, PIDA aims to provide an abstract and persistent interface over binaries (DLLs and EXEs) with separate classes for representing functions, basic blocks and instructions. The end result is the creation of a portable file that when loaded allows you to arbitrarily navigate throughout the entire original binary.
+    <li> <b>Bak Mei</b>: Built on top of pGRAPH, BakMei is a database driven replacement for PIDA. BakMei is an API to allow easy access
+    to commonly needed information stored in the <i>Open Binary Database</i> format. BakMei currently supports both MySQL and SQLite 2.
 </ul>
 
 A layer above the core components you will find the remainder of the PaiMei framework broken into the following over-arching components:
@@ -162,6 +166,10 @@ Consider another, more real-world example. You need to locate all functions with
 
 Together, PIDA and PyDbg offer a powerful combination for building a variety of tools. Consider for example the ease of re-creating <a href="http://www.openrce.org/downloads/details/171/Process%20Stalker">Process Stalker</a> on top of this platform. Simply generate a PIDA module, load it in a PyDbg script, step through the functions / basic blocks within the module setting breakpoints along the way and finally register a breakpoint handler that logs the breakpoint hits to disk.
 </td><td valign=top><img src="../logos/paimei-6.jpg"></td></tr></table>
+
+<a name="bakmei"></a><h2>Bak Mei</h2>
+
+TODO: Add docs for Bak Mei.
 
 <a name="future_development"></a><h2>Entity Relationship Diagram</h2>
 

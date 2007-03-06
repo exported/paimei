@@ -4,6 +4,8 @@
 # PaiMei Console
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -39,6 +41,10 @@ try:
     missing_requirement = "MySQLdb"
     import mysql_connect_dialog
 
+    missing_requirement = "BakMei"
+    import load_module_dialog
+    import bakmei
+    
     missing_requirement = "PaiMei PyDbg"
     import pydbg_locale_dialog
 
@@ -48,6 +54,8 @@ try:
     import pydbg
     missing_requirement = False
 except:
+    import traceback
+    traceback.print_exc(file=sys.stdout)
     pass
 
 # this is the top most handle for accessing the entire console from the shell.
@@ -204,24 +212,27 @@ class PAIMEIframe (wx.Frame):
         # if the username was restored, show that in the status bar.
         self.status_bar.SetStatusText("User: %s" % self.username, 5)
 
-        connect_menu = wx.Menu()
-        connect_menu.Append(101, "&MySQL Connect",        "Connect to MySQL server.")
-        connect_menu.Append(102, "&PyDbg Locale",         "Set PyDbg locale.")
-        connect_menu.Append(103, "&Set Username",         "Tell PaiMei who you are.")
-        connect_menu.Append(104, "&uDraw(Graph) Connect", "Connect to uDraw(Graph) server.")
-        connect_menu.AppendSeparator()
-        connect_menu.Append(105, "Save &Options",         "Save connection settings and automatically restore them on load.")
-        connect_menu.Append(106, "&Restore Connections",  "Restore connections from saved settings.")
+        session_menu = wx.Menu()
+        session_menu.Append(101, "&MySQL Connect",          "Connect to MySQL server.")
+        session_menu.Append(107, "Load Module",             "Set the current module to analyze.")
+                                                            
+        session_menu.Append(102, "&PyDbg Locale",           "Set PyDbg locale.")
+        session_menu.Append(103, "Set &Username",           "Tell PaiMei who you are.")
+        session_menu.Append(104, "uDraw(&Graph) Connect",   "Connect to uDraw(Graph) server.")
+        session_menu.AppendSeparator()                      
+        session_menu.Append(105, "&Save Session",           "Save connection settings and automatically restore them on load.")
+        session_menu.Append(106, "&Load Session",           "Restore connections from saved settings.")
 
         advanced_menu = wx.Menu()
-        advanced_menu.Append(201, "Clear Log",            "Clear the current modules log.")
-        advanced_menu.Append(202, "Toggle Python &Shell", "Toggle interactive Python shell.")
+        advanced_menu.Append(201, "Clear Log",              "Clear the current modules log.")
+        advanced_menu.Append(202, "Toggle Python &Shell",   "Toggle interactive Python shell.")
 
         help_menu = wx.Menu()
         help_menu.Append(901, "&About", "About PAIMEIconsole.")
 
         self.menu = wx.MenuBar()
-        self.menu.Append(connect_menu,  "&Connections")
+
+        self.menu.Append(session_menu,  "&Session")
         self.menu.Append(advanced_menu, "&Advanced")
         self.menu.Append(help_menu,     "&Help")
 
@@ -231,15 +242,16 @@ class PAIMEIframe (wx.Frame):
         self.Bind(wx.EVT_MENU_HIGHLIGHT_ALL, self.OnMenuHighlight)
 
         # menu events.
-        self.Bind(wx.EVT_MENU, self.OnMenuMySQLConnect,       id=101)
-        self.Bind(wx.EVT_MENU, self.OnMenuPyDbgLocale,        id=102)
-        self.Bind(wx.EVT_MENU, self.OnMenuSetUsername,        id=103)
-        self.Bind(wx.EVT_MENU, self.OnMenuUDrawConnect,       id=104)
-        self.Bind(wx.EVT_MENU, self.OnMenuSaveOptions,        id=105)
-        self.Bind(wx.EVT_MENU, self.OnMenuRestoreConnections, id=106)
-        self.Bind(wx.EVT_MENU, self.OnMenuClearLog,           id=201)
-        self.Bind(wx.EVT_MENU, self.OnMenuPythonShell,        id=202)
-        self.Bind(wx.EVT_MENU, self.OnMenuAbout,              id=901)
+        self.Bind(wx.EVT_MENU, self.OnMenuMySQLConnect,         id=101)
+        self.Bind(wx.EVT_MENU, self.OnMenuLoadModule,           id=107)  
+        self.Bind(wx.EVT_MENU, self.OnMenuPyDbgLocale,          id=102)
+        self.Bind(wx.EVT_MENU, self.OnMenuSetUsername,          id=103)
+        self.Bind(wx.EVT_MENU, self.OnMenuUDrawConnect,         id=104)
+        self.Bind(wx.EVT_MENU, self.OnMenuSaveOptions,          id=105)
+        self.Bind(wx.EVT_MENU, self.OnMenuRestoreConnections,   id=106)
+        self.Bind(wx.EVT_MENU, self.OnMenuClearLog,             id=201)
+        self.Bind(wx.EVT_MENU, self.OnMenuPythonShell,          id=202)
+        self.Bind(wx.EVT_MENU, self.OnMenuAbout,                id=901)
 
         # splitter stuff.
         self.splitter     = wx.SplitterWindow(self, -1, style=wx.SP_3D|wx.SP_BORDER|wx.SP_PERMIT_UNSPLIT)
@@ -353,16 +365,28 @@ class PAIMEIframe (wx.Frame):
 
     def OnMenuMySQLConnect (self, event):
         '''
-        Event handler for the connections\mysql menu item.
+        Event handler for the session\mysql menu item.
         '''
 
         dlg = mysql_connect_dialog.mysql_connect_dialog(parent=self)
         dlg.ShowModal()
 
+    def OnMenuLoadModule (self, event):
+        '''
+        Event handler for the session\load module menu item.
+        '''
+
+        dlg = load_module_dialog.load_module_dialog(parent=self)
+        dlg.ShowModal()
+        
+        if self.main_module_id and self.main_module_id > -1:
+            self.main_module = bakmei.module(self.main_DSN, self.main_module_id)
+            self.status_bar.SetStatusText("Module: %d - %s" % (self.main_module.dbid, self.main_module.name),6)
+
 
     def OnMenuPyDbgLocale (self, event):
         '''
-        Event handler for the connections\pydbg menu item.
+        Event handler for the session\pydbg menu item.
         '''
 
         dlg = pydbg_locale_dialog.pydbg_locale_dialog(parent=self)
@@ -371,7 +395,7 @@ class PAIMEIframe (wx.Frame):
 
     def OnMenuSetUsername (self, event):
         '''
-        Event handler for the connections\set username menu item.
+        Event handler for the session\set username menu item.
         '''
 
         if self.username: default = self.username
@@ -390,7 +414,7 @@ class PAIMEIframe (wx.Frame):
 
     def OnMenuUDrawConnect (self, event):
         '''
-        Event handler for the connections\udraw menu item.
+        Event handler for the session\udraw menu item.
         '''
 
         dlg = udraw_connect_dialog.udraw_connect_dialog(parent=self)
@@ -418,7 +442,7 @@ class PAIMEIframe (wx.Frame):
 
     def OnMenuRestoreConnections (self, event):
         '''
-        Event handler for the connections\restore connections menu item.
+        Event handler for the session\restore connections menu item.
         '''
 
         busy = wx.BusyInfo("Restoring connections... please wait.")
@@ -439,7 +463,7 @@ class PAIMEIframe (wx.Frame):
 
     def OnMenuSaveOptions (self, event):
         '''
-        Event handler for the connections\save options menu item.
+        Event handler for the session\save options menu item.
         '''
 
         fh = open(".options", "wb+")
@@ -488,10 +512,10 @@ class PAIMEIstatusbar (wx.StatusBar):
 
         wx.StatusBar.__init__(self, self.parent, -1)
 
-        self.SetFieldsCount(6)
+        self.SetFieldsCount(7)
 
         # set the fields to have relative widths.
-        self.SetStatusWidths([-3, -4, -1, -1, -1, -1])
+        self.SetStatusWidths([-3, -4, -1, -1, -1, -1, -1])
 
         # set the default status fields.
         self.SetStatusText("PaiMei ... Hayai!", 1)
@@ -499,6 +523,7 @@ class PAIMEIstatusbar (wx.StatusBar):
         self.SetStatusText("PyDbg: localhost", 3)
         self.SetStatusText("uDraw: NONE", 4)
         self.SetStatusText("User: NONE", 5)
+        self.SetStatusText("Module: 0 - None", 6)
 
 
 ########################################################################################################################

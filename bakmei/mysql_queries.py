@@ -240,3 +240,5 @@ cSELECT_RPC_FUNCTIONS_BY_UUID               = "SELECT function from rpc_data WHE
 cUPDATE_MODULE_NAME                         = "UPDATE module SET name=%s where id=%d"
 cUPDATE_MODULE_BASE                         = "UPDATE module SET base=%s where id=%d"
 cUPDATE_MODULE_SIGNATURE                    = "UPDATE module SET signature=%s where id=%d"
+
+cSELECT_MODULES                             = "SELECT id, name FROM module;"

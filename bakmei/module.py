@@ -42,6 +42,7 @@ class module (pgraph.graph):
 
     # most of these should be read via properties
     __name          = None
+    __comment       = None
     __base          = None
     __signature     = None
 
@@ -100,6 +101,7 @@ class module (pgraph.graph):
         self.__name         = results["name"]
         self.__base         = results["base"]
         self.__signature    = results["signature"]
+        self.__comment      = results["comment"]
 
         self.__cached = True
 
@@ -142,6 +144,46 @@ class module (pgraph.graph):
         destructs the name of the module
         '''
         del self.__name
+
+    ####################################################################################################################
+    # comment accessors
+
+    def __getComment (self):
+        '''
+        The module comment.
+
+        @rtype:  String
+        @return: The name of the module
+        '''
+
+        if not self.__cached:
+            self.__load_from_sql()
+
+        return self.__comment
+
+    ####
+
+    def __setComment (self, value):
+        '''
+        Sets the comment on the module.
+
+        @type  value: String
+        @param value: The comment for the module.
+        '''
+
+        if self.__cached:
+            self.__comment = value
+
+        ss = sql_singleton()
+        ss.update_module_comment(self.DSN, self.dbid, value)
+
+    ####
+
+    def __deleteComment (self):
+        '''
+        destructs the comment for the module
+        '''
+        del self.__comment
 
     ####################################################################################################################
     # base accessors
@@ -662,3 +704,4 @@ class module (pgraph.graph):
     imported_functions  = property(__getImportedFunctions,  __setImportedFunctions, __deleteImportedFunctions,  "The functions imported from other libraries.")
     library_functions   = property(__getLibraryFunctions,   __setLibraryFunctions,  __deleteLibraryFunctions,   "The library functions compiled inline.")
     rpc_uuids           = property(__getRpcUuids,           __setRpcUuids,          __deleteRpcUuids,           "All RPC UUIDs for the module.")
+    comment             = property(__getComment,            __setComment,           __deleteComment,            "Notes about the module.")

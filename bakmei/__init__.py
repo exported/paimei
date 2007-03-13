@@ -1,3 +1,5 @@
+# $Id$
+
 from module      import module
 
 __all__ = \

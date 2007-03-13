@@ -34,7 +34,7 @@ class sql_singleton(object):
     # storage for the instance reference
     __instance = None
 
-    def sql_safe_str(string_val):
+    def sql_safe_str(self, string_val):
         return "'" + string_val.replace("'", "''") + "'"
 
     def extract_DSN_values(DSN):
@@ -700,6 +700,7 @@ class sql_singleton(object):
             ret_val["name"]         = results[0]
             ret_val["base"]         = results[1]
             ret_val["signature"]    = results[2]
+            ret_val["comment"]      = results[3]
 
             return ret_val
 
@@ -868,6 +869,26 @@ class sql_singleton(object):
                 return None
 
             return results[0]
+
+        def update_module_comment(self, DSN, module_id, comment, author):
+            raise NotImplementedException
+            
+            # TODO: handle proper insertions
+            
+            if comment:
+                comment = "'" + comment.replace("'",  "''") + "'"
+            else:
+                comment = "NULL"
+
+            if DSN[:6] == "mysql;":
+                curs = self.connection(DSN).cursor()
+                
+                curs.execute(bakmei.mysql_queries.cUPDATE_MODULE_COMMENT % (comment, author, module_id))
+
+            else: #sqlite
+                curs = self.connection(DSN)
+                curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_COMMENT % (comment, author, module_id))
+                curs.commit()
 
         def update_module_name(self, DSN, module_id, name):
             if name:
@@ -1616,7 +1637,7 @@ class sql_singleton(object):
         @param  module_id:  The ID of the module to retrieve.
 
         @rtype:             dict
-        @return:            A dictionary of all the attributes for the given module. The keys for the dictionary are "name", "base" and "signature".
+        @return:            A dictionary of all the attributes for the given module. The keys for the dictionary are "name", "base", "signature", "comment".
         '''
         if sql_singleton.__instance is None:
             raise SingletonInstanceException
@@ -1795,6 +1816,24 @@ class sql_singleton(object):
             raise SingletonInstanceException
 
         return sql_singleton.__instance.update_module_name(DSN, module_id, name)
+        
+    def update_module_comment(self, DSN, module_id, comment, author):
+        '''
+        Update the module comment in the database.
+
+        @type   DSN:        String
+        @param  DSN:        The database source name.
+        @type   module_id:  Integer
+        @param  module_id:  The ID of the module to update.
+        @type   name:       String
+        @param  name:       The module comment to store in the database.
+        @type   author:     String
+        @param  author:     The name of the person adding the comment.
+        '''
+        if sql_singleton.__instance is None:
+            raise SingletonInstanceException
+
+        return sql_singleton.__instance.update_module_comment(DSN, module_id, comment, author)        
 
     def update_module_base(self, DSN, module_id, base):
         '''

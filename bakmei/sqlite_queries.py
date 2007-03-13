@@ -29,7 +29,8 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         name            varchar(255) NOT NULL,
         base            int UNSIGNED NOT NULL,
         signature       text default '',
-        version         varchar(255) NOT NULL
+        version         varchar(255) NOT NULL,
+        comment         int UNSIGNED
         )""", """
 
     CREATE TABLE sections (
@@ -37,6 +38,7 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         module          INTEGER NOT NULL,
         name            varchar(255),
         start           INTEGER,
+        end             INTEGER,
         type            INTEGER,
         bytes           BLOB
         )""", """
@@ -53,7 +55,6 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         start_address   int UNSIGNED NOT NULL,
         end_address     int UNSIGNED NOT NULL,
         name            varchar(255) NOT NULL,
-        import          int UNSIGNED,
         exported        smallint UNSIGNED,
         flags           int UNSIGNED,
         comment         int UNSIGNED
@@ -79,6 +80,7 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
     CREATE TABLE import (
         id              INTEGER PRIMARY KEY,
         module          int UNSIGNED NOT NULL,
+        function        int UNSIGNED,
         name            varchar(255) NOT NULL,
         library         varchar(255) NOT NULL
         )""","""
@@ -101,7 +103,9 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         function        int UNSIGNED NOT NULL,
         module          int UNSIGNED NOT NULL,
         comment         int UNSIGNED,
-        contiguous      tinyint(1)
+        name            VARCHAR(255),
+        size            INTEGER,
+        comment         int UNSIGNED
         )""","""
 
     CREATE TABLE instruction (
@@ -157,9 +161,9 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         value           text
         )""")
 
-cINSERT_INSTRUCTION                         = "INSERT INTO instruction (address, basic_block, function, module, mnemonic, bytes) VALUES (%d, %d, %d, %d, '%s', '%s');"
-cINSERT_MODULE                              = "INSERT INTO module (name, base, version) VALUES ('%s', %d, '%s');"
-cINSERT_FUNCTION                            = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, '%s');"
+cINSERT_INSTRUCTION                         = "INSERT INTO instruction (address, basic_block, function, module, mnemonic, bytes) VALUES (%d, %d, %d, %d, %s, %s);"
+cINSERT_MODULE                              = "INSERT INTO module (name, base, version) VALUES (%s, %d, %s);"
+cINSERT_FUNCTION                            = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, %s);"
 cINSERT_BASIC_BLOCK                         = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);"
 cINSERT_OPERAND                             = "INSERT INTO operand (instruction, position, operand_text) VALUES (%d, %d, %s);"
 
@@ -199,7 +203,7 @@ cSELECT_BASIC_BLOCK_INSTRUCTION_REFERENCES  = "SELECT b.address, d.address FROM 
 
 ### FUNCTION ###
 
-cSELECT_FUNCTION                            = "SELECT name, module, start_address, end_address, import, exported FROM function WHERE id = %d;"
+cSELECT_FUNCTION                            = "SELECT f.name, f.module, f.start_address, f.end_address, i.id, f.exported FROM function AS f, import as i WHERE f.id = %d AND i.function = f.id;"
 cSELECT_FRAME_INFO                          = "SELECT saved_reg_size, frame_size, ret_size, local_var_size, arg_size FROM frame_info WHERE function = %d;"
 cSELECT_ARGS                                = "SELECT name FROM function_variables WHERE function = %d AND flags = 1;"
 cSELECT_LOCAL_VARS                          = "SELECT name FROM function_variables WHERE function = %d AND flags = 2;"

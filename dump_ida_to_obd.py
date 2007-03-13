@@ -46,7 +46,7 @@ VAR_TYPE_LOCAL      = 2
 
 ### SQL STATEMENTS ###
 
-UPDATE_FUNCTION_ATTRIBS     = "UPDATE function SET start_address=%d, end_address=%d, name='%s' WHERE id = %d;"
+UPDATE_FUNCTION_ATTRIBS     = "UPDATE function SET start_address=%d, end_address=%d, name=%s WHERE id = %d;"
 
 SELECT_BLOCK_FROM_INSN      = "SELECT basic_block FROM instruction WHERE id = %d;"
 
@@ -118,7 +118,7 @@ def set_up_cross_references():
                 basic_block_added[(id_tuple_source[1], id_tuple_dest[1])] = 1
 
                 if id_tuple_source[2] != id_tuple_dest[2] and not function_added.has_key((id_tuple_source[2], id_tuple_dest[2])):
-                    curs.execute(InSERT_BLOC_TO_BLOC_XREFS % (id_tuple_source[2], id_tuple_dest[2]))
+                    curs.execute(INSERT_BLOC_TO_BLOC_XREFS % (id_tuple_source[2], id_tuple_dest[2]))
                     function_added[(id_tuple_source[2], id_tuple_dest[2])] = 1
 
         except KeyError, details:
@@ -357,7 +357,7 @@ def create_operand(instruction_id, ea, position):
 
     index = 0
 
-    op_width = OPERAND_WIDTH[ord(ida_op.dtyp)]
+    op_width = OPERAND_WIDTH[ord(ida_op.dtyp)][1]
 
     root = create_expression_entry(NODE_TYPE_OPERATOR_ID, op_width, None, 0, None)
     root[0] = 0
@@ -409,13 +409,28 @@ def create_operand(instruction_id, ea, position):
 
     parent_lookup = {}
     for entry in tree:
-        sql = INSERT_EXPRESSION % (entry[1], ss.sql_safe_str(entry[2]) if entry[2] else "NULL",
-            ss.sql_safe_str(entry[3]) if entry[3] else "NULL", entry[4],
-            parent_lookup[entry[5]] if entry[5] else "NULL")
+        #try:
+            
+        tmp_symbol = "NULL"
+        if entry[2]:
+            tmp_symbol = ss.sql_safe_str(entry[2])
+        tmp_immediate = "NULL"
+        if entry[3]:
+            tmp_immediate = entry[3]
+        tmp_parent = "NULL"
+        if entry[5]:
+            tmp_parent = parent_lookup[entry[5]]
+            
+        sql = INSERT_EXPRESSION % (entry[1], tmp_symbol, tmp_immediate, entry[4], tmp_parent)
         curs.execute(sql)
         expr_id = curs.lastrowid
         parent_lookup[entry[0]] = expr_id
-
+        #except:            
+        #    print GetDisasm(ea)
+        #    print op_type, tree
+        #    print entry[5]
+        #    print parent_lookup
+        #    break
         # TODO : now might be a good time to eliminate dupes
 
 
@@ -502,7 +517,7 @@ def create_phrase_operand(tree, ida_op, temp, ea):
 
     else:
         reg = REGISTERS[getseg(ea).bitness+1][ida_op.phrase]
-        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, reg, None, 3+seg_off, 2+seg_off))
+        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, reg, None, 2+seg_off, 1+seg_off))
 
 ####################################################################################################################
 
@@ -875,7 +890,7 @@ def init_args_and_local_vars (func_struct, frame_struct, function_id, module_id)
                 vtype = VAR_TYPE_LOCAL
 
         if vtype != -1:
-            curs.execute("INSERT INTO function_variables (function, module, name, flags, offset) VALUES (%d, %d, '%s', %d, %d);" %(function_id, module_id, ss.sql_safe_str(name), vtype, end_offset))
+            curs.execute("INSERT INTO function_variables (function, module, name, flags, offset) VALUES (%d, %d, %s, %d, %d);" %(function_id, module_id, ss.sql_safe_str(name), vtype, end_offset))
 
     arg_size = frame_offset - argument_boundary
     ss.update_function_arg_size(global_DSN, function_id, arg_size)

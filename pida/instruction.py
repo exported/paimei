@@ -272,7 +272,7 @@ class instruction:
 
         # if the disassembled line contains a comment. then strip it and the trailing whitespace.
         if disasm.count(";"):
-            disasm = disasm[0:disasm.rindex(";")].rstrip(" ")
+            disasm = disasm[0:disasm.index(";")].rstrip(" ")
 
         # shrink whitespace.
         while disasm.count("  "):

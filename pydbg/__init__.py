@@ -31,7 +31,6 @@ __all__ = \
     "pdx",
     "pydbg",
     "pydbg_client",
-    "pydbg_core",
     "system_dll",
     "windows_h",
 ]
@@ -45,6 +44,5 @@ from memory_snapshot_context import *
 from pdx                     import *
 from pydbg                   import *
 from pydbg_client            import *
-from pydbg_core              import *
 from system_dll              import *
 from windows_h               import *

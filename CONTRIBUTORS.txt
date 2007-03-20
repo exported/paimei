@@ -1,5 +1,8 @@
 # alphabetical order.
 
+Alex Ionescu <alex.ionescu@reactos.org>
+    - Debugger internals and debugger debugging support.
+
 Andrew Hintz <drew@overt.org>
     - Addition of "Mark positions" option to pstalker IDA export.
     - Beta testing.
@@ -7,13 +10,18 @@ Andrew Hintz <drew@overt.org>
 Cody Pierce <cpierce@tippingpoint.com>
     - PAIMEIfilefuzz.
     - General ideas, beta testing and morale support.
+    - Ongoing support and additions.
 
 Cameron Hotchkies <nummish@0x90.org>
     - PIDA enhancements.
     - General ideas, beta testing and morale support.
+    - Ongoing support and additions.
 
 Charlie Miller <charlesamiller@hotmail.com>
     - Bug fix in PyDbg context dump (EBP was being resolved as ESI).
+
+Chris Clark <cclark@isecpartners.com>
+    - Patches to xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 Gerardo Richarte <gera@corest.com>
     - Ideas, bug reports and fixes.

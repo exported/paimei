@@ -121,6 +121,8 @@ def handle_bp (dbg):
 
     global allocations, cmd_num, saved_context, glob
 
+    log("breakpoint hit")
+
     if not dbg.first_breakpoint:
         # examine the return value.
         ret      = dbg.context.Eax
@@ -154,16 +156,17 @@ def handle_bp (dbg):
                 free_all()
                 break
 
-        #try:
-        exec(command)
-        cmd_num += 1
+        try:
+            exec(command)
+            cmd_num += 1
+    
+            # implicit "GO" after dpc() commands.
+            if type(command) is str and command.lower().startswith("dpc"):
+                break
+        except:
+            sys.stderr.write("failed executing: '%s'.\n" % command)
 
-        # implicit "GO" after dpc() commands.
-        if type(command) is str and command.lower().startswith("dpc"):
-            break
-        #except:
-        #    sys.stderr.write("failed executing: '%s'.\n" % command)
-
+    log("continuing process")
     return DBG_CONTINUE
 
 
@@ -229,8 +232,9 @@ def dpc (address, *args, **kwargs):
     CALL = "\xE8"
     INT3 = "\xCC"
 
+    # XXX - freeing an address that bp_del is later trying to work on.
     if container:
-        free(container)
+        pass #free(container)
 
     # allocate some space for our new instructions and update EIP to point into that new space.
     container = eip = alloc(512)

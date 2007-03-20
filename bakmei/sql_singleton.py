@@ -18,6 +18,9 @@
 import MySQLdb
 from pysqlite2 import dbapi2 as sqlite
 from sqlite_queries import *
+from mysql_queries import *
+
+import sys # for now
 
 import bakmei
 
@@ -36,48 +39,7 @@ class sql_singleton(object):
 
     def sql_safe_str(self, string_val):
         return "'" + string_val.replace("'", "''") + "'"
-
-    def extract_DSN_values(DSN):
-        '''
-        To be honest this is not really a standard DSN format, kind of a hack that looks similar and I call it DSN
-
-        @rtype: tuple
-        @return: A tuple containing the parsed information. The structure of the tuple changes based on the source database.
-        '''
-        sections = DSN.split(';')
-
-        if len(sections) == 1:
-            # This case means it wasn't a DSN string, so it is probably the default sqlite pathname
-            return sections
-        elif sections[0] == "sqlite":
-            ret_val = ()
-
-            if sections[1][:5].upper() == "PATH=":
-                sections[1] = sections[1][5:]
-
-            ret_val.append(sections[1])
-
-            return ret_val
-        elif sections[0] == "mysql":
-
-            server = port = dbname = uid = pwd = None
-
-            for entry in sections[1:]:
-                temp = entry.split('=')
-                if temp[0].upper() == "SERVER":
-                    server = temp[1]
-                elif temp[0].upper() == "PORT":
-                    port = temp[1]
-                elif temp[0].upper() == "DATABASE":
-                    dbname = temp[1]
-                elif temp[0].upper() == "UID":
-                    uid = temp[1]
-                elif temp[0].upper() == "PWD":
-                    pwd = temp[1]
-
-            return (server, port, dbname, uid, pwd)
-
-        return None
+   
 
     class __impl(object):
         '''
@@ -103,6 +65,47 @@ class sql_singleton(object):
         def test(self):
             print "inner"
 
+        def __extract_DSN_values(self, DSN):
+               '''
+               To be honest this is not really a standard DSN format, kind of a hack that looks similar and I call it DSN
+        
+               @rtype: tuple
+               @return: A tuple containing the parsed information. The structure of the tuple changes based on the source database.
+               '''
+               sections = DSN.split(';')
+        
+               if len(sections) == 1:
+                   # This case means it wasn't a DSN string, so it is probably the default sqlite pathname
+                   return sections
+               elif sections[0] == "sqlite":
+                   ret_val = ()
+        
+                   if sections[1][:5].upper() == "PATH=":
+                       sections[1] = sections[1][5:]
+        
+                   ret_val.append(sections[1])
+        
+                   return ret_val
+               elif sections[0] == "mysql":
+        
+                   server = port = dbname = uid = pwd = None
+        
+                   for entry in sections[1:]:
+                       temp = entry.split('=')
+                       if temp[0].upper() == "SERVER":
+                           server = temp[1]
+                       elif temp[0].upper() == "PORT":
+                           port = temp[1]
+                       elif temp[0].upper() == "DATABASE":
+                           dbname = temp[1]
+                       elif temp[0].upper() == "UID":
+                           uid = temp[1]
+                       elif temp[0].upper() == "PWD":
+                           pwd = temp[1]
+        
+                   return (server, port, dbname, uid, pwd)
+        
+               return None
 
         INSERT_INSTRUCTION                     = cINSERT_INSTRUCTION
         INSERT_MODULE                          = cINSERT_MODULE
@@ -142,7 +145,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_OPERAND_TEXT % (text, operand_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         ## INSTRUCTION ###
 
@@ -150,17 +153,17 @@ class sql_singleton(object):
             ret_val = {}
 
             sql_query = None
-
-            if DSN[:6] == "mysql;":
-                curs = self.connection(DSN).cursor()
+            curs = self.connection(DSN).cursor()
+            
+            if DSN[:6] == "mysql;":                
                 sql_query = bakmei.mysql_queries.cSELECT_INSTRUCTION
             else: #sqlite
-                curs = self.connection(DSN)
                 sql_query = bakmei.sqlite_queries.cSELECT_INSTRUCTION
 
-            results = curs.execute(sql_query % instruction_id).fetchone()
+            resultset = curs.execute(sql_query % instruction_id)
+            results = curs.fetchone()
 
-            ret_val = {'address':results[0], 'mnemonic':results[1], 'comment':results[5], 'bytes':results[6], 'basic_block':results[7]}
+            ret_val = {'address':results[0], 'mnemonic':results[1], 'comment_id':results[5], 'bytes':results[6], 'basic_block':results[7], 'comment':results[5]}
 
             return ret_val
 
@@ -173,6 +176,7 @@ class sql_singleton(object):
                 curs = self.connection(DSN).cursor()
                 sql_query = bakmei.mysql_queries.cSELECT_INSTRUCTION_OPERANDS
             else: #sqlite
+                print DSN
                 curs = self.connection(DSN)
                 sql_query = bakmei.sqlite_queries.cSELECT_INSTRUCTION_OPERANDS
 
@@ -214,22 +218,38 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_MNEMONIC % (mnemonic, instruction_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_instruction_comment(self, DSN, instruction_id, comment):
+            # Multiple comments aren't handled by the code yet because I don't wanna atm
+            # The database however supports it
             if comment:
                 comment = "'" + comment.replace("'",  "''") + "'"
             else:
                 comment = "NULL"
 
-            if DSN[:6] == "mysql;":
-                curs = self.connection(DSN).cursor()
-                curs.execute(bakmei.mysql_queries.cUPDATE_INSTRUCTION_COMMENT % (comment, instruction_id))
-            else: #sqlite
-                curs = self.connection(DSN)
-                curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_COMMENT % (comment, instruction_id))
-                curs.commit()
+            comment_id = self.select_instruction(DSN, instruction_id)["comment_id"]
+            curs = self.connection(DSN).cursor()
+            
+            if DSN[:6] == "mysql;":                
+                sql_source = bakmei.mysql_queries
+            else: #sqlite                
+                sql_source = bakmei.sqlite_queries
 
+            if comment_id == None:                               
+                curs.execute(sql_source.cINSERT_COMMENT_TEXT % comment)
+                    
+                comment_id = curs.lastrowid
+             
+                curs.execute(sql_source.cUPDATE_INSTRUCTION_COMMENT % (comment_id, instruction_id))
+    
+                if DSN[:6] != "mysql;":
+                    self.connection(DSN).commit()
+            else:
+                curs.execute(sql_source.cUPDATE_COMMENT_TEXT % (comment, comment_id))                   
+                if DSN[:6] != "mysql;":
+                    self.connection(DSN).commit()
+                    
         def update_instruction_operand(self, DSN, instruction_id, operand_seq, value):
             if value:
                 value = "'" + value.replace("'",  "''") + "'"
@@ -258,7 +278,7 @@ class sql_singleton(object):
 
                 curs.execute(sql % (value, instruction_id))
 
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_instruction_flags(self, DSN, instruction_id, flags):
             if DSN[:6] == "mysql;":
@@ -268,7 +288,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_FLAGS % (flags, instruction_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_instruction_address(self, DSN, instruction_id, address):
             if DSN[:6] == "mysql;":
@@ -278,7 +298,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_ADDRESS % (address, instruction_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_instruction_bytes(self, DSN, instruction_id, byte_string):
             if byte_string:
@@ -292,7 +312,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_INSTRUCTION_BYTES % (byte_string, instruction_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         ## BASIC BLOCK ###
 
@@ -351,7 +371,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_BASIC_BLOCK_START_ADDRESS % (address, basic_block_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_basic_block_end_address(self, DSN, basic_block_id, address):
             if DSN[:6] == "mysql;":
@@ -360,7 +380,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_BASIC_BLOCK_END_ADDRESS % (address, basic_block_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         ## FUNCTION ###
 
@@ -556,7 +576,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_START_ADDRESS % (address, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_end_address(self, DSN, function_id, address):
             if DSN[:6] == "mysql;":
@@ -566,7 +586,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_END_ADDRESS % (address, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_flags(self, DSN, function_id, flags):
             if DSN[:6] == "mysql;":
@@ -576,7 +596,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_FLAGS % (flags, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_exported(self, DSN, function_id, exported):
             if exported == True:
@@ -591,7 +611,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_EXPORTED % (exported, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_arg_size(self, DSN, function_id, size):
             if DSN[:6] == "mysql;":
@@ -601,7 +621,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_ARG_SIZE % (size, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_name(self, DSN, function_id, name):
             if name:
@@ -616,7 +636,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_NAME % (name, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_saved_reg_size(self, DSN, function_id, size):
             if DSN[:6] == "mysql;":
@@ -626,7 +646,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_SAVED_REG_SIZE % (size, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_frame_size(self, DSN, function_id, size):
             if DSN[:6] == "mysql;":
@@ -636,7 +656,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_FRAME_SIZE % (size, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_function_ret_size(self, DSN, function_id, size):
             if DSN[:6] == "mysql;":
@@ -646,7 +666,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_RET_SIZE % (size, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
 
         def update_function_local_var_size(self, DSN, function_id, size):
@@ -657,7 +677,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_LOCAL_VAR_SIZE % (size, function_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def select_modules(self, DSN):
             '''
@@ -888,7 +908,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_COMMENT % (comment, author, module_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_module_name(self, DSN, module_id, name):
             if name:
@@ -903,7 +923,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_NAME % (name, module_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_module_base(self, DSN, module_id, base):
             if not isNumber(base):
@@ -916,7 +936,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_BASE % (base, module_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def update_module_signature(self, DSN, module_id, signature):
             if signature:
@@ -930,7 +950,7 @@ class sql_singleton(object):
             else: #sqlite
                 curs = self.connection(DSN)
                 curs.execute(bakmei.sqlite_queries.cUPDATE_MODULE_SIGNATURE % (signature, module_id))
-                curs.commit()
+                self.connection(DSN).commit()
 
         def connection(self, DSN=None):
             '''
@@ -944,21 +964,27 @@ class sql_singleton(object):
                 # Connection missing
                 try:
                     self.__init_connection(DSN)
-                except sqlite.DatabaseError:
-                    raise InvalidDatabaseException
+                except sqlite.DatabaseError, de:
+                    raise de # InvalidDatabaseException
+                except MySQLdb.OperationalError, oe:
+                    if oe[0] == 1045: 
+                        raise InvalidCredentialsException
+                    else:
+                        raise oe
+                    
 
             return self.__sql[DSN]
 
         def __init_connection(self, DSN):
             if DSN[:6] == "mysql;":
-                db_values = sql_singleton.extract_DSN_values(DSN)
+                db_values = self.__extract_DSN_values(DSN)
 
                 try:
                     self.__sql[DSN] = MySQLdb.connect(host=db_values[0], user=db_values[3], passwd=db_values[4], db=db_values[2])
                 except MySQLdb.OperationalError, err:
                     if err[0] == 1049:
                         # DB doesn't exist, let's make it!
-                        create_bakmei_database(DSN)
+                        self.create_bakmei_database(DSN)
                     else:
                         raise MySQLdb.OperationalError, err
             else:
@@ -974,18 +1000,27 @@ class sql_singleton(object):
 
         def create_bakmei_database(self, DSN):
             if DSN[:6] == "mysql;":
-                db_values = sql_singleton.extract_DSN_values(DSN)
+                db_values = self.__extract_DSN_values(DSN)
 
-                __sql[DSN] = MySQLdb.connect(host=db_values[0], user=db_values[3], passwd=db_values[4])
+                self.__sql[DSN] = MySQLdb.connect(host=db_values[0], user=db_values[3], passwd=db_values[4])
                 cursor = self.__sql[DSN].cursor()
+
+                print DSN
+                print db_values[2]
 
                 # create db
                 cursor.execute("CREATE DATABASE %s" % db_values[2])
-                cursor.execute("USE %s" + db_values[2])
+                cursor.execute("USE %s" % db_values[2])
+
+                print "Creating Tables"
 
                 # create tables
                 for query in bakmei.mysql_queries.MYSQL_CREATE_BAKMEI_SCHEMA:
+                    sys.stdout.write(query)
+                    print query
                     cursor.execute(query)
+                    
+                print "%d tables created" % len(bakmei.mysql_queries.MYSQL_CREATE_BAKMEI_SCHEMA)
             else: #sqlite
                 cursor = self.__sql[DSN].cursor()
 
@@ -1946,3 +1981,7 @@ class SingletonInstanceException(Exception):
 class InvalidDatabaseException(Exception):
     def __str__(self):
         return "Invalid database path."
+        
+class InvalidCredentialsException(Exception):
+    def __str__(Self):
+        return "The credentials were invalid for this database"        

@@ -8,9 +8,11 @@ __all__ = \
     "defines",
     "function",
     "instruction",
+    "operand",
     "module",
     "sql_singleton",
-    "sqlite_queries"
+    "sqlite_queries",
+    "mysql_queries"
 ]
 
 

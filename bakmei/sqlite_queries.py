@@ -44,9 +44,10 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         )""", """
 
     CREATE TABLE comments (
-        id              INTEGER PRIMARY KEY,
-        comment         text NOT NULL,
-        next            int UNSIGNED
+        id              INTEGER PRIMARY KEY,        
+        parent          int UNSIGNED,
+        comment         text NOT NULL,        
+        author          VARCHAR(255)
         )""","""
 
     CREATE TABLE function (
@@ -102,7 +103,6 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         end_address     int UNSIGNED NOT NULL,
         function        int UNSIGNED NOT NULL,
         module          int UNSIGNED NOT NULL,
-        comment         int UNSIGNED,
         name            VARCHAR(255),
         size            INTEGER,
         comment         int UNSIGNED
@@ -167,6 +167,8 @@ cINSERT_FUNCTION                            = "INSERT INTO function (module, sta
 cINSERT_BASIC_BLOCK                         = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);"
 cINSERT_OPERAND                             = "INSERT INTO operand (instruction, position, operand_text) VALUES (%d, %d, %s);"
 
+cUPDATE_COMMENT_TEXT                        = "UPDATE comments SET comment=%s WHERE id=%d"
+cINSERT_COMMENT_TEXT                        = "INSERT INTO comments (parent, comment, author) VALUES (NULL, %s, NULL);" 
 ### OPERAND ###
 
 cSELECT_OPERAND                             = "SELECT operand_text, position FROM operand WHERE id = %d;"
@@ -175,7 +177,8 @@ cUPDATE_OPERAND_TEXT                        = "UPDATE operand SET operand_text=%
 
 ### INSTRUCTION ###
 
-cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;"
+cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, comment, bytes, basic_block, op1.operand_text as operand1, op2.operand_text as operand2, op3.operand_text as operand3 FROM instruction as i LEFT JOIN operand as op1 ON i.id=op1.instruction AND op1.position = 0 LEFT JOIN operand as op2 ON i.id=op2.instruction AND op2.position = 1 LEFT JOIN operand as op3 ON i.id=op3.instruction AND op3.position = 2 WHERE i.id = %d;"
+  
 cSELECT_INSTRUCTION_XREFS_TO                = "SELECT source FROM cross_references WHERE destination=%d AND reference_type = 8;"
 cSELECT_INSTRUCTION_OPERANDS                = "SELECT id FROM operand WHERE instruction = %d ORDER BY position;"
 
@@ -186,7 +189,7 @@ cUPDATE_INSTRUCTION_OPERAND2                = "UPDATE instruction SET operand2=%
 cUPDATE_INSTRUCTION_OPERAND3                = "UPDATE instruction SET operand3=%s WHERE id=%d;"
 cUPDATE_INSTRUCTION_FLAGS                   = "UPDATE instruction SET flags=%d WHERE id = %d;"
 cUPDATE_INSTRUCTION_ADDRESS                 = "UPDATE instruction SET address=%d where id=%d"
-cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%s where id=%d"
+cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%d where id=%d"
 cUPDATE_INSTRUCTION_BYTES                   = "UPDATE instruction SET bytes=%s where id=%d"
 
 ### BASIC BLOCK ###

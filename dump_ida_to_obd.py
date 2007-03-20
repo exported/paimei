@@ -50,7 +50,7 @@ UPDATE_FUNCTION_ATTRIBS     = "UPDATE function SET start_address=%d, end_address
 
 SELECT_BLOCK_FROM_INSN      = "SELECT basic_block FROM instruction WHERE id = %d;"
 
-INSERT_IMPORT               = "INSERT INTO import (name, module, library) VALUES (%s, %d, '');"
+INSERT_IMPORT               = "INSERT INTO import (name, module, function, library) VALUES (%s, %d, %d, '');"
 INSERT_FRAME_INFO           = "INSERT INTO frame_info (function, saved_reg_size, frame_size, ret_size, local_var_size) VALUES (%d, %d, %d, %d, %d);"
 INSERT_INSN_TO_INSN_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 8);"
 INSERT_BLOC_TO_BLOC_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 4);"
@@ -198,16 +198,15 @@ def enumerate_imports (module_id):
         import_name = Name(import_ea);
 
         if len(import_name) > 1:
-            # TODO : Save the library name as well
-            curs.execute(INSERT_IMPORT % (ss.sql_safe_str(import_name), module_id))
-            import_id = curs.lastrowid
-
+            
             sql = ss.INSERT_FUNCTION % (module_id, import_ea, import_ea, ss.sql_safe_str(import_name))
             curs.execute(sql)
             dbid = curs.lastrowid
 
-            curs.execute("UPDATE function SET import=%d WHERE id=%d;" % (import_id, dbid))
-
+            # TODO : Save the library name as well
+            curs.execute(INSERT_IMPORT % (ss.sql_safe_str(import_name), module_id, dbid))
+            import_id = curs.lastrowid
+ 
             sql_connection.commit()
 
             # Set up Data References

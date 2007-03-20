@@ -25,32 +25,33 @@
 
 MYSQL_CREATE_BAKMEI_SCHEMA = ("""
     CREATE TABLE module (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         name            varchar(255) NOT NULL,
         base            int UNSIGNED NOT NULL,
-        signature       text default '',
+        signature       text,
         version         varchar(255) NOT NULL,
         comment         int UNSIGNED
         )""", """
 
     CREATE TABLE sections (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         module          INTEGER NOT NULL,
         name            varchar(255),
         start           INTEGER,
-        end             INTEGER
+        end             INTEGER,
         type            INTEGER,
         bytes           BLOB
         )""", """
 
     CREATE TABLE comments (
-        id              INTEGER PRIMARY KEY,
-        comment         text NOT NULL,
-        next            int UNSIGNED
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
+        parent          int UNSIGNED,
+        comment         text NOT NULL,        
+        author          VARCHAR(255)
         )""","""
 
     CREATE TABLE function (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         module          int UNSIGNED NOT NULL,
         start_address   BIGINT UNSIGNED NOT NULL,
         end_address     BIGINT UNSIGNED NOT NULL,
@@ -78,7 +79,7 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         )""","""
 
     CREATE TABLE import (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         module          int UNSIGNED NOT NULL,
         function        int UNSIGNED,
         name            varchar(255) NOT NULL,
@@ -86,7 +87,7 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         )""","""
 
     CREATE TABLE function_variables (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         function        int UNSIGNED NOT NULL,
         module          int UNSIGNED NOT NULL,
         name            varchar(255) NOT NULL,
@@ -97,16 +98,18 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         )""","""
 
     CREATE TABLE basic_block (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         start_address   BIGINT UNSIGNED NOT NULL,
-        end_address     BIGINT UNSIGNED NOT NULL,
+        end_address     BIGINT UNSIGNED NOT NULL, 
         function        int UNSIGNED NOT NULL,
-        module          int UNSIGNED NOT NULL,
+        module          int UNSIGNED NOT NULL,       
+        name            VARCHAR(255),
+        size            INTEGER,
         comment         int UNSIGNED
         )""","""
 
     CREATE TABLE instruction (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         address         BIGINT UNSIGNED NOT NULL,
         basic_block     int UNSIGNED NOT NULL,
         function        int UNSIGNED NOT NULL,
@@ -117,7 +120,7 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         )""","""
 
     CREATE TABLE operand (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         instruction     INTEGER NOT NULL,
         position        INTEGER NOT NULL,
         operand_text    TEXT
@@ -129,7 +132,7 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         )""","""
 
     CREATE TABLE expression (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         expr_type       INTEGER NOT NULL,
         symbol          VARCHAR(255),
         immediate       INTEGER,
@@ -145,14 +148,14 @@ MYSQL_CREATE_BAKMEI_SCHEMA = ("""
         ) ""","""
 
     CREATE TABLE cross_references (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         source          int UNSIGNED,
         destination     int UNSIGNED,
         reference_type  int UNSIGNED
         )""","""
 
     CREATE TABLE data (
-        id              INTEGER PRIMARY KEY,
+        id              INTEGER AUTO_INCREMENT PRIMARY KEY,
         address         int UNSIGNED,
         data_type       int UNSIGNED,
         value           text,
@@ -167,6 +170,8 @@ cINSERT_FUNCTION                            = "INSERT INTO function (module, sta
 cINSERT_BASIC_BLOCK                         = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);"
 cINSERT_OPERAND                             = "INSERT INTO operand (instruction, position, operand_text) VALUES (%d, %d, %s);"
 
+cUPDATE_COMMENT_TEXT                        = "UPDATE comments SET comment=%s WHERE id=%d"
+cINSERT_COMMENT_TEXT                        = "INSERT INTO comments (parent, comment, author) VALUES (NULL, %s, NULL);" 
 ### OPERAND ###
 
 cSELECT_OPERAND                             = "SELECT operand_text, position FROM operand WHERE id = %d;"
@@ -175,12 +180,12 @@ cUPDATE_OPERAND_TEXT                        = "UPDATE operand SET operand_text=%
 
 ### INSTRUCTION ###
 
-cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, operand1, operand2, operand3, comment, bytes, basic_block FROM instruction WHERE id = %d;"
+cSELECT_INSTRUCTION                         = "SELECT address, mnemonic, comment, bytes, basic_block, op1.operand_text as operand1, op2.operand_text as operand2, op3.operand_text as operand3 FROM instruction as i LEFT JOIN operand as op1 ON i.id=op1.instruction AND op1.position = 0 LEFT JOIN operand as op2 ON i.id=op2.instruction AND op2.position = 1 LEFT JOIN operand as op3 ON i.id=op3.instruction AND op3.position = 2 WHERE i.id = %d;"
 cSELECT_INSTRUCTION_XREFS_TO                = "SELECT source FROM cross_references WHERE destination=%d AND reference_type = 8;"
 cSELECT_INSTRUCTION_OPERANDS                = "SELECT id FROM operand WHERE instruction = %d ORDER BY position;"
 
 cUPDATE_INSTRUCTION_MNEMONIC                = "UPDATE instruction SET mnemonic=%s where id=%d"
-cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%s WHERE id=%d;"
+cUPDATE_INSTRUCTION_COMMENT                 = "UPDATE instruction SET comment=%d WHERE id=%d;"
 cUPDATE_INSTRUCTION_OPERAND1                = "UPDATE instruction SET operand1=%s WHERE id=%d;"
 cUPDATE_INSTRUCTION_OPERAND2                = "UPDATE instruction SET operand2=%s WHERE id=%d;"
 cUPDATE_INSTRUCTION_OPERAND3                = "UPDATE instruction SET operand3=%s WHERE id=%d;"

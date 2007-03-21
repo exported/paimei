@@ -76,14 +76,11 @@ class TestCase:
             self.pydbg.terminate_process()
         except:
             pass
-            
+                    
         evt = ThreadEventEnd()
         wx.PostEvent(self.main_window, evt)
-        
-        return self.rc
 
-    def handler_exit_process (self):
-        return DBG_CONTINUE
+        return self.rc
 
     def Run(self):
         self.stats["files_ran"] = self.main_window.files_ran
@@ -112,10 +109,7 @@ class TestCase:
                     time.sleep(1)
             
             for key in item.keys():
-                #time.sleep(self.timeout+1)
-                #self.pydbg = pydbg()
                 dbg = pydbg()
-                dbg.event_handler_exit_process = self.handler_exit_process
 
                 self.current_pos = key
                 self.current_file = item[key]
@@ -157,9 +151,6 @@ class TestCase:
                     evt = ThreadEventLog(msg = "Problem in debug_Event_loop() (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
                     wx.PostEvent(self.main_window, evt)
 
-                #dbg.debug_event_loop()
-
-                
                 self.stats["files_ran"] += 1
                 self.stats["files_left"] -= 1
                 self.stats["end_time"] -= self.timeout
@@ -172,7 +163,10 @@ class TestCase:
         wx.PostEvent(self.main_window, evt)
         
         self.main_window.msgbox("Finished fuzzing!")
-    
+        
+        evt = ThreadEventLog(msg = "=" * 100)
+        wx.PostEvent(self.main_window, evt)
+        
         self.End(0)
         
     def Watch(self, pydbg, current_file):
@@ -182,8 +176,8 @@ class TestCase:
 	        try:
 	            pydbg.terminate_process()
 	        except pdx, x:
-	            #evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, current_file))
-	            #wx.PostEvent(self.main_window, evt)
+	            evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, current_file))
+	            wx.PostEvent(self.main_window, evt)
 	            
 	            return 1
 	        
@@ -233,8 +227,8 @@ class TestCase:
         try:
             pydbg.terminate_process()
         except pdx, x:
-            #evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
-            #wx.PostEvent(self.main_window, evt)
+            evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
+            wx.PostEvent(self.main_window, evt)
             
             return 1
         
@@ -261,6 +255,7 @@ class PAIMEIfilefuzz(wx.Panel):
     start_time           = 0
     running_time         = "00:00:00"
     end_time             = "00:00:00"
+    logfile              = ""
     
     def __init__(self, *args, **kwds):
         # begin wxGlade: PAIMEIfilefuzz.__init__
@@ -542,7 +537,7 @@ class PAIMEIfilefuzz(wx.Panel):
             self.msgbox("Please enter all data!")
             return(-1)
          
-        if self.file_list_pos <= 0:
+        if self.file_list_pos < 0:
             self.msgbox("Nothing in file list")
             return(-1)
         
@@ -551,6 +546,12 @@ class PAIMEIfilefuzz(wx.Panel):
         self.program_name = self.program_name_control.GetValue()
         self.timeout = int(self.timer_control.GetValue())
         
+        # This should be an option, but since we are moving to the new ui i wont waste my time
+        if not self.logfile:
+            self.logfile = open(self.destination + "\\" + "filefuzz.log", "a")
+            
+        self.msg("================================ %s ================================" % self.format_date())
+            
         self.start = 0
         self.end = self.file_list_pos + 1
         
@@ -642,6 +643,10 @@ class PAIMEIfilefuzz(wx.Panel):
         Write a log message to log window.
         '''
 
+        if self.logfile:
+            self.logfile.write("[*] %s\n" % message)
+            self.logfile.flush()
+        
         self.log.AppendText("[*] %s\n" % message)
     
     def msgbox(self, message):
@@ -837,6 +842,9 @@ class PAIMEIfilefuzz(wx.Panel):
 
         self.file_view_control.ShowPosition(bytepos)
     
+    def format_date(self):
+        return time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime())
+        
     def seconds_strtime(self, seconds):
         hour = seconds / 3600   
         minutes = (seconds - (hour * 3600)) / 60
@@ -844,10 +852,13 @@ class PAIMEIfilefuzz(wx.Panel):
 
         return "%02d:%02d:%02d" % (hour, minutes, seconds)           
     
-    def numerifile(self, x, y): 
-        x = int(x[:x.rfind(".")]) 
-        y = int(y[:y.rfind(".")]) 
-        
+    def numerifile(self, x, y):
+        try:
+            x = int(x[:x.rfind(".")]) 
+            y = int(y[:y.rfind(".")]) 
+        except:
+            return 1
+            
         if   x  < y: return -1
         elif x == y: return 0
         else:        return 1

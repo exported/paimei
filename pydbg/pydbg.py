@@ -1388,7 +1388,9 @@ class pydbg:
         '''
 
         # remove the TEB entry for the exiting thread id.
-        del(self.tebs[self.dbg.dwThreadId])
+        
+        if self.tebs.has_key(self.dbg.dwThreadId):
+            del(self.tebs[self.dbg.dwThreadId])
 
         if self.callbacks.has_key(EXIT_THREAD_DEBUG_EVENT):
             return self.callbacks[EXIT_THREAD_DEBUG_EVENT](self)

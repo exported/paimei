@@ -131,7 +131,7 @@ class TestCase:
                 attempts = 0
                 while attempts < retries:
                     try:
-                        dbg.load(self.program_name, "\"" + self.current_file + "\"")
+                        dbg.load(self.program_name, "\"" + self.current_file + "\"", show=False)
                     except pdx, x:
                         evt = ThreadEventLog(msg = "Problem Starting Program (%s): %s %s" % (x. __str__(), self.program_name, self.current_file))
                         wx.PostEvent(self.main_window, evt)
@@ -182,12 +182,14 @@ class TestCase:
 	        try:
 	            pydbg.terminate_process()
 	        except pdx, x:
-	            evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, current_file))
-	            wx.PostEvent(self.main_window, evt)
+	            #evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, current_file))
+	            #wx.PostEvent(self.main_window, evt)
+	            
 	            return 1
 	        
-	        evt = ThreadEventLog(msg = "Terminated Process: %s %s" % (self.program_name, current_file))
-	        wx.PostEvent(self.main_window, evt)
+	        #evt = ThreadEventLog(msg = "Terminated Process: %s %s" % (self.program_name, current_file))
+	        #wx.PostEvent(self.main_window, evt)
+	        
 	        return 0
 
     def GuardHandler(self, pydbg):
@@ -231,8 +233,12 @@ class TestCase:
         try:
             pydbg.terminate_process()
         except pdx, x:
-            evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
-            wx.PostEvent(self.main_window, evt)
+            #evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
+            #wx.PostEvent(self.main_window, evt)
+            
+            return 1
+        
+        return 0
 
 #######################################################################################################################
 class PAIMEIfilefuzz(wx.Panel):

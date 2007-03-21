@@ -2336,7 +2336,7 @@ class pydbg:
 
 
     ####################################################################################################################
-    def load (self, path_to_file, command_line=None):
+    def load (self, path_to_file, command_line=None, show=True):
         '''
         Load the specified executable and optional command line arguments into the debugger.
 
@@ -2346,6 +2346,8 @@ class pydbg:
         @param path_to_file: Full path to executable to load in debugger
         @type  command_line: String
         @param command_line: (Optional, def=None) Command line arguments to pass to debuggee
+        @type show: Bool
+        @param show: (Optional, def=True) Controls whether to show the programs main window
 
         @raise pdx: An exception is raised if we are unable to load the specified executable in the debugger.
         '''
@@ -2354,6 +2356,11 @@ class pydbg:
         si = STARTUPINFO()
 
         si.cb = sizeof(si)
+        
+        # This will add the flags controlling main window display (useful for file fuzzing)
+        if not show:
+            si.dwFlags = 0x1
+            si.wShowWindow = 0x0
 
         # CreateProcess() seems to work better with command line arguments when the path_to_file is passed as NULL.
         if command_line:

@@ -1431,7 +1431,7 @@ class pydbg:
         '''
 
         base     = self.dbg.u.UnloadDll.lpBaseOfDll
-        unloaded = None
+        unloading = None
 
         for system_dll in self.system_dlls:
             if system_dll.base == base:

@@ -22,6 +22,8 @@
 
 import sys, os, thread, time, datetime, copy, struct
 
+import win32api, win32con
+
 import wx
 import wx.lib.filebrowsebutton as filebrowse
 import wx.lib.newevent
@@ -40,6 +42,8 @@ class TestCase:
     def __init__(self, main_window, program_name, timeout, file_list):
         self.main_window = main_window
         self.program_name = program_name
+        self.program_type = ""
+        self.program_cache = {}
         self.timeout = timeout
         self.file_list = file_list
         self.pydbg = ""
@@ -53,6 +57,14 @@ class TestCase:
     def Start(self):
         self.running = True
         
+        if not self.program_name:
+            evt = ThreadEventLog(msg = "Trying to dynamically do program launching")
+            wx.PostEvent(self.main_window, evt)
+            
+            self.program_type = "Dynamic"
+        else:
+            self.program_type = "Static"
+               
         try:
             thread.start_new_thread(self.Run, ())
         except:
@@ -110,32 +122,51 @@ class TestCase:
             
             for key in item.keys():
                 dbg = pydbg()
-
+                
                 self.current_pos = key
                 self.current_file = item[key]
-                
+
                 evt = ThreadEventUpdate(pos = self.current_pos, stats = self.stats)
                 wx.PostEvent(self.main_window, evt)
                 
                 # Run pydbg shit
                 dbg.set_callback(EXCEPTION_ACCESS_VIOLATION, self.ExceptionHandler)
                 dbg.set_callback(EXCEPTION_GUARD_PAGE, self.GuardHandler)
-                
-                # Ghetto hack around timming issues with CreateProcessA
-                attempts = 0
-                while attempts < retries:
+
+                if self.program_type == "Dynamic":
+                    extension = "." + self.current_file.split(".")[-1]
+                    
+                    evt = ThreadEventLog(msg = "Checking extension %s" % extension)
+                    wx.PostEvent(self.main_window, evt)
+                    
+                    if self.program_cache.has_key(extension):
+                        command = self.program_cache[extension]
+                    else:
+                        command = self.get_handler(extension, self.current_file)
+                        self.program_cache[extension] = command
+                    
+                    if not command:
+                        evt = ThreadEventLog(msg = "Couldnt find proper handler.")
+                        wx.PostEvent(self.main_window, evt)
+                        
+                        continue
+                    else:
+                        evt = ThreadEventLog(msg = "Running with [%s]" % command)
+                        wx.PostEvent(self.main_window, evt)
+                        
+                        #self.program_name = command
+                        try:
+                            dbg.load(command, "\"" + self.current_file + "\"", show=False)
+                        except pdx, x:
+                            evt = ThreadEventLog(msg = "Problem Starting Program (%s): %s %s" % (x. __str__(), self.program_name, self.current_file))
+                            wx.PostEvent(self.main_window, evt)
+                else:   
                     try:
                         dbg.load(self.program_name, "\"" + self.current_file + "\"", show=False)
                     except pdx, x:
                         evt = ThreadEventLog(msg = "Problem Starting Program (%s): %s %s" % (x. __str__(), self.program_name, self.current_file))
                         wx.PostEvent(self.main_window, evt)
-                        
-                        time.sleep(5)
-                        attempts += 1
-                        continue
                     
-                    break
-                
                 # Create watchdog thread
                 try:
                     thread.start_new_thread(self.Watch, (dbg, self.current_file))
@@ -234,6 +265,35 @@ class TestCase:
         
         return 0
 
+    def get_handler(self, extension, current_file):
+        handler = ""
+        
+        key = win32api.RegOpenKey(win32con.HKEY_CLASSES_ROOT, "%s" % extension)
+        
+        try:
+            (handler, junk) = win32api.RegQueryValueEx(key, "")
+        except:
+            return ""
+        
+        command = ""
+        
+        try:
+            key = win32api.RegOpenKey(win32con.HKEY_CLASSES_ROOT, "%s\\shell\\open\\command" % handler)
+        except:
+            return ""
+        
+        try:
+            (command, junk) = win32api.RegQueryValueEx(key, "")
+        except:
+            return ""
+        
+        newcommand = command.rsplit(" ", 1)[0]
+        #newcommand = newcommand.replace(r'%1', current_file)
+        #newcommand = newcommand.replace(r'%L', current_file)
+        #newcommand = newcommand.replace(r'%l', current_file)
+        
+        return newcommand
+        
 #######################################################################################################################
 class PAIMEIfilefuzz(wx.Panel):
     
@@ -533,7 +593,8 @@ class PAIMEIfilefuzz(wx.Panel):
             self.run_button_control.SetLabel("Pause")
             return -1
             
-        if self.program_name_control.GetValue() == "" or self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:
+        #if self.program_name_control.GetValue() == "" or self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:
+        if self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:
             self.msgbox("Please enter all data!")
             return(-1)
          
@@ -543,6 +604,7 @@ class PAIMEIfilefuzz(wx.Panel):
         
         self.running = True
         self.paused = False
+        
         self.program_name = self.program_name_control.GetValue()
         self.timeout = int(self.timer_control.GetValue())
         

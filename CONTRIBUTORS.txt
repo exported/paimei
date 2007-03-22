@@ -21,7 +21,7 @@ Charlie Miller <charlesamiller@hotmail.com>
     - Bug fix in PyDbg context dump (EBP was being resolved as ESI).
 
 Chris Clark <cclark@isecpartners.com>
-    - Patches to xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    - Patches to PyDbg.
 
 Gerardo Richarte <gera@corest.com>
     - Ideas, bug reports and fixes.

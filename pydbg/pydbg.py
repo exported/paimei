@@ -578,9 +578,9 @@ class pydbg:
             http://pdos.csail.mit.edu/6.828/2005/readings/ia32/IA32-3.pdf
             Section 15.2
 
-        Alternatively, you can register a custom handler to handle hits on the specific hw breakpoint slot. Hardware
-        breakpoints are handled globally throughout the entire process and not a single specific thread.
+        Alternatively, you can register a custom handler to handle hits on the specific hw breakpoint slot.
 
+        @note: Hardware breakpoints are handled globally throughout the entire process and not a single specific thread.
         @see:  bp_del_hw(), bp_del_hw_all()
 
         @type  address:     DWORD
@@ -626,15 +626,19 @@ class pydbg:
 
         # check for any available hardware breakpoint slots. there doesn't appear to be any difference between local
         # and global as far as we are concerned on windows.
-        # bits 0, 2, 4, 6 for local  (L0 - L3)
-        # bits 1, 3, 5, 7 for global (G0 - G3)
-        """
-        available = None
-        for slot in xrange(4):
-            if context.Dr7 & (1 << (slot * 2)) == 0:
-                available = slot
-                break
-        """
+        #
+        #     bits 0, 2, 4, 6 for local  (L0 - L3)
+        #     bits 1, 3, 5, 7 for global (G0 - G3)
+        #
+        # we could programatically search for an open slot in a given thread context with the following code:
+        #
+        #    available = None
+        #    for slot in xrange(4):
+        #        if context.Dr7 & (1 << (slot * 2)) == 0:
+        #            available = slot
+        #            break
+        #
+        # but since we are doing global hardware breakpoints, we rely on ourself for tracking open slots.
 
         if not self.hardware_breakpoints.has_key(0):
             available = 0
@@ -1354,8 +1358,27 @@ class pydbg:
         # add this TEB to the internal dictionary.
         self.tebs[thread_id] = teb
 
-        # XXX - apply any existing hardware breakpoints to this new thread.
+        #  apply any existing hardware breakpoints to this new thread.
+        for slot, hw_bp in self.hardware_breakpoints.items():
+            # mark available debug register as active (L0 - L3).
+            thread_context.Dr7 |= 1 << (slot * 2)
 
+            # save our breakpoint address to the available hw bp slot.
+            if   slot == 0: thread_context.Dr0 = hw_bp.address
+            elif slot == 1: thread_context.Dr1 = hw_bp.address
+            elif slot == 2: thread_context.Dr2 = hw_bp.address
+            elif slot == 3: thread_context.Dr3 = hw_bp.address
+
+            # set the condition (RW0 - RW3) field for the appropriate slot (bits 16/17, 20/21, 24,25, 28/29)
+            thread_context.Dr7 |= hw_bp.condition << ((slot * 4) + 16)
+
+            # set the length (LEN0-LEN3) field for the appropriate slot (bits 18/19, 22/23, 26/27, 30/31)
+            thread_context.Dr7 |= hw_bp.length << ((slot * 4) + 18)
+
+            # set the thread context.
+            self.set_thread_context(thread_context, thread_id=thread_id)
+
+        # pass control to user defined callback.
         if self.callbacks.has_key(CREATE_THREAD_DEBUG_EVENT):
             return self.callbacks[CREATE_THREAD_DEBUG_EVENT](self)
         else:
@@ -1388,7 +1411,7 @@ class pydbg:
         '''
 
         # remove the TEB entry for the exiting thread id.
-        
+
         if self.tebs.has_key(self.dbg.dwThreadId):
             del(self.tebs[self.dbg.dwThreadId])
 
@@ -1713,7 +1736,8 @@ class pydbg:
     def func_resolve_debuggee (self, dll_name, func_name):
         '''
         Utility function that resolves the address of a given module / function name pair under the context of the
-        debuggee.
+        debuggee. Note: Be weary of calling this function from within a LOAD_DLL handler as the module is not yet
+        fully loaded and therefore the snapshot will not include it.
 
         @author: Otto Ebeling
         @see:    func_resolve()
@@ -2338,18 +2362,20 @@ class pydbg:
 
 
     ####################################################################################################################
-    def load (self, path_to_file, command_line=None, show=True):
+    def load (self, path_to_file, command_line=None, create_new_console=False, show_window=True):
         '''
         Load the specified executable and optional command line arguments into the debugger.
 
         @todo: This routines needs to be further tested ... I nomally just attach.
 
-        @type  path_to_file: String
-        @param path_to_file: Full path to executable to load in debugger
-        @type  command_line: String
-        @param command_line: (Optional, def=None) Command line arguments to pass to debuggee
-        @type show: Bool
-        @param show: (Optional, def=True) Controls whether to show the programs main window
+        @type  path_to_file:       String
+        @param path_to_file:       Full path to executable to load in debugger
+        @type  command_line:       String
+        @param command_line:       (Optional, def=None) Command line arguments to pass to debuggee
+        @type  create_new_console: Boolean
+        @param create_new_console: (Optional, def=False) Create a new console for the debuggee.
+        @type  show_window:        Boolean
+        @param show_window:        (Optional, def=True) Show / hide the debuggee window.
 
         @raise pdx: An exception is raised if we are unable to load the specified executable in the debugger.
         '''
@@ -2358,10 +2384,10 @@ class pydbg:
         si = STARTUPINFO()
 
         si.cb = sizeof(si)
-        
-        # This will add the flags controlling main window display (useful for file fuzzing)
-        if not show:
-            si.dwFlags = 0x1
+
+        # these flags control the main window display of the debuggee.
+        if not show_window:
+            si.dwFlags     = 0x1
             si.wShowWindow = 0x0
 
         # CreateProcess() seems to work better with command line arguments when the path_to_file is passed as NULL.
@@ -2373,6 +2399,9 @@ class pydbg:
             creation_flags = DEBUG_PROCESS
         else:
             creation_flags = DEBUG_ONLY_THIS_PROCESS
+
+        if create_new_console:
+            creation_flags |= CREATE_NEW_CONSOLE
 
         success = kernel32.CreateProcessA(c_char_p(path_to_file),
                                           c_char_p(command_line),

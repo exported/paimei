@@ -238,8 +238,6 @@ class TestCase:
         
         logmessage = crash_bin.crash_synopsis()
         
-        pydbg.terminate_process()
-        
         self.stats["num_crashes"] += 1
         self.stats["last_crash_addr"] = "%08x" % pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress
         
@@ -260,10 +258,8 @@ class TestCase:
         except pdx, x:
             evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
             wx.PostEvent(self.main_window, evt)
-            
-            return 1
         
-        return 0
+        return DBG_CONTINUE
 
     def get_handler(self, extension, current_file):
         handler = ""
@@ -299,7 +295,7 @@ class PAIMEIfilefuzz(wx.Panel):
     
     running              = False
     paused               = False
-    first_chance         = False
+    first_chance         = True
     
     file_list_pos        = 0
     byte_length          = 0

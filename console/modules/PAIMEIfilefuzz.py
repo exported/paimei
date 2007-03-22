@@ -53,6 +53,7 @@ class TestCase:
         self.current_pos = 0
         self.current_file = ""
         self.first_chance = self.main_window.first_chance
+        self.show_window = self.main_window.show_window
         
     def Start(self):
         self.running = True
@@ -156,13 +157,13 @@ class TestCase:
                         
                         #self.program_name = command
                         try:
-                            dbg.load(command, "\"" + self.current_file + "\"", show=False)
+                            dbg.load(command, "\"" + self.current_file + "\"", show_window=self.show_window)
                         except pdx, x:
                             evt = ThreadEventLog(msg = "Problem Starting Program (%s): %s %s" % (x. __str__(), self.program_name, self.current_file))
                             wx.PostEvent(self.main_window, evt)
                 else:   
                     try:
-                        dbg.load(self.program_name, "\"" + self.current_file + "\"", show=False)
+                        dbg.load(self.program_name, "\"" + self.current_file + "\"", show_window=self.show_window)
                     except pdx, x:
                         evt = ThreadEventLog(msg = "Problem Starting Program (%s): %s %s" % (x. __str__(), self.program_name, self.current_file))
                         wx.PostEvent(self.main_window, evt)
@@ -296,6 +297,7 @@ class PAIMEIfilefuzz(wx.Panel):
     running              = False
     paused               = False
     first_chance         = True
+    show_window          = False
     
     file_list_pos        = 0
     byte_length          = 0

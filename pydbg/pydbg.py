@@ -579,6 +579,9 @@ class pydbg:
             Section 15.2
 
         Alternatively, you can register a custom handler to handle hits on the specific hw breakpoint slot.
+        
+        *Warning: Setting hardware breakpoints during the first system breakpoint will be removed upon process
+        continue.  A better approach is to set a software breakpoint that when hit will set your hardware breakpoints.
 
         @note: Hardware breakpoints are handled globally throughout the entire process and not a single specific thread.
         @see:  bp_del_hw(), bp_del_hw_all()

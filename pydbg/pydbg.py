@@ -1489,6 +1489,9 @@ class pydbg:
         This is the default EXCEPTION_ACCESS_VIOLATION handler. Responsible for handling the access violation and
         passing control to the registered user callback handler.
 
+        @attention: If you catch an access violaton and wish to terminate the process, you *must* still return
+                    DBG_CONTINUE to avoid a deadlock.
+
         @rtype:  DWORD
         @return: Debug event continue status.
         '''

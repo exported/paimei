@@ -193,7 +193,7 @@ class TestCase:
         
         self.main_window.msgbox("Finished fuzzing!")
         
-        evt = ThreadEventLog(msg = "=" * 100)
+        evt = ThreadEventLog(msg = "=" * 85)
         wx.PostEvent(self.main_window, evt)
         
         self.End(0)
@@ -210,7 +210,7 @@ class TestCase:
 	            
 	            return 1
 	        
-	        return 0
+	        return DBG_CONTINUE
 
     def GuardHandler(self, pydbg):
         evt = ThreadEventLog(msg = "[!] Guard page hit @ 0x%08x" % (pydbg.exception_address))
@@ -583,7 +583,7 @@ class PAIMEIfilefuzz(wx.Panel):
             return -1
         
         if self.program_name_control.GetValue() == "" and not dynamic:
-            self.msgbox("Please enter program name"
+            self.msgbox("Please enter program name")
             return(-1)
             
         if self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:

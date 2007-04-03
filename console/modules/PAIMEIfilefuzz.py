@@ -22,8 +22,12 @@
 
 import sys, os, thread, time, datetime, copy, struct
 
-import win32api, win32con
-
+try:
+    import win32api, win32con
+    dynamic = True
+except:
+    dynamic = False
+    
 import wx
 import wx.lib.filebrowsebutton as filebrowse
 import wx.lib.newevent
@@ -56,15 +60,15 @@ class TestCase:
         self.show_window = self.main_window.show_window
         
     def Start(self):
-        self.running = True
-        
-        if not self.program_name:
+        if not self.program_name and dynamic:
             evt = ThreadEventLog(msg = "Trying to dynamically do program launching")
             wx.PostEvent(self.main_window, evt)
             
             self.program_type = "Dynamic"
         else:
             self.program_type = "Static"
+        
+        self.running = True
                
         try:
             thread.start_new_thread(self.Run, ())
@@ -103,9 +107,6 @@ class TestCase:
         self.stats["num_read"] = 0
         self.stats["num_write"] = 0
         self.stats["last_crash_addr"] = 0x00000000
-        
-        attempts = 0
-        retries = 5
         
         for item in self.file_list:
             if not self.running:
@@ -152,10 +153,6 @@ class TestCase:
                         
                         continue
                     else:
-                        evt = ThreadEventLog(msg = "Running with [%s]" % command)
-                        wx.PostEvent(self.main_window, evt)
-                        
-                        #self.program_name = command
                         try:
                             dbg.load(command, "\"" + self.current_file + "\"", show_window=self.show_window)
                         except pdx, x:
@@ -212,9 +209,6 @@ class TestCase:
 	            wx.PostEvent(self.main_window, evt)
 	            
 	            return 1
-	        
-	        #evt = ThreadEventLog(msg = "Terminated Process: %s %s" % (self.program_name, current_file))
-	        #wx.PostEvent(self.main_window, evt)
 	        
 	        return 0
 
@@ -284,10 +278,8 @@ class TestCase:
         except:
             return ""
         
+        # This needs to be enhanced
         newcommand = command.rsplit(" ", 1)[0]
-        #newcommand = newcommand.replace(r'%1', current_file)
-        #newcommand = newcommand.replace(r'%L', current_file)
-        #newcommand = newcommand.replace(r'%l', current_file)
         
         return newcommand
         
@@ -542,7 +534,7 @@ class PAIMEIfilefuzz(wx.Panel):
     def OnGenerate(self, event):
         if self.running:
             return -1
-                    
+
         if self.source_name_control.GetValue() == "" or self.destination_control.GetValue() == "" or self.hex_control.GetValue() == "":
            self.msgbox("Please enter all data!")
            return -1
@@ -557,7 +549,6 @@ class PAIMEIfilefuzz(wx.Panel):
             self.msgbox("Destination directory does not exist")
             return -1
             
-        #self.byte = chr(int(self.hex_control.GetValue(), 16))
         self.byte = self.hex_control.GetValue()
         
         if self.start_control.GetValue() == "":
@@ -590,8 +581,11 @@ class PAIMEIfilefuzz(wx.Panel):
             self.test_case_thread.UnPause()
             self.run_button_control.SetLabel("Pause")
             return -1
+        
+        if self.program_name_control.GetValue() == "" and not dynamic:
+            self.msgbox("Please enter program name"
+            return(-1)
             
-        #if self.program_name_control.GetValue() == "" or self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:
         if self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:
             self.msgbox("Please enter all data!")
             return(-1)
@@ -816,8 +810,7 @@ class PAIMEIfilefuzz(wx.Panel):
             test_case_thread = TestCase(self)
             test_case_thread.Start()
             test_case_thread.Join(self.timeout)
-            #time.sleep(self.timeout)
-            #self.pydbg.terminate_process()
+
             wx.Yield()
 
             # Update gauge
@@ -881,17 +874,17 @@ class PAIMEIfilefuzz(wx.Panel):
             
             if filepos == filebyte or length > 0:
                 bytepos = self.file_view_control.GetInsertionPoint()
-                self.file_view_control.SetStyle(bytepos, bytepos, wx.TextAttr("RED", ""))
+                self.file_view_control.SetStyle(bytepos, bytepos, wx.TextAttr("RED", "WHITE"))
                 
                 if length != 0:
                     length = length - 1
                 else:
                     length = self.byte_length - 1
             elif byte == "\x00":
-                self.file_view_control.SetStyle(self.file_view_control.GetInsertionPoint(), self.file_view_control.GetInsertionPoint(), wx.TextAttr("GREY", ""))
+                self.file_view_control.SetStyle(self.file_view_control.GetInsertionPoint(), self.file_view_control.GetInsertionPoint(), wx.TextAttr("GREY", "WHITE"))
             else:
                 #self.file_view_control.SetStyle(-1, -1, self.file_view_control.GetDefaultStyle())
-                self.file_view_control.SetStyle(-1, -1, wx.TextAttr("BLACK", ""))
+                self.file_view_control.SetStyle(-1, -1, wx.TextAttr("BLACK", "WHITE"))
                  
             if counter < 16:
                 self.file_view_control.AppendText("0x%02x " % ord(byte),)

@@ -2,6 +2,8 @@
 # pGRAPH
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -33,19 +35,27 @@ class graph (object):
     '''
 
     id       = None
-    clusters = []
-    edges    = {}
-    nodes    = {}
+    clusters = None
+    edges    = None
+    nodes    = None
 
     ####################################################################################################################
     def __init__ (self, id=None):
         '''
         '''
 
-        self.id       = id
+        try:
+            self.id       = id
+        except AttributeError:
+            #ignore this
+            pass
         self.clusters = []
         self.edges    = {}
-        self.nodes    = {}
+        try:
+            self.nodes    = {}
+        except NotImplementedError:
+            #ignore this, used by some inherited values
+            pass
 
 
     ####################################################################################################################
@@ -178,7 +188,7 @@ class graph (object):
 
 
     ####################################################################################################################
-    def del_node (self, id):
+    def del_node (self, node_id):
         '''
         Remove a node from the graph.
 
@@ -186,8 +196,8 @@ class graph (object):
         @param node_id: Identifier of node to remove from graph
         '''
 
-        if self.nodes.has_key(id):
-            del self.nodes[id]
+        if self.nodes.has_key(node_id):
+            del self.nodes[node_id]
 
         return self
 
@@ -203,7 +213,6 @@ class graph (object):
         @rtype:  List
         @return: List of edges from the specified node
         '''
-
         return [edge for edge in self.edges.values() if edge.src == id]
 
 
@@ -358,6 +367,7 @@ class graph (object):
         '''
 
         down_graph = graph()
+
         from_node  = self.find_node("id", from_node_id)
 
         if not from_node:
@@ -379,12 +389,14 @@ class graph (object):
                 down_graph.add_node(copy.copy(node))
 
                 for edge in self.edges_from(node.id):
+
                     to_add = self.find_node("id", edge.dst)
 
                     if not down_graph.find_node("id", edge.dst):
                         next_level.append(to_add)
 
                     down_graph.add_node(copy.copy(to_add))
+
                     down_graph.add_edge(copy.copy(edge))
 
             if next_level:
@@ -481,6 +493,9 @@ class graph (object):
         current_depth     = 1
 
         levels_to_process.append([from_node])
+
+        if not self.nodes:
+            print "Error: nodes == null"
 
         for level in levels_to_process:
             next_level = []

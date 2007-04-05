@@ -2,6 +2,8 @@
 # API Hooking Abstraction Helper
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -26,7 +28,7 @@ from pydbg.defines import *
 class hook_container:
     '''
     The purpose of this class is to provide an easy interface for hooking the entry and return points of arbitrary
-    API calls. The hooking of one or both of the points is optional. Example usage:
+    API calls. The hooking of one or both of the points is optional. Example usage::
 
         def CreateFileA_on_entry (dbg, args):
             pass
@@ -51,11 +53,11 @@ class hook_container:
     def add (self, pydbg, address, num_args, entry_hook=None, exit_hook=None):
         '''
         Add a new hook on the specified API which accepts the specified number of arguments. Optionally specify callback
-        functions for hooked API entry / exit events. The entry / exit callback prototypes are:
+        functions for hooked API entry / exit events. The entry / exit callback prototypes are::
 
             entry(dbg, args)
 
-        Where entry receives the active PyDbg instance as well as a list of the arguments passed to the hooked routine.
+        Where entry receives the active PyDbg instance as well as a list of the arguments passed to the hooked routine::
 
             exit (dbg, args, return_value)
 

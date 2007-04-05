@@ -2,6 +2,8 @@
 # Crash Binning
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -189,11 +191,11 @@ class crash_binning:
 
         @see: import_file()
 
-        @type  name: String
-        @param name: File name to export to
+        @type  file_name:   String
+        @param file_name:   File name to export to
 
-        @rtype:  crash_binning
-        @return: self
+        @rtype:             crash_binning
+        @return:            self
         '''
 
         # null out what we don't serialize but save copies to restore after dumping to disk.
@@ -219,11 +221,11 @@ class crash_binning:
 
         @see: export_file()
 
-        @type  name: String
-        @param name: File name to import from
+        @type  file_name:   String
+        @param file_name:   File name to import from
 
-        @rtype:  crash_binning
-        @return: self
+        @rtype:             crash_binning
+        @return:            self
         '''
 
         fh  = open(file_name, "rb")

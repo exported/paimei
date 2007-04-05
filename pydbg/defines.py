@@ -2,6 +2,8 @@
 # PyDBG
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -124,6 +126,7 @@ HW_WRITE                       = 0x00000001
 CONTEXT_CONTROL                = 0x00010001
 CONTEXT_FULL                   = 0x00010007
 CONTEXT_DEBUG_REGISTERS        = 0x00010010
+CREATE_NEW_CONSOLE             = 0x00000010
 DBG_CONTINUE                   = 0x00010002
 DBG_EXCEPTION_NOT_HANDLED      = 0x80010001
 DBG_EXCEPTION_HANDLED          = 0x00010001

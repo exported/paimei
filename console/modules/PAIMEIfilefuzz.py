@@ -2,6 +2,8 @@
 # Paimei File Fuzzing Module
 # Copyright (C) 2006 Cody Pierce <cpierce@tippingpoint.com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -22,6 +24,12 @@
 
 import sys, os, thread, time, datetime, copy, struct
 
+try:
+    import win32api, win32con
+    dynamic = True
+except:
+    dynamic = False
+    
 import wx
 import wx.lib.filebrowsebutton as filebrowse
 import wx.lib.newevent
@@ -40,6 +48,8 @@ class TestCase:
     def __init__(self, main_window, program_name, timeout, file_list):
         self.main_window = main_window
         self.program_name = program_name
+        self.program_type = ""
+        self.program_cache = {}
         self.timeout = timeout
         self.file_list = file_list
         self.pydbg = ""
@@ -49,10 +59,19 @@ class TestCase:
         self.current_pos = 0
         self.current_file = ""
         self.first_chance = self.main_window.first_chance
+        self.show_window = self.main_window.show_window
         
     def Start(self):
-        self.running = True
+        if not self.program_name and dynamic:
+            evt = ThreadEventLog(msg = "Trying to dynamically do program launching")
+            wx.PostEvent(self.main_window, evt)
+            
+            self.program_type = "Dynamic"
+        else:
+            self.program_type = "Static"
         
+        self.running = True
+               
         try:
             thread.start_new_thread(self.Run, ())
         except:
@@ -76,14 +95,11 @@ class TestCase:
             self.pydbg.terminate_process()
         except:
             pass
-            
+                    
         evt = ThreadEventEnd()
         wx.PostEvent(self.main_window, evt)
-        
-        return self.rc
 
-    def handler_exit_process (self):
-        return DBG_CONTINUE
+        return self.rc
 
     def Run(self):
         self.stats["files_ran"] = self.main_window.files_ran
@@ -93,9 +109,6 @@ class TestCase:
         self.stats["num_read"] = 0
         self.stats["num_write"] = 0
         self.stats["last_crash_addr"] = 0x00000000
-        
-        attempts = 0
-        retries = 5
         
         for item in self.file_list:
             if not self.running:
@@ -112,36 +125,48 @@ class TestCase:
                     time.sleep(1)
             
             for key in item.keys():
-                #time.sleep(self.timeout+1)
-                #self.pydbg = pydbg()
                 dbg = pydbg()
-                dbg.event_handler_exit_process = self.handler_exit_process
-
+                
                 self.current_pos = key
                 self.current_file = item[key]
-                
+
                 evt = ThreadEventUpdate(pos = self.current_pos, stats = self.stats)
                 wx.PostEvent(self.main_window, evt)
                 
                 # Run pydbg shit
                 dbg.set_callback(EXCEPTION_ACCESS_VIOLATION, self.ExceptionHandler)
                 dbg.set_callback(EXCEPTION_GUARD_PAGE, self.GuardHandler)
-                
-                # Ghetto hack around timming issues with CreateProcessA
-                attempts = 0
-                while attempts < retries:
+
+                if self.program_type == "Dynamic":
+                    extension = "." + self.current_file.split(".")[-1]
+                    
+                    evt = ThreadEventLog(msg = "Checking extension %s" % extension)
+                    wx.PostEvent(self.main_window, evt)
+                    
+                    if self.program_cache.has_key(extension):
+                        command = self.program_cache[extension]
+                    else:
+                        command = self.get_handler(extension, self.current_file)
+                        self.program_cache[extension] = command
+                    
+                    if not command:
+                        evt = ThreadEventLog(msg = "Couldnt find proper handler.")
+                        wx.PostEvent(self.main_window, evt)
+                        
+                        continue
+                    else:
+                        try:
+                            dbg.load(command, "\"" + self.current_file + "\"", show_window=self.show_window)
+                        except pdx, x:
+                            evt = ThreadEventLog(msg = "Problem Starting Program (%s): %s %s" % (x. __str__(), self.program_name, self.current_file))
+                            wx.PostEvent(self.main_window, evt)
+                else:   
                     try:
-                        dbg.load(self.program_name, "\"" + self.current_file + "\"")
+                        dbg.load(self.program_name, "\"" + self.current_file + "\"", show_window=self.show_window)
                     except pdx, x:
                         evt = ThreadEventLog(msg = "Problem Starting Program (%s): %s %s" % (x. __str__(), self.program_name, self.current_file))
                         wx.PostEvent(self.main_window, evt)
-                        
-                        time.sleep(5)
-                        attempts += 1
-                        continue
                     
-                    break
-                
                 # Create watchdog thread
                 try:
                     thread.start_new_thread(self.Watch, (dbg, self.current_file))
@@ -157,9 +182,6 @@ class TestCase:
                     evt = ThreadEventLog(msg = "Problem in debug_Event_loop() (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
                     wx.PostEvent(self.main_window, evt)
 
-                #dbg.debug_event_loop()
-
-                
                 self.stats["files_ran"] += 1
                 self.stats["files_left"] -= 1
                 self.stats["end_time"] -= self.timeout
@@ -172,7 +194,10 @@ class TestCase:
         wx.PostEvent(self.main_window, evt)
         
         self.main_window.msgbox("Finished fuzzing!")
-    
+        
+        evt = ThreadEventLog(msg = "=" * 85)
+        wx.PostEvent(self.main_window, evt)
+        
         self.End(0)
         
     def Watch(self, pydbg, current_file):
@@ -184,11 +209,10 @@ class TestCase:
 	        except pdx, x:
 	            evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, current_file))
 	            wx.PostEvent(self.main_window, evt)
+	            
 	            return 1
 	        
-	        evt = ThreadEventLog(msg = "Terminated Process: %s %s" % (self.program_name, current_file))
-	        wx.PostEvent(self.main_window, evt)
-	        return 0
+	        return DBG_CONTINUE
 
     def GuardHandler(self, pydbg):
         evt = ThreadEventLog(msg = "[!] Guard page hit @ 0x%08x" % (pydbg.exception_address))
@@ -211,8 +235,6 @@ class TestCase:
         
         logmessage = crash_bin.crash_synopsis()
         
-        pydbg.terminate_process()
-        
         self.stats["num_crashes"] += 1
         self.stats["last_crash_addr"] = "%08x" % pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress
         
@@ -233,13 +255,43 @@ class TestCase:
         except pdx, x:
             evt = ThreadEventLog(msg = "Couldnt Terminate Process (%s): %s %s" % (x.__str__(), self.program_name, self.current_file))
             wx.PostEvent(self.main_window, evt)
+        
+        return DBG_CONTINUE
 
+    def get_handler(self, extension, current_file):
+        handler = ""
+        
+        key = win32api.RegOpenKey(win32con.HKEY_CLASSES_ROOT, "%s" % extension)
+        
+        try:
+            (handler, junk) = win32api.RegQueryValueEx(key, "")
+        except:
+            return ""
+        
+        command = ""
+        
+        try:
+            key = win32api.RegOpenKey(win32con.HKEY_CLASSES_ROOT, "%s\\shell\\open\\command" % handler)
+        except:
+            return ""
+        
+        try:
+            (command, junk) = win32api.RegQueryValueEx(key, "")
+        except:
+            return ""
+        
+        # This needs to be enhanced
+        newcommand = command.rsplit(" ", 1)[0]
+        
+        return newcommand
+        
 #######################################################################################################################
 class PAIMEIfilefuzz(wx.Panel):
     
     running              = False
     paused               = False
-    first_chance         = False
+    first_chance         = True
+    show_window          = False
     
     file_list_pos        = 0
     byte_length          = 0
@@ -255,6 +307,7 @@ class PAIMEIfilefuzz(wx.Panel):
     start_time           = 0
     running_time         = "00:00:00"
     end_time             = "00:00:00"
+    logfile              = ""
     
     def __init__(self, *args, **kwds):
         # begin wxGlade: PAIMEIfilefuzz.__init__
@@ -483,7 +536,7 @@ class PAIMEIfilefuzz(wx.Panel):
     def OnGenerate(self, event):
         if self.running:
             return -1
-                    
+
         if self.source_name_control.GetValue() == "" or self.destination_control.GetValue() == "" or self.hex_control.GetValue() == "":
            self.msgbox("Please enter all data!")
            return -1
@@ -498,7 +551,6 @@ class PAIMEIfilefuzz(wx.Panel):
             self.msgbox("Destination directory does not exist")
             return -1
             
-        #self.byte = chr(int(self.hex_control.GetValue(), 16))
         self.byte = self.hex_control.GetValue()
         
         if self.start_control.GetValue() == "":
@@ -531,20 +583,31 @@ class PAIMEIfilefuzz(wx.Panel):
             self.test_case_thread.UnPause()
             self.run_button_control.SetLabel("Pause")
             return -1
+        
+        if self.program_name_control.GetValue() == "" and not dynamic:
+            self.msgbox("Please enter program name")
+            return(-1)
             
-        if self.program_name_control.GetValue() == "" or self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:
+        if self.timer_control.GetValue() == "" or self.timer_control.GetValue() <= 0:
             self.msgbox("Please enter all data!")
             return(-1)
          
-        if self.file_list_pos <= 0:
+        if self.file_list_pos < 0:
             self.msgbox("Nothing in file list")
             return(-1)
         
         self.running = True
         self.paused = False
+        
         self.program_name = self.program_name_control.GetValue()
         self.timeout = int(self.timer_control.GetValue())
         
+        # This should be an option, but since we are moving to the new ui i wont waste my time
+        if not self.logfile:
+            self.logfile = open(self.destination + "\\" + "filefuzz.log", "a")
+            
+        self.msg("================================ %s ================================" % self.format_date())
+            
         self.start = 0
         self.end = self.file_list_pos + 1
         
@@ -636,6 +699,10 @@ class PAIMEIfilefuzz(wx.Panel):
         Write a log message to log window.
         '''
 
+        if self.logfile:
+            self.logfile.write("[*] %s\n" % message)
+            self.logfile.flush()
+        
         self.log.AppendText("[*] %s\n" % message)
     
     def msgbox(self, message):
@@ -745,8 +812,7 @@ class PAIMEIfilefuzz(wx.Panel):
             test_case_thread = TestCase(self)
             test_case_thread.Start()
             test_case_thread.Join(self.timeout)
-            #time.sleep(self.timeout)
-            #self.pydbg.terminate_process()
+
             wx.Yield()
 
             # Update gauge
@@ -810,17 +876,17 @@ class PAIMEIfilefuzz(wx.Panel):
             
             if filepos == filebyte or length > 0:
                 bytepos = self.file_view_control.GetInsertionPoint()
-                self.file_view_control.SetStyle(bytepos, bytepos, wx.TextAttr("RED", ""))
+                self.file_view_control.SetStyle(bytepos, bytepos, wx.TextAttr("RED", "WHITE"))
                 
                 if length != 0:
                     length = length - 1
                 else:
                     length = self.byte_length - 1
             elif byte == "\x00":
-                self.file_view_control.SetStyle(self.file_view_control.GetInsertionPoint(), self.file_view_control.GetInsertionPoint(), wx.TextAttr("GREY", ""))
+                self.file_view_control.SetStyle(self.file_view_control.GetInsertionPoint(), self.file_view_control.GetInsertionPoint(), wx.TextAttr("GREY", "WHITE"))
             else:
                 #self.file_view_control.SetStyle(-1, -1, self.file_view_control.GetDefaultStyle())
-                self.file_view_control.SetStyle(-1, -1, wx.TextAttr("BLACK", ""))
+                self.file_view_control.SetStyle(-1, -1, wx.TextAttr("BLACK", "WHITE"))
                  
             if counter < 16:
                 self.file_view_control.AppendText("0x%02x " % ord(byte),)
@@ -831,6 +897,9 @@ class PAIMEIfilefuzz(wx.Panel):
 
         self.file_view_control.ShowPosition(bytepos)
     
+    def format_date(self):
+        return time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime())
+        
     def seconds_strtime(self, seconds):
         hour = seconds / 3600   
         minutes = (seconds - (hour * 3600)) / 60
@@ -838,10 +907,13 @@ class PAIMEIfilefuzz(wx.Panel):
 
         return "%02d:%02d:%02d" % (hour, minutes, seconds)           
     
-    def numerifile(self, x, y): 
-        x = int(x[:x.rfind(".")]) 
-        y = int(y[:y.rfind(".")]) 
-        
+    def numerifile(self, x, y):
+        try:
+            x = int(x[:x.rfind(".")]) 
+            y = int(y[:y.rfind(".")]) 
+        except:
+            return 1
+            
         if   x  < y: return -1
         elif x == y: return 0
         else:        return 1

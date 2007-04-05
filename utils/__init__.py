@@ -1,3 +1,7 @@
+#
+# $Id$
+#
+
 __all__ = \
 [
     "code_coverage",

@@ -1,5 +1,7 @@
 #!c:\python\python.exe
 
+# $Id$
+
 import MySQLdb
 import sys
 

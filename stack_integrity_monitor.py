@@ -1,5 +1,7 @@
 #!c:\python\python.exe
 
+# $Id$
+
 """
 speed ups:
     - replace disasm with byte checks

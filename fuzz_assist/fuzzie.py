@@ -3,6 +3,8 @@
 #
 # FuzzIE - Internet Explorer CSS Fuzzing Arbiter
 #
+# $Id$
+#
 # REFERENCES:
 #
 #   - http://msdn.microsoft.com/workshop/browser/webbrowser/reference/objects/internetexplorer.asp

@@ -1,3 +1,4 @@
+REM $Id$
 
 set PythonPath=C:\Python24
 

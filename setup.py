@@ -1,5 +1,7 @@
 #!c:\python\python.exe
 
+# $Id$
+
 from distutils.core import setup
 
 setup( name         = "PaiMei",

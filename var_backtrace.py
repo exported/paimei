@@ -13,6 +13,8 @@ Variable backtrace script for IDA.
 This does not work independantly of IDA at the moment, but does however rely on the PIDA 
 extensions for manipulating varivakes
 
+$Id$
+
 '''
 
 ida_log = lambda x: sys.stdout.write(x + "\n")

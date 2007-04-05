@@ -1,5 +1,7 @@
 #!c:\python\python.exe
 
+# $Id$
+
 import thread
 import sys
 import time

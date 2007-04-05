@@ -4,6 +4,8 @@
 # PyDBG Client *** NOT INCLUDED IN PUBLIC RELEASE ***
 # Copyright (C) 2006 Pedram Amini <pedram.amini@gmail.com>
 #
+# $Id$
+#
 
 '''
 @author:       Pedram Amini

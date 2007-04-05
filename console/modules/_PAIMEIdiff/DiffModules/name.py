@@ -1,3 +1,7 @@
+#
+# $Id$
+#
+
 from defines import *
 
 class name:

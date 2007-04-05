@@ -115,7 +115,7 @@ SQLITE_CREATE_BAKMEI_SCHEMA = ("""
         function        int UNSIGNED NOT NULL,
         module          int UNSIGNED NOT NULL,
         comment         int UNSIGNED,
-        bytes           char(10) NOT NULL,
+        bytes           varchar(40) NOT NULL,
         mnemonic        varchar(15) NOT NULL
         )""","""
 

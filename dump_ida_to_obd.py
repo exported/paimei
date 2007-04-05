@@ -542,7 +542,11 @@ def create_displ_operand(tree, ida_op, temp, ea):
         var_name, offset_adj = get_stack_variable(ida_op, ea)
 
     value = long(ida_op.addr)
-
+    
+    # convert to signed
+    if value > 2**31:
+        value = -(2**32 - value)
+        
     # Is there an SIB byte?
     if ord(ida_op.specflag1)==1:
         base_reg = SIB_BASE_REGISTERS[ord(ida_op.specflag2)&0x7]
@@ -555,7 +559,7 @@ def create_displ_operand(tree, ida_op, temp, ea):
         if scale:
             plus_off = 2+seg_off # seg_off can be changed by the following function
             create_scaled_expression(tree, base_reg, scale, ida_op, seg_off, ea)
-            tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr, 4+seg_off, 2+seg_off))
+            tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, value, 4+seg_off, 2+seg_off))
         else:
             index_reg = SIB_BASE_REGISTERS[(ord(ida_op.specflag2)>>3)&0x7]
 
@@ -891,7 +895,9 @@ def init_args_and_local_vars (func_struct, frame_struct, function_id, module_id)
         if vtype != -1:
             curs.execute("INSERT INTO function_variables (function, module, name, flags, offset) VALUES (%d, %d, %s, %d, %d);" %(function_id, module_id, ss.sql_safe_str(name), vtype, end_offset))
 
-    arg_size = frame_offset - argument_boundary
+    # Size should always be positive
+    arg_size = abs(frame_offset - argument_boundary)
+    
     ss.update_function_arg_size(global_DSN, function_id, arg_size)
 
 ####################################################################################################################

@@ -176,7 +176,6 @@ class sql_singleton(object):
                 curs = self.connection(DSN).cursor()
                 sql_query = bakmei.mysql_queries.cSELECT_INSTRUCTION_OPERANDS
             else: #sqlite
-                print DSN
                 curs = self.connection(DSN)
                 sql_query = bakmei.sqlite_queries.cSELECT_INSTRUCTION_OPERANDS
 
@@ -613,7 +612,8 @@ class sql_singleton(object):
                 curs.execute(bakmei.sqlite_queries.cUPDATE_FUNCTION_EXPORTED % (exported, function_id))
                 self.connection(DSN).commit()
 
-        def update_function_arg_size(self, DSN, function_id, size):
+        def update_function_arg_size(self, DSN, function_id, size):            
+            
             if DSN[:6] == "mysql;":
                 curs = self.connection(DSN).cursor()
                 curs.execute(bakmei.mysql_queries.cUPDATE_FUNCTION_ARG_SIZE % (size, function_id))
@@ -1005,22 +1005,14 @@ class sql_singleton(object):
                 self.__sql[DSN] = MySQLdb.connect(host=db_values[0], user=db_values[3], passwd=db_values[4])
                 cursor = self.__sql[DSN].cursor()
 
-                print DSN
-                print db_values[2]
-
                 # create db
                 cursor.execute("CREATE DATABASE %s" % db_values[2])
                 cursor.execute("USE %s" % db_values[2])
 
-                print "Creating Tables"
-
                 # create tables
                 for query in bakmei.mysql_queries.MYSQL_CREATE_BAKMEI_SCHEMA:
-                    sys.stdout.write(query)
-                    print query
                     cursor.execute(query)
-                    
-                print "%d tables created" % len(bakmei.mysql_queries.MYSQL_CREATE_BAKMEI_SCHEMA)
+                                    
             else: #sqlite
                 cursor = self.__sql[DSN].cursor()
 

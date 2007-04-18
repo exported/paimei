@@ -19,6 +19,7 @@ Cameron Hotchkies <nummish@0x90.org>
 
 Charlie Miller <charlesamiller@hotmail.com>
     - Bug fix in PyDbg context dump (EBP was being resolved as ESI).
+    - Big fix in proc_peek_recon.
 
 Chris Clark <cclark@isecpartners.com>
     - Patches to PyDbg.

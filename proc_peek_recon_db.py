@@ -156,7 +156,7 @@ def meat_and_potatoes (mysql):
         processed += 1
 
         # we don't care about instructions within known library routines.
-        if GetFunctionFlags(ea) & FUNC_LIB:
+        if GetFunctionFlags(ea) and GetFunctionFlags(ea) & FUNC_LIB:
             continue
 
         if disasm_match(ea, "movsx"):

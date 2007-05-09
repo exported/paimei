@@ -1415,15 +1415,17 @@ class pydbg:
         @return: Debug event continue status.
         '''
 
-        # remove the TEB entry for the exiting thread id.
+        # before we remove the TEB entry from our internal list, let's give the user a chance to do something with it.
+        if self.callbacks.has_key(EXIT_THREAD_DEBUG_EVENT):
+            continue_status = self.callbacks[EXIT_THREAD_DEBUG_EVENT](self)
+        else:
+            continue_status = DBG_CONTINUE
 
+        # remove the TEB entry for the exiting thread id.
         if self.tebs.has_key(self.dbg.dwThreadId):
             del(self.tebs[self.dbg.dwThreadId])
 
-        if self.callbacks.has_key(EXIT_THREAD_DEBUG_EVENT):
-            return self.callbacks[EXIT_THREAD_DEBUG_EVENT](self)
-        else:
-            return DBG_CONTINUE
+        return continue_status
 
 
     ####################################################################################################################
@@ -1468,6 +1470,12 @@ class pydbg:
                 unloading = system_dll
                 break
 
+        # before we remove the system dll from our internal list, let's give the user a chance to do something with it.
+        if self.callbacks.has_key(UNLOAD_DLL_DEBUG_EVENT):
+            continue_status = self.callbacks[UNLOAD_DLL_DEBUG_EVENT](self)
+        else:
+            continue_status = DBG_CONTINUE
+
         if not unloading:
             #raise pdx("Unable to locate DLL that is being unloaded from %08x" % base, False)
             pass
@@ -1479,10 +1487,7 @@ class pydbg:
             self.system_dlls.remove(unloading)
             del(unloading)
 
-        if self.callbacks.has_key(UNLOAD_DLL_DEBUG_EVENT):
-            return self.callbacks[UNLOAD_DLL_DEBUG_EVENT](self)
-        else:
-            return DBG_CONTINUE
+        return continue_status
 
 
     ####################################################################################################################

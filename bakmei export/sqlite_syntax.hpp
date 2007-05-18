@@ -140,3 +140,4 @@ const char *INSERT_MODULE = "INSERT INTO module (name, base, version) VALUES (%s
 const char *INSERT_FUNCTION = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, %s);";
 const char *INSERT_BASIC_BLOCK = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);";
 const char *INSERT_INSTRUCTION = "INSERT INTO instruction (address, basic_block, function, module, mnemonic, bytes) VALUES (%d, %d, %d, %d, %s, %s);";
+const char *INSERT_OPERAND = "INSERT INTO operand (instruction, position, operand_text) VALUES (%d, %d, %s);";

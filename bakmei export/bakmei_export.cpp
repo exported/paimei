@@ -24,6 +24,7 @@ void create_function(func_t *, int);
 void create_basic_block(ea_t, ea_t, int, int);
 void create_instruction(ea_t, int, int, int);
 void create_operands(int, ea_t);
+void create_operand(int, ea_t, int);
 
 sqlite3 *db_ptr;
 
@@ -558,7 +559,137 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 
 void create_operands(int instruction_id, ea_t address)
 {
+	int opnum = 0;
+	char op_buf[4]; // this isn't actually used, just to check existence
+
+	for (opnum = 0; opnum < 3; opnum++)
+	{
+		if (ua_outop(address, op_buf, 4, opnum))
+			create_operand(instruction_id, address, opnum);
+		else
+			return;
+	}
+
 	return;
+}
+
+void create_operand(int instruction_id, ea_t address, int opnum)
+{
+	char op[256];
+	int operand_id = 0;
+
+	// Set op to string representation of operand
+	ua_outop(address, op, 256, opnum);
+
+	// Insert into database
+	char * safe_oper = sql_escape(op);
+
+	int sql_size = strlen(INSERT_OPERAND) 
+					+ strlen(safe_oper)
+					+ 10 /* max instruction id size */
+					+ 10 /* max oper seq size */
+					+ 1 /*Z*/;
+
+	char *sql = (char *) malloc(sql_size);
+		
+	sprintf_s(sql, sql_size, INSERT_OPERAND, instruction_id, opnum, safe_oper);
+	free(safe_oper); // Done with this, clean it up.
+
+	// Execute the sql statement
+	char *errmsg;
+	int result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+	operand_id = sqlite3_last_insert_rowid(db_ptr);
+  	
+  	    //op_type = GetOpType(ea, position)
+  	
+	ua_ana0(address);
+	op_t ida_op = cmd.Operands[opnum];
+  	
+  	int index = 0;
+  	
+	// TODO
+	//op_width = OPERAND_WIDTH[ord(ida_op.dtyp)][1]
+  	
+  	//root = create_expression_entry(NODE_TYPE_OPERATOR_ID, op_width, None, 0, None)
+ 	//root[0] = 0
+  	
+  	//tree = [root]
+  	
+  	/*    if op_width[1] == "":
+  	        raise NotImplementedError, "Missing operand width for %s" % op_width[0]
+  	*/
+	switch (ida_op.type)
+	{
+	case o_reg:
+    
+        // General Register
+        // tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, op, None, 1, 0))
+		break;
+    case o_mem:
+        // Memory Reference
+        // create_memory_reference_operand(tree, ida_op, op, ea)
+		break;
+	case o_phrase:
+        // Phrase (Base + Index)
+        // create_phrase_operand(tree, ida_op, op, ea)
+		break;
+	case o_displ:
+		// (+) Displacement
+        // create_displ_operand(tree, ida_op, op, ea)
+		break;
+	case o_imm:
+        // Immediate
+        // TODO: String references aren't being saved.. Fix this
+        tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, GetOperandValue(address, position), 1, 0))
+		break;
+	case o_far:
+	case o_near:
+        // Immediate (Far, Near) Address
+        // TODO: save substitution of ptr addresses
+        tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr,  1, 0))
+		break;
+	case o_idpspec3:
+        // 386 Trace Register
+        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, 'st(%d)' % ida_op.reg, None, 1, 0));
+		break;    
+	case o_idpspec4:
+        // MMX register
+        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, 'mm%d' % ida_op.reg, None, 1, 0));
+		break;    
+	case o_idpspec5:
+        // XMM register
+        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, 'xmm%d' % ida_op.reg, None, 1, 0))
+    default:
+        print "0x%08x: Gonna die..." % ea
+        raise NotImplementedError, "Currently can not process %d operands" % op_type
+
+    if len(tree) == 1:
+        print "0x%08x: Gonna die..." % ea
+        raise NotImplementedError, "No operands for %d operands" % op_type
+
+    // TODO Insert into database
+    INSERT_EXPRESSION = "INSERT INTO expression (expr_type, symbol, immediate, position, parent_id) VALUES (%d, %s, %s, %d, %s)"
+
+    parent_lookup = {}
+    for entry in tree:
+   
+        tmp_symbol = "NULL"
+        if entry[2]:
+            tmp_symbol = ss.sql_safe_str(entry[2])
+        tmp_immediate = "NULL"
+        if entry[3]:
+            tmp_immediate = entry[3]
+        tmp_parent = "NULL"
+        if entry[5]:
+            tmp_parent = parent_lookup[entry[5]]
+           
+        sql = INSERT_EXPRESSION % (entry[1], tmp_symbol, tmp_immediate, entry[4], tmp_parent)
+        curs.execute(sql)
+        expr_id = curs.lastrowid
+        parent_lookup[entry[0]] = expr_id
+ 
+        // TODO : now might be a good time to eliminate dupes
+  	
 }
 
 void enumerate_imports(int module_id)

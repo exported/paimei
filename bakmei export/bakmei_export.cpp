@@ -9,6 +9,28 @@
 
 #include "sqlite_syntax.hpp" 
 
+#include <vector>
+
+using namespace std;
+
+struct operand_leaf
+{
+	int operator_type;
+	char symbol[256];
+	long immediate;
+	int position;
+	int parent;
+};
+
+enum NODE_TYPE
+{
+	MNEMONIC = 0,
+	SYMBOL = 1,
+	IMMEDIATE_INT = 2,
+	IMMEDIATE_FLOAT = 3,
+	OPERATOR = 4
+};
+
 void bakmei_export(void);
 
 void select_database_type(char *);
@@ -25,6 +47,9 @@ void create_basic_block(ea_t, ea_t, int, int);
 void create_instruction(ea_t, int, int, int);
 void create_operands(int, ea_t);
 void create_operand(int, ea_t, int);
+
+void create_memory_reference_operand(vector<operand_leaf> *, op_t, char *, ea_t);
+void create_phrase_operand(vector<operand_leaf> *, op_t, char *, ea_t);
 
 sqlite3 *db_ptr;
 
@@ -271,10 +296,11 @@ int create_module(char *input_file)
 	char *sql = (char *) malloc(sql_size);
 	sprintf_s(sql, sql_size, INSERT_MODULE, safe_module_name, base_address, "'0'");
 	free(safe_module_name); // Done with this, clean it up.
-
+	
 	// Execute the sql statement
 	char *errmsg;
 	int result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+	free(sql);
 	module_id = sqlite3_last_insert_rowid(db_ptr);
  
 	if (errmsg != NULL)
@@ -298,7 +324,7 @@ int create_module(char *input_file)
 		{
 			last_pct += .1;
 			msg("%0.00f%% Completed...\n", last_pct * 100);
-		}
+		}		
 	}
 
     enumerate_imports(module_id);
@@ -372,6 +398,7 @@ void create_function(func_t *current_function, int module_id)
 	// Execute the sql statement
 	char *errmsg;
 	int result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+	free(sql);
 	function_id = sqlite3_last_insert_rowid(db_ptr);
  	 
 	//flags = current_function->flags; // this is stupid to variablize
@@ -472,6 +499,7 @@ void create_basic_block(ea_t starting_address, ea_t ending_address, int function
 	// Execute the sql statement
 	char *errmsg;
 	int result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+	free(sql);
 	basic_block_id = sqlite3_last_insert_rowid(db_ptr);
 	
 	ea_t addr = next_not_tail(starting_address-1);
@@ -485,8 +513,16 @@ void create_basic_block(ea_t starting_address, ea_t ending_address, int function
 			return;
 		}
 		create_instruction(addr, basic_block_id, function_id, module_id);
+
 		addr = next_not_tail(addr);		
+
+		//// DEBUG
+		//msg("0x%08x: enumerating more\n", addr);
 	}
+
+	//// DEBUG
+	//msg("Basic blocks are clean\n");
+
 	return;
 }
 
@@ -499,6 +535,9 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 
 	int instruction_length = end_address - address;
 	unsigned char bytes[20]; // Max Size in the database
+
+	//// DEBUG
+	//msg ("Instructions are dirty\n");
 
 	// Get the raw bytes
 	for (int counter = 0; (address + counter) < end_address; counter++)
@@ -547,6 +586,7 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 	// Execute the sql statement
 	char *errmsg;
 	int result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+	free(sql);
 	instruction_id = sqlite3_last_insert_rowid(db_ptr);
 
 	// TODO
@@ -554,32 +594,52 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 
 	create_operands(instruction_id, address);
 
+	//// DEBUG
+	//msg("instructions are clean\n");
+
 	return;
 }
 
 void create_operands(int instruction_id, ea_t address)
 {
-	int opnum = 0;
-	char op_buf[4]; // this isn't actually used, just to check existence
+	//// DEBUG
+	//msg ("Operands are dirty\n");
 
-	for (opnum = 0; opnum < 3; opnum++)
+	ua_ana0(address);
+	
+	for (int opnum = 0; cmd.Operands[opnum].type != o_void; opnum++)
 	{
-		if (ua_outop(address, op_buf, 4, opnum))
-			create_operand(instruction_id, address, opnum);
-		else
-			return;
+		create_operand(instruction_id, address, opnum);		
 	}
 
+	//// DEBUG
+	//msg("operands are clean\n");
 	return;
 }
+
 
 void create_operand(int instruction_id, ea_t address, int opnum)
 {
 	char op[256];
 	int operand_id = 0;
+	struct operand_leaf *root = new operand_leaf();
+	vector<operand_leaf> tree;
 
 	// Set op to string representation of operand
 	ua_outop(address, op, 256, opnum);
+	tag_remove(op, op, 256); // this will have to be done more intelligently to allow a max_size 256
+
+	//// DEBUG
+	//msg("0x%08x: Operand == %s, Type == %d, Flags = %x\n", address, op, cmd.Operands[opnum].type, cmd.Operands[opnum].flags);
+
+	if (!cmd.Operands[opnum].showed())
+	{
+		msg("This operand should not be visible\n");
+		return;
+	}
+
+	//// DEBUG
+	//msg("operand simple database code is dirty\n");
 
 	// Insert into database
 	char * safe_oper = sql_escape(op);
@@ -591,47 +651,105 @@ void create_operand(int instruction_id, ea_t address, int opnum)
 					+ 1 /*Z*/;
 
 	char *sql = (char *) malloc(sql_size);
-		
+
+	//// DEBUG
+	//msg("sprintf is dirty\n");
+
+	/*msg("%s, %d, %d, %s -- %d\n", INSERT_OPERAND, instruction_id, opnum, safe_oper, sql_size);*/
+
 	sprintf_s(sql, sql_size, INSERT_OPERAND, instruction_id, opnum, safe_oper);
 	free(safe_oper); // Done with this, clean it up.
+
+	////DEBUG
+	//msg("sprintf is clean.\n");
 
 	// Execute the sql statement
 	char *errmsg;
 	int result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+	free(sql);
 	operand_id = sqlite3_last_insert_rowid(db_ptr);
   	
-  	    //op_type = GetOpType(ea, position)
-  	
-	ua_ana0(address);
+	//// DEBUG
+	//msg("operand simple database code is clean.\n");
+  	  
 	op_t ida_op = cmd.Operands[opnum];
   	
   	int index = 0;
   	
-	// TODO
-	//op_width = OPERAND_WIDTH[ord(ida_op.dtyp)][1]
-  	
-  	//root = create_expression_entry(NODE_TYPE_OPERATOR_ID, op_width, None, 0, None)
- 	//root[0] = 0
-  	
-  	//tree = [root]
-  	
-  	/*    if op_width[1] == "":
-  	        raise NotImplementedError, "Missing operand width for %s" % op_width[0]
-  	*/
+	root->operator_type = OPERATOR;
+	root->immediate = 0;
+	root->parent = -1;
+	root->position = 0;
+
+	switch(ida_op.dtyp)
+	{
+	case dt_byte:
+		strcpy_s(root->symbol, 256, "b1");
+		break;
+	case dt_word:
+		strcpy_s(root->symbol, 256, "b2");
+		break;
+	case dt_dword:
+	case dt_float:
+		strcpy_s(root->symbol, 256, "b4");
+		break;
+	case dt_double:
+	case dt_qword:
+		strcpy_s(root->symbol, 256, "b8");
+		break;
+	case dt_tbyte:
+		strcpy_s(root->symbol, 256, "b_var");
+		break;
+	case dt_packreal:
+		strcpy_s(root->symbol, 256, "b12");
+		break;
+	case dt_byte16:
+		strcpy_s(root->symbol, 256, "b16");
+		break;
+	case dt_fword:
+		strcpy_s(root->symbol, 256, "b6");
+		break;
+	case dt_3byte:
+		strcpy_s(root->symbol, 256, "b3");
+		break;
+	default:
+		// TODO Throw exception raise NotImplementedError, "Missing operand width for %s" % op_width[0]
+		throw -1;
+		break;
+	}
+
+	////DEBUG
+	//msg("Corruption check\n");
+
+	tree.assign(1, *root);
+  	delete(root); // TODO see if corruption occurs
+	struct operand_leaf *node = new operand_leaf();
+	int size = 0;
+
+	//// DEBUG
+	//msg("Operand type switch is dirty. \n");
+
 	switch (ida_op.type)
 	{
-	case o_reg:
-    
+	case o_reg:		
         // General Register
-        // tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, op, None, 1, 0))
+		/*msg("Gen Reg\n");*/
+		node->operator_type = SYMBOL;
+		strcpy_s(node->symbol, 256, op);
+		node->immediate = 0;
+		node->position = 1;
+		node->parent = 0;
+
+		tree.push_back(*node);
+		delete(node);
 		break;
     case o_mem:
         // Memory Reference
-        // create_memory_reference_operand(tree, ida_op, op, ea)
+		create_memory_reference_operand(&tree, ida_op, op, address);
 		break;
 	case o_phrase:
-        // Phrase (Base + Index)
-        // create_phrase_operand(tree, ida_op, op, ea)
+        // Phrase (Base + Index)        
+		create_phrase_operand(&tree, ida_op, op, address);
 		break;
 	case o_displ:
 		// (+) Displacement
@@ -640,56 +758,280 @@ void create_operand(int instruction_id, ea_t address, int opnum)
 	case o_imm:
         // Immediate
         // TODO: String references aren't being saved.. Fix this
-        tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, GetOperandValue(address, position), 1, 0))
+        // tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, GetOperandValue(address, position), 1, 0))
 		break;
 	case o_far:
 	case o_near:
+		/*msg("Imm\n");*/
         // Immediate (Far, Near) Address
         // TODO: save substitution of ptr addresses
-        tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr,  1, 0))
+		node->operator_type = IMMEDIATE_INT;
+		node->symbol[0] = NULL;
+		node->immediate = ida_op.addr;
+		node->position = 1;
+		node->parent = 0;
+
+		tree.push_back(*node);
+		delete(node);        
 		break;
 	case o_idpspec3:
         // 386 Trace Register
-        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, 'st(%d)' % ida_op.reg, None, 1, 0));
+		node->operator_type = SYMBOL;
+
+		// "st(%d)" % ida_op.reg
+		node->symbol[0] = 's';
+		node->symbol[1] = 't';
+		node->symbol[2] = '(';
+		itoa(ida_op.reg, node->symbol+3, 10);
+		size = strlen(node->symbol);
+		node->symbol[size] = ')';
+		node->symbol[size+1] = NULL;
+
+		node->immediate = 0;
+		node->parent = 0;
+		node->position = 1;
+
+		tree.push_back(*node);
+		delete(node);        
 		break;    
 	case o_idpspec4:
         // MMX register
-        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, 'mm%d' % ida_op.reg, None, 1, 0));
+        node->operator_type = SYMBOL;
+
+		// "mm%d" % ida_op.reg
+		node->symbol[0] = 'm';
+		node->symbol[1] = 'm';
+		itoa(ida_op.reg, node->symbol+2, 10); //itoa will null terminate
+
+		node->immediate = 0;
+		node->parent = 0;
+		node->position = 1;
+
+		tree.push_back(*node);
+		delete(node);        
 		break;    
 	case o_idpspec5:
         // XMM register
-        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, 'xmm%d' % ida_op.reg, None, 1, 0))
-    default:
-        print "0x%08x: Gonna die..." % ea
-        raise NotImplementedError, "Currently can not process %d operands" % op_type
+        node->operator_type = SYMBOL;
 
-    if len(tree) == 1:
-        print "0x%08x: Gonna die..." % ea
-        raise NotImplementedError, "No operands for %d operands" % op_type
+		// "xmm%d" % ida_op.reg
+		node->symbol[0] = 'x';
+		node->symbol[1] = 'm';
+		node->symbol[2] = 'm';
+		itoa(ida_op.reg, node->symbol+3, 10); //itoa will null terminate
+
+		node->immediate = 0;
+		node->parent = 0;
+		node->position = 1;
+
+		tree.push_back(*node);
+		delete(node);        
+		break;   
+    default:
+		delete(node);
+        msg("0x%08x: Gonna die...\n", address);
+        //raise NotImplementedError, "Currently can not process %d operands" % ida_op.type
+		// TODO throw exception		
+	}
+
+	//// DEBUG
+	//msg("Safe escape\n");
+	
+	if  (tree.size() < 2)
+	{
+        msg("0x%08x: Gonna die...small tree\n", address);
+        //raise NotImplementedError, "No operands for %d operands" % ida_op.type
+		// TODO Throw exception
+	}
 
     // TODO Insert into database
-    INSERT_EXPRESSION = "INSERT INTO expression (expr_type, symbol, immediate, position, parent_id) VALUES (%d, %s, %s, %d, %s)"
+    // INSERT_EXPRESSION = "INSERT INTO expression (expr_type, symbol, immediate, position, parent_id) VALUES (%d, %s, %s, %d, %s)";
 
-    parent_lookup = {}
-    for entry in tree:
+    //parent_lookup = {};
+    //for entry in tree:
    
-        tmp_symbol = "NULL"
-        if entry[2]:
-            tmp_symbol = ss.sql_safe_str(entry[2])
-        tmp_immediate = "NULL"
-        if entry[3]:
-            tmp_immediate = entry[3]
-        tmp_parent = "NULL"
-        if entry[5]:
-            tmp_parent = parent_lookup[entry[5]]
-           
-        sql = INSERT_EXPRESSION % (entry[1], tmp_symbol, tmp_immediate, entry[4], tmp_parent)
-        curs.execute(sql)
-        expr_id = curs.lastrowid
-        parent_lookup[entry[0]] = expr_id
+    //    tmp_symbol = "NULL"
+    //    if entry[2]:
+    //        tmp_symbol = ss.sql_safe_str(entry[2])
+    //    tmp_immediate = "NULL"
+    //    if entry[3]:
+    //        tmp_immediate = entry[3]
+    //    tmp_parent = "NULL"
+    //    if entry[5]:
+    //        tmp_parent = parent_lookup[entry[5]]
+    //       
+    //    sql = INSERT_EXPRESSION % (entry[1], tmp_symbol, tmp_immediate, entry[4], tmp_parent)
+    //    curs.execute(sql)
+    //    expr_id = curs.lastrowid
+    //    parent_lookup[entry[0]] = expr_id
  
-        // TODO : now might be a good time to eliminate dupes
+    //    // TODO : now might be a good time to eliminate dupes
   	
+}
+
+void create_phrase_operand(vector<operand_leaf> *tree, op_t ida_op, char *op, ea_t address)
+{
+	struct operand_leaf *node = new operand_leaf();
+	int seg_off = 0;
+
+	if (ida_op.specval>>16 != 0)
+	{		
+		node->operator_type = OPERATOR;
+		strcpy_s(node->symbol, 256, ph.regNames[ida_op.specval>>16]); // This should give the segment prefix
+
+		// Let's check
+		msg("0x%08x: Segment: %s\n", address, node->symbol);
+
+		node->immediate = 0;
+		node->parent = 0;
+		node->position = 1;
+
+		seg_off = 1;
+		tree->push_back(*node);
+
+		delete(node); // clear and redefine
+		node = new operand_leaf();
+	}
+	
+	// DEBUG
+	msg("Adding DEREF phrase\n");
+
+	// Add deref operator
+	node->operator_type = OPERATOR;
+	node->symbol[0] = '['; node->symbol[1] = '\0';
+	node->immediate = 0;
+	node->parent = 0 + seg_off;
+	node->position = 1 + seg_off;
+
+	tree->push_back(*node);
+	delete(node); node = new operand_leaf();
+
+	// DEBUG
+	msg("Adding SIB phrase\n");
+
+	// Is there an SIB byte? (see intel.hpp:68)
+    if (1 == ida_op.specflag1)
+	{
+		// DEBUG
+		msg("0x%08x: Base Reg: %s", address, ph.regNames[ida_op.specflag2 & 0x7]);
+
+		/*
+        base_reg = SIB_BASE_REGISTERS[ord(ida_op.specflag2)&0x7]
+
+        if base_reg == 'ebp' and temp.find('ebp') < 0:
+            base_reg = ''
+
+        scale = (None, 2, 4, 8)[ord(ida_op.specflag2)>>6]
+
+        if scale:
+			create_scaled_expression(tree, base_reg, scale, ida_op, seg_off, ea)
+            // Is there a value at the end?
+        else:
+            index_reg = SIB_BASE_REGISTERS[(ord(ida_op.specflag2)>>3)&0x7]
+
+            if index_reg == "esp":
+                tree.append(create_expression_entry(NODE_TYPE_OPERATOR_ID, NODE_TYPE_OPERATOR_PLUS, None, 2+seg_off, 1+seg_off))
+                tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, base_reg, None, 3+seg_off, 2+seg_off))
+                tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr, 4+seg_off, 2+seg_off))
+            else:
+                tree.append(create_expression_entry(NODE_TYPE_OPERATOR_ID, NODE_TYPE_OPERATOR_PLUS, None, 2+seg_off, 1+seg_off))
+                tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, base_reg, None, 3+seg_off, 2+seg_off))
+                tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, index_reg, None, 4+seg_off, 2+seg_off))
+
+                // TODO: save substitution
+	*/
+	}
+    else
+	{
+     /*   reg = REGISTERS[getseg(ea).bitness+1][ida_op.phrase]
+        tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, reg, None, 2+seg_off, 1+seg_off))*/
+	}
+	
+	return;
+}
+
+// TODO Save the address name
+void create_memory_reference_operand(vector<operand_leaf> *tree, op_t ida_op, char *op, ea_t address)
+{
+	struct operand_leaf *node = new operand_leaf();
+	int seg_off = 0;
+
+	if (ida_op.specval>>16 != 0)
+	{		
+		node->operator_type = OPERATOR;
+		strcpy_s(node->symbol, 256, ph.regNames[ida_op.specval>>16]); // This should give the segment prefix
+
+		// Let's check
+		msg("0x%08x: Segment: %s\n", address, node->symbol);
+
+		node->immediate = 0;
+		node->parent = 0;
+		node->position = 1;
+
+		seg_off = 1;
+		tree->push_back(*node);
+
+		delete(node); // clear and redefine
+		node = new operand_leaf();
+	}
+
+	// DEBUG
+	msg("Adding DEREF memref\n");
+
+	// Add deref operator
+	node->operator_type = OPERATOR;
+	node->symbol[0] = '['; node->symbol[1] = '\0';
+	node->immediate = 0;
+	node->parent = 0 + seg_off;
+	node->position = 1 + seg_off;
+
+	tree->push_back(*node);
+	delete(node); node = new operand_leaf();
+	
+	// TODO finish after other errors are sorted.
+
+	// DEBUG
+	msg("Adding SIB memref\n");
+
+    // Is there an SIB byte? (see intel.hpp:68)
+    if (1 == ida_op.specflag1)
+	{
+		// DEBUG
+		msg("0x%08x: Base Reg: %s", address, ph.regNames[ida_op.specflag2 & 0x7]);
+
+		/*
+        base_reg = SIB_BASE_REGISTERS[ida_op.specflag2 & 0x7]
+ 	
+		if base_reg == 'ebp' and temp.find('ebp') < 0:
+ 	            base_reg = ''
+ 	
+ 	        scale = (None, 2, 4, 8)[ord(ida_op.specflag2)>>6]
+ 	
+ 	        if scale:
+ 	            plus_off = 2+seg_off # seg_off can be changed by the following function
+ 	            create_scaled_expression(tree, base_reg, scale, ida_op, seg_off, ea)
+ 	            tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr, 4+seg_off, 2+seg_off))
+ 	        else:
+ 	            index_reg = SIB_BASE_REGISTERS[(ord(ida_op.specflag2)>>3)&0x7]
+ 	
+ 	            if index_reg != "esp":
+ 	                print "0x%08x: Gonna die..." % ea
+ 	                raise NotImplementedError, "Don't know how to handle index registers"
+ 	            else:
+ 	                tree.append(create_expression_entry(NODE_TYPE_OPERATOR_ID, NODE_TYPE_OPERATOR_PLUS, None, 2+seg_off, 1+seg_off))
+ 	                tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, base_reg, None, 3+seg_off, 2+seg_off))
+ 	                tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr, 4+seg_off, 2+seg_off))
+ 	                // TODO: save substitution
+			*/
+	}
+ 	else
+	{
+		//tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, ida_op.addr, 1+seg_off, 0+seg_off))
+	}
+
+	delete(node);
+
+	return;
 }
 
 void enumerate_imports(int module_id)

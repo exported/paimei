@@ -2302,12 +2302,12 @@ class pydbg:
     def iterate_threads (self):
         '''
         A simple iterator function that can be used to iterate through all running processes. Yielded objects are of
-        type PROCESSENTRY32.
+        type THREADENTRY32.
 
         @see:     enumerate_threads()
         @warning: break-ing out of loops over this routine will cause a handle leak.
 
-        @rtype:  PROCESSENTRY32
+        @rtype:  THREADENTRY32
         @return: Iterated process entries.
         '''
 

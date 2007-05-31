@@ -1,3 +1,20 @@
+/**********************************************************************************************************************
+ Bak Mei Exporter - Exports from IDA to the Pai Mei back end database format
+ Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
+
+ $Id: sql_singleton.py 191 2007-04-05 12:38:47Z cameron $
+
+ This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
+ License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
+ version.
+
+ This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License along with this program; if not, write to the Free
+ Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+***********************************************************************************************************************/
+
 
 #include <ida.hpp>
 #include <idp.hpp>
@@ -33,8 +50,10 @@ enum NODE_TYPE
 
 void bakmei_export(void);
 
-void select_database_type(char *);
-sqlite3 * create_sqlite_storage(char *);
+int select_options(char *, char **);
+sqlite3 * create_sqlite_storage(char *, char **);
+void export_database(char *);
+
 
 void enumerate_imports(int);
 void enumerate_rpc(int);
@@ -46,10 +65,11 @@ void create_function(func_t *, int);
 void create_basic_block(ea_t, ea_t, int, int);
 void create_instruction(ea_t, int, int, int);
 void create_operands(int, ea_t);
-void create_operand(int, ea_t, int);
+void create_operand(int, ea_t, int, bool advanced = false);
 
 void create_memory_reference_operand(vector<operand_leaf> *, op_t, char *, ea_t);
 void create_phrase_operand(vector<operand_leaf> *, op_t, char *, ea_t);
+void create_displacement_operand(vector<operand_leaf> *, op_t, char *, ea_t);
 
 sqlite3 *db_ptr;
 
@@ -108,9 +128,11 @@ void bakmei_export(void)
 	time_t start_time, run_time;
 	int module_id = 0;
 	char input_file[400]; // Seriously, why 400? I'm a lazy f
+	char *output_file = NULL;
+	int advanced_export = 0;
 
 	get_input_file_path(input_file, 400);
-	select_database_type(input_file);
+	advanced_export = select_options(input_file, &output_file);
 
 	msg("Analyzing IDB...\n");
 	
@@ -125,13 +147,96 @@ void bakmei_export(void)
 
 	// Set up Detailed Operands
 
+	// Export Database
+	export_database(output_file);
+
 	time(&run_time);
-
-
 	msg("Done. Completed in %.2lf seconds.\n", difftime(run_time, start_time));
 }
 
-void select_database_type(char *input_filename)
+void export_database(char *outfile)
+{	
+	// If file exists, delete it
+	// TODO
+	
+	char *extern_statement;
+	int extern_size = strlen(outfile) + 29 /*SQL*/ + 1 /*Z*/;
+	extern_statement = (char *) malloc(extern_size);
+
+	sprintf_s(extern_statement, extern_size, "ATTACH DATABASE '%s' AS extern;", outfile);
+	msg("%s\n", extern_statement);
+	// Execute the sql statement
+	char *errmsg;
+	int result = sqlite3_exec(db_ptr, extern_statement, NULL, NULL, &errmsg);
+	free(extern_statement);
+	
+	if (errmsg != NULL)
+	{
+		msg("[export 1] Error %s\n", errmsg);
+		sqlite3_free(errmsg);
+		return;
+	}
+
+	msg("Attached external database\n");
+
+	for (int table_count = 0; table_count < TABLE_COUNT; table_count++)
+	{
+		char *src_table = SQLITE_CREATE_BAKMEI_SCHEMA[table_count];
+		char *dst_table = (char *) malloc(strlen(src_table) + 7 /*extern.*/ + 1 /*Z*/);
+
+		// Replace "TABLE " with "TABLE extern."
+		memcpy(dst_table, src_table, 13);
+		dst_table[13] = 'e'; dst_table[14] = 'x'; dst_table[15] = 't';
+		dst_table[16] = 'e'; dst_table[17] = 'r'; dst_table[18] = 'n';
+		dst_table[19] = '.';
+		strcpy_s(dst_table + 20, strlen(src_table) + 8 - 20, src_table + 13);
+
+        // Execute the sql statement
+		result = sqlite3_exec(db_ptr, dst_table, NULL, NULL, &errmsg);	
+		
+		if (errmsg != NULL)
+		{
+			msg("[export 2] Error %s\n", errmsg);
+			sqlite3_free(errmsg);
+			return;
+		}
+
+		// 20 is the offset to the table name
+		char *space = strchr(dst_table + 20, ' ');
+		space[0] = '\0';
+
+		msg("Table name::%s::\n", dst_table +20);
+
+		int sql_size = (strlen(dst_table + 20) * 2) + 35/*sql*/ + 1/*Z*/;
+		char *sql = (char *) malloc(sql_size);
+
+		sprintf_s(sql, sql_size, "INSERT INTO extern.%s SELECT * FROM %s;", dst_table+20, dst_table+20);
+        // Execute the sql statement
+		result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);	
+
+		if (errmsg != NULL)
+		{
+			msg("[export 2] Error %s\n", errmsg);
+			sqlite3_free(errmsg);
+			return;
+		}
+		free(sql);
+
+
+		// Clean up
+		free(dst_table); 
+	}
+	
+	msg("closing the database [%s]\n", outfile);
+	// actually close the database
+	sqlite3_close(db_ptr);
+	free(outfile);
+
+	return;
+}
+
+// Returns 0 for standard, 1 for Advanced Operand Export
+int select_options(char *input_filename, char **output_filename)
 {
 	const char initial_format[] = 
 		"STARTITEM 0\n"
@@ -142,12 +247,16 @@ void select_database_type(char *input_filename)
 
 		"Choose the database engine for export.\n"					// Title
 		
-		 //  Radio Buttons
+		//  Radio Buttons
 		"<#This will set the export engine to use SQLite.#"         // hint radio_sqlite
 		"SQLite:R>\n"												// text radio_sqlite
 
 		"<#This will set the export engine to use MySQL.#"          // hint radio_mysql
 		"MySQL:R>>\n\n"												// text radio_mysql                     
+
+		// Operand Tree Export (UNSTABLE)
+		"<#This will export the full operand tree information. It it not stable.#"
+		"Advanced Operand Export (UNSTABLE):C>>\n\n"
 		;
 
 	const char mysql_format[] = 
@@ -164,15 +273,18 @@ void select_database_type(char *input_filename)
 		"<Password:A:254:30:::>\n\n"
 		; // End Dialog Format String
 
+	short advanced_export = 0;
 	short db_format = 0;
 	
-	int ok = AskUsingForm_c(initial_format, &db_format);
+	int ok = AskUsingForm_c(initial_format, &db_format, &advanced_export);
+
+	// TODO : Handle Cancels
 	
 	switch(db_format)
 	{
 		case 0:
 			// SQLite
-			db_ptr = create_sqlite_storage(input_filename);
+			db_ptr = create_sqlite_storage(input_filename, output_filename);
 			
 			break;
 		case 1:
@@ -184,7 +296,7 @@ void select_database_type(char *input_filename)
 			break;
 	}
 
-	return;
+	return advanced_export;
 }
 
 int schema_check_callback(void *counter, int num_fields, char **fields, char **col_names)
@@ -195,7 +307,7 @@ int schema_check_callback(void *counter, int num_fields, char **fields, char **c
 	return 0;
 }
 
-sqlite3 * create_sqlite_storage(char *input_filename)
+sqlite3 * create_sqlite_storage(char *input_filename, char **output_filename)
 {
 	char *filename = NULL, *suggested_file = NULL;
 	int suggested_file_length = 0;
@@ -209,13 +321,16 @@ sqlite3 * create_sqlite_storage(char *input_filename)
 	strncat_s(suggested_file, suggested_file_length, ".obd", 4);
 
 	// Where would this filename memory get cleared?
-	filename = askfile_c(1, suggested_file, "Select the filename to be exported to.");
-	
+	filename = askfile_c(1, suggested_file, "Select the filename to be exported to.");	
+
 	free(suggested_file);
 
 	if (NULL != filename)
 	{
 		struct _stat buf;
+
+		*output_filename = (char *) malloc(strlen(filename) + 1);
+		strcpy_s(*output_filename, strlen(filename) + 1, filename);
 
 		// Check for database existence
 		if (_stat(filename, &buf) == 0)
@@ -228,33 +343,38 @@ sqlite3 * create_sqlite_storage(char *input_filename)
 				return NULL;
 			else if (1 == overwrite)
 			{
-				remove(filename);
+				if (0 != remove(filename))
+				{
+					msg("Error code: %d deleting file.\n");
+					throw "error deleting file";
+				}
 			}
 		}
 
-		// TODO : export from memory when done
 		// Open SQL database
 		sqlite3_open(":memory:"/*filename*/, &ret_val);
-
 		
-		// Test for schema
-		int table_count = 0;
-		sqlite3_exec(ret_val, "SELECT name FROM sqlite_master WHERE type='table';", &schema_check_callback, &table_count, NULL);
 
-		if (table_count <= 0)
-		{
-			for (int i = 0; i < 16; i++)
-			{
-				sqlite3_exec(ret_val, SQLITE_CREATE_BAKMEI_SCHEMA[i], NULL, NULL, NULL);
-			}
-		}
-		else
-		{
-			if (table_count != 16)
-			{
-				msg("We might have problems, there were %d tables in the database\n", table_count);
-			}
-		}
+		// TODO This should be done on a file if we're not overwriting
+
+		//// Test for schema
+		//int table_count = 0;
+		//sqlite3_exec(ret_val, "SELECT name FROM sqlite_master WHERE type='table';", &schema_check_callback, &table_count, NULL);
+
+		//if (table_count <= 0)
+		//{
+		//	for (int i = 0; i < 16; i++)
+		//	{
+		//		sqlite3_exec(ret_val, SQLITE_CREATE_BAKMEI_SCHEMA[i], NULL, NULL, NULL);
+		//	}
+		//}
+		//else
+		//{
+		//	if (table_count != 16)
+		//	{
+		//		msg("We might have problems, there were %d tables in the database\n", table_count);
+		//	}
+		//}
 	}
 
 	return ret_val;
@@ -323,9 +443,10 @@ int create_module(char *input_file)
 		if (fns/func_count > last_pct)
 		{
 			last_pct += .1;
-			msg("%0.00f%% Completed...\n", last_pct * 100);
+			msg("%0.00f%% Completed...", last_pct * 100);
 		}		
 	}
+	msg("\n");
 
     enumerate_imports(module_id);
 
@@ -515,13 +636,7 @@ void create_basic_block(ea_t starting_address, ea_t ending_address, int function
 		create_instruction(addr, basic_block_id, function_id, module_id);
 
 		addr = next_not_tail(addr);		
-
-		//// DEBUG
-		//msg("0x%08x: enumerating more\n", addr);
 	}
-
-	//// DEBUG
-	//msg("Basic blocks are clean\n");
 
 	return;
 }
@@ -535,9 +650,6 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 
 	int instruction_length = end_address - address;
 	unsigned char bytes[20]; // Max Size in the database
-
-	//// DEBUG
-	//msg ("Instructions are dirty\n");
 
 	// Get the raw bytes
 	for (int counter = 0; (address + counter) < end_address; counter++)
@@ -594,52 +706,33 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 
 	create_operands(instruction_id, address);
 
-	//// DEBUG
-	//msg("instructions are clean\n");
-
 	return;
 }
 
 void create_operands(int instruction_id, ea_t address)
 {
-	//// DEBUG
-	//msg ("Operands are dirty\n");
+	ua_ana0(address);	
 
-	ua_ana0(address);
-	
 	for (int opnum = 0; cmd.Operands[opnum].type != o_void; opnum++)
 	{
-		create_operand(instruction_id, address, opnum);		
+		// If it's invisible, it's implicit and we don't care for our purposes
+		// In theory, pyemu may need this information in the future.
+		if (cmd.Operands[opnum].showed())	
+			create_operand(instruction_id, address, opnum);		
 	}
 
-	//// DEBUG
-	//msg("operands are clean\n");
 	return;
 }
 
 
-void create_operand(int instruction_id, ea_t address, int opnum)
+void create_operand(int instruction_id, ea_t address, int opnum, bool advanced)
 {
 	char op[256];
 	int operand_id = 0;
-	struct operand_leaf *root = new operand_leaf();
-	vector<operand_leaf> tree;
 
 	// Set op to string representation of operand
 	ua_outop(address, op, 256, opnum);
 	tag_remove(op, op, 256); // this will have to be done more intelligently to allow a max_size 256
-
-	//// DEBUG
-	//msg("0x%08x: Operand == %s, Type == %d, Flags = %x\n", address, op, cmd.Operands[opnum].type, cmd.Operands[opnum].flags);
-
-	if (!cmd.Operands[opnum].showed())
-	{
-		msg("This operand should not be visible\n");
-		return;
-	}
-
-	//// DEBUG
-	//msg("operand simple database code is dirty\n");
 
 	// Insert into database
 	char * safe_oper = sql_escape(op);
@@ -652,16 +745,8 @@ void create_operand(int instruction_id, ea_t address, int opnum)
 
 	char *sql = (char *) malloc(sql_size);
 
-	//// DEBUG
-	//msg("sprintf is dirty\n");
-
-	/*msg("%s, %d, %d, %s -- %d\n", INSERT_OPERAND, instruction_id, opnum, safe_oper, sql_size);*/
-
 	sprintf_s(sql, sql_size, INSERT_OPERAND, instruction_id, opnum, safe_oper);
 	free(safe_oper); // Done with this, clean it up.
-
-	////DEBUG
-	//msg("sprintf is clean.\n");
 
 	// Execute the sql statement
 	char *errmsg;
@@ -669,9 +754,13 @@ void create_operand(int instruction_id, ea_t address, int opnum)
 	free(sql);
 	operand_id = sqlite3_last_insert_rowid(db_ptr);
   	
-	//// DEBUG
-	//msg("operand simple database code is clean.\n");
-  	  
+	// We can safely leave now for old paimei usage
+	if (!advanced)
+		return;
+  
+	struct operand_leaf *root = new operand_leaf();
+	vector<operand_leaf> tree;
+
 	op_t ida_op = cmd.Operands[opnum];
   	
   	int index = 0;
@@ -717,23 +806,16 @@ void create_operand(int instruction_id, ea_t address, int opnum)
 		throw -1;
 		break;
 	}
-
-	////DEBUG
-	//msg("Corruption check\n");
-
+ 
 	tree.assign(1, *root);
   	delete(root); // TODO see if corruption occurs
 	struct operand_leaf *node = new operand_leaf();
 	int size = 0;
 
-	//// DEBUG
-	//msg("Operand type switch is dirty. \n");
-
 	switch (ida_op.type)
 	{
 	case o_reg:		
-        // General Register
-		/*msg("Gen Reg\n");*/
+        // General Register		
 		node->operator_type = SYMBOL;
 		strcpy_s(node->symbol, 256, op);
 		node->immediate = 0;
@@ -753,12 +835,20 @@ void create_operand(int instruction_id, ea_t address, int opnum)
 		break;
 	case o_displ:
 		// (+) Displacement
-        // create_displ_operand(tree, ida_op, op, ea)
+		create_displacement_operand(&tree, ida_op, op, address);
 		break;
 	case o_imm:
         // Immediate
         // TODO: String references aren't being saved.. Fix this
         // tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, GetOperandValue(address, position), 1, 0))
+		node->operator_type = IMMEDIATE_INT;
+		node->symbol[0] = '\0';
+		node->immediate = ida_op.value;
+		node->position = 1;
+		node->parent = 0;
+
+		tree.push_back(*node);
+		delete(node);
 		break;
 	case o_far:
 	case o_near:
@@ -833,13 +923,10 @@ void create_operand(int instruction_id, ea_t address, int opnum)
         //raise NotImplementedError, "Currently can not process %d operands" % ida_op.type
 		// TODO throw exception		
 	}
-
-	//// DEBUG
-	//msg("Safe escape\n");
 	
 	if  (tree.size() < 2)
 	{
-        msg("0x%08x: Gonna die...small tree\n", address);
+		msg("0x%08x: Gonna die...small tree. Optype: %d\n", address, ida_op.type);
         //raise NotImplementedError, "No operands for %d operands" % ida_op.type
 		// TODO Throw exception
 	}
@@ -867,6 +954,110 @@ void create_operand(int instruction_id, ea_t address, int opnum)
  
     //    // TODO : now might be a good time to eliminate dupes
   	
+}
+
+void create_displacement_operand(vector<operand_leaf> *tree, op_t ida_op, char *op, ea_t address)
+{
+	struct operand_leaf *node = new operand_leaf();
+	int seg_off = 0;
+
+	if (ida_op.specval>>16 != 0)
+	{		
+		node->operator_type = OPERATOR;
+		strcpy_s(node->symbol, 256, ph.regNames[ida_op.specval>>16]); // This should give the segment prefix
+
+		// Let's check
+		msg("0x%08x: Segment: %s\n", address, node->symbol);
+
+		node->immediate = 0;
+		node->parent = 0;
+		node->position = 1;
+
+		seg_off = 1;
+		tree->push_back(*node);
+
+		delete(node); // clear and redefine
+		node = new operand_leaf();
+	}
+	
+	// DEBUG
+	msg("Adding DEREF displacement\n");
+
+	// Add deref operator
+	node->operator_type = OPERATOR;
+	node->symbol[0] = '['; node->symbol[1] = '\0';
+	node->immediate = 0;
+	node->parent = 0 + seg_off;
+	node->position = 1 + seg_off;
+
+	tree->push_back(*node);
+	delete(node); node = new operand_leaf();
+
+	// Check for a variable name
+	// TODO : Now would be a good time to insert vars into the database
+	/*
+536 	    flags = GetFlags(ea)
+537 	
+538 	    var_name    = None
+539 	    offset_adj  = 0
+540 	
+541 	    if (ord(ida_op.n) == 0 and isStkvar0(flags)) or (ord(ida_op.n) == 1 and isStkvar0(flags)):
+542 	        var_name, offset_adj = get_stack_variable(ida_op, ea)
+543 	
+544 	    value = long(ida_op.addr)
+545 	   
+546 	    # convert to signed
+547 	    if value > 2**31:
+548				value = -(2**32 - value)
+	*/
+	// DEBUG
+	msg("Adding SIB displacement\n");
+
+	// Is there an SIB byte? (see intel.hpp:68)
+    if (1 == ida_op.specflag1)
+	{
+		// DEBUG
+		msg("0x%08x: Base Reg: %s\n", address, ph.regNames[ida_op.specflag2 & 0x7]);
+
+		/*
+552 	        base_reg = SIB_BASE_REGISTERS[ord(ida_op.specflag2)&0x7]
+553 	
+554 	        if base_reg == 'ebp' and temp.find('ebp') < 0:
+555 	            base_reg = ''
+556 	
+557 	        scale = (None, 2, 4, 8)[ord(ida_op.specflag2)>>6]
+558 	
+559 	        if scale:
+560 	            plus_off = 2+seg_off # seg_off can be changed by the following function
+561 	            create_scaled_expression(tree, base_reg, scale, ida_op, seg_off, ea)
+562 	            tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, value, 4+seg_off, 2+seg_off))
+563 	        else:
+564 	            index_reg = SIB_BASE_REGISTERS[(ord(ida_op.specflag2)>>3)&0x7]
+565 	
+566 	            if index_reg != "esp":
+567 	                tree.append(create_expression_entry(NODE_TYPE_OPERATOR_ID, NODE_TYPE_OPERATOR_PLUS, None, 2+seg_off, 1+seg_off))
+568 	                tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, base_reg, None, 3+seg_off, 2+seg_off))
+569 	                tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, index_reg, None, 4+seg_off, 2+seg_off))
+570 	                tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, value, 5+seg_off, 2+seg_off))
+571 	                # TODO: save substitution
+572 	            else:
+573 	                tree.append(create_expression_entry(NODE_TYPE_OPERATOR_ID, NODE_TYPE_OPERATOR_PLUS, None, 2+seg_off, 1+seg_off))
+574 	                tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, base_reg, None, 3+seg_off, 2+seg_off))
+575 	                tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, value, 4+seg_off, 2+seg_off))
+576 	                # TODO: save substitution
+	*/
+	}
+	else
+	{
+		/*
+578 	       tree.append(create_expression_entry(NODE_TYPE_OPERATOR_ID, NODE_TYPE_OPERATOR_PLUS, None, 2+seg_off, 1+seg_off))
+579 	       reg = REGISTERS[getseg(ea).bitness+1][ida_op.reg]
+580 	       tree.append(create_expression_entry(NODE_TYPE_SYMBOL_ID, reg, None, 3+seg_off, 2+seg_off))
+581 	       tree.append(create_expression_entry(NODE_TYPE_IMMEDIATE_INT_ID, None, value, 4+seg_off, 2+seg_off))
+582 	       # TODO: save substitution (if any)
+		*/
+	}	
+	return;
 }
 
 void create_phrase_operand(vector<operand_leaf> *tree, op_t ida_op, char *op, ea_t address)
@@ -913,7 +1104,7 @@ void create_phrase_operand(vector<operand_leaf> *tree, op_t ida_op, char *op, ea
     if (1 == ida_op.specflag1)
 	{
 		// DEBUG
-		msg("0x%08x: Base Reg: %s", address, ph.regNames[ida_op.specflag2 & 0x7]);
+		msg("0x%08x: Base Reg: %s\n", address, ph.regNames[ida_op.specflag2 & 0x7]);
 
 		/*
         base_reg = SIB_BASE_REGISTERS[ord(ida_op.specflag2)&0x7]
@@ -997,7 +1188,7 @@ void create_memory_reference_operand(vector<operand_leaf> *tree, op_t ida_op, ch
     if (1 == ida_op.specflag1)
 	{
 		// DEBUG
-		msg("0x%08x: Base Reg: %s", address, ph.regNames[ida_op.specflag2 & 0x7]);
+		msg("0x%08x: Base Reg: %s\n", address, ph.regNames[ida_op.specflag2 & 0x7]);
 
 		/*
         base_reg = SIB_BASE_REGISTERS[ida_op.specflag2 & 0x7]

@@ -155,7 +155,9 @@ def handler_ReadFile(dbg, args, ret):
                 
                 # print call stack, 15 calls deep
                 print "CALL STACK:"
-                for address in dbg.stack_unwind()[:15]:
+                call_stack = dbg.stack_unwind()
+                call_stack.reverse()
+                for address in call_stack[:15]:
                     print "%s: 0x%08x" % (dbg.addr_to_module(address).szModule, address)
                 print "...\n---------------------"
 

@@ -168,14 +168,33 @@ def handler_ReadFile(dbg, args, ret):
     
     return DBG_CONTINUE
 
+def incremental_read (dbg, addr, length):
+    data = ""
+    while length:
+        try:
+            data += dbg.read_process_memory(addr, 1)
+        except:
+            break
+
+        addr   += 1
+        length -= 1
+
+    return data
+        
+
 def handler_CreateFileW(dbg, args, ret):
     handle = { "id":0,
                "filename":"",
                "pos":0
              }
-    filename = dbg.get_unicode_string(dbg.read_process_memory(args[0], 255))
-    if dbg.filename.lower() in filename.lower():
-        print "[*] CreateFileW %s returned 0x%x" % (filename, ret)
+    
+    filename = dbg.get_unicode_string(incremental_read(dbg, args[0], 255))
+
+    if filename:
+        if dbg.filename.lower() in filename.lower():
+            print "[*] CreateFileW %s returned 0x%x" % (filename, ret)
+    else:
+        return DBG_CONTINUE    
     
     handle["id"] = ret
     handle["filename"] = filename
@@ -323,7 +342,7 @@ library = [{ "id":0,
              "func":"_read",
              "handler":handler__read,
              "args":3,
-             "on":False
+             "on":True
            }]
 
 handles = []

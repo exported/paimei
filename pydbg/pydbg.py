@@ -2711,10 +2711,7 @@ class pydbg:
 
         while length:
             if not kernel32.ReadProcessMemory(self.h_process, address, read_buf, length, byref(count)):
-                if not data: 
-                    raise pdx("ReadProcessMemory(%08x, %d, read=%d)" % (address, length, count.value), True) 
-                else:
-                    return data 	
+                raise pdx("ReadProcessMemory(%08x, %d, read=%d)" % (address, length, count.value), True)
 
             data    += read_buf.raw
             length  -= count.value

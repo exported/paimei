@@ -152,6 +152,12 @@ def handler_ReadFile(dbg, args, ret):
                     return DBG_CONTINUE
                 
                 print "[*] ReadFile %s [%d] [%d] Req:%d Read:%d\n[0x%08x][%s]" % (handle["filename"], buffer["id"], handle["id"], requested_bytes, buffer["size"], buffer["address"], dbg.smart_dereference(buffer["address"]))
+                
+                # print call stack, 15 calls deep
+                print "CALL STACK:"
+                for address in dbg.stack_unwind()[:15]:
+                    print "%s: 0x%08x" % (dbg.addr_to_module(address).szModule, address)
+                print "...\n---------------------"
 
                 for dbgbuffer in dbg.buffers:
                     if buffer["address"] == dbgbuffer:
@@ -231,7 +237,7 @@ def attach_target_proc(dbg, procname, filename):
     imagename = procname.rsplit('\\')[-1]
     print "[*] Trying to attach to existing %s" % imagename
     for (pid, name) in dbg.enumerate_processes():
-        if imagename in name:
+        if imagename in name.lower():
             try:
                 print "[*] Attaching to %s (%d)" % (name, pid)
                 dbg.attach(pid)
@@ -361,8 +367,8 @@ if len(sys.argv) < 3:
     
     sys.exit(-1)
 
-procname = sys.argv[1]
-filename = sys.argv[2]
+procname = sys.argv[1].lower()
+filename = sys.argv[2].lower()
 trackbuffer = False
 
 if len(sys.argv) == 4:

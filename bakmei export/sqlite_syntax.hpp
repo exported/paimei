@@ -2,7 +2,7 @@
  Bak Mei Exporter - Exports from IDA to the Pai Mei back end database format
  Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 
- $Id: sql_singleton.py 191 2007-04-05 12:38:47Z cameron $
+ $Id$
 
  This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
  License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
@@ -17,6 +17,7 @@
 
 #define TABLE_COUNT 16
 
+// Table creation queries
 char *SQLITE_CREATE_BAKMEI_SCHEMA[TABLE_COUNT] = {
 	 "CREATE TABLE module ("
      "   id              INTEGER PRIMARY KEY,"
@@ -155,8 +156,18 @@ char *SQLITE_CREATE_BAKMEI_SCHEMA[TABLE_COUNT] = {
      "    value           text"
      "    )"};
 
+// Insertion Queries
 const char *INSERT_MODULE = "INSERT INTO module (name, base, version) VALUES (%s, %d, %s);";
 const char *INSERT_FUNCTION = "INSERT INTO function (module, start_address, end_address, name) VALUES (%d, %d, %d, %s);";
 const char *INSERT_BASIC_BLOCK = "INSERT INTO basic_block (start_address, end_address, function, module) VALUES (%d, %d, %d, %d);";
 const char *INSERT_INSTRUCTION = "INSERT INTO instruction (address, basic_block, function, module, mnemonic, bytes) VALUES (%d, %d, %d, %d, %s, %s);";
 const char *INSERT_OPERAND = "INSERT INTO operand (instruction, position, operand_text) VALUES (%d, %d, %s);";
+
+const char *INSERT_INSN_TO_INSN_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 8);";
+const char *INSERT_BLOC_TO_BLOC_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 4);";
+const char *INSERT_FUNC_TO_FUNC_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 1);";
+const char *INSERT_INSN_TO_DATA_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 64);";
+const char *INSERT_BLOC_TO_DATA_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 32);";
+const char *INSERT_FUNC_TO_DATA_XREFS   = "INSERT INTO cross_references (source, destination, reference_type) VALUES (%d, %d, 16);";
+const char *INSERT_DATA_FOR_REFS        = "INSERT INTO data (address, data_type, value) VALUES (%d, '00000000', 1);";
+

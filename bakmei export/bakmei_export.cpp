@@ -2,7 +2,7 @@
  Bak Mei Exporter - Exports from IDA to the Pai Mei back end database format
  Copyright (C) 2007 Cameron Hotchkies <chotchkies@tippingpoint.com>
 
- $Id: sql_singleton.py 191 2007-04-05 12:38:47Z cameron $
+ $Id$
 
  This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
  License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
@@ -27,6 +27,8 @@
 #include "sqlite_syntax.hpp" 
 
 #include <vector>
+#include <map>
+#include <algorithm>
 
 using namespace std;
 
@@ -57,6 +59,7 @@ void export_database(char *);
 
 void enumerate_imports(int);
 void enumerate_rpc(int);
+void generate_cross_references(void);
 
 char *sql_escape(char *);
 
@@ -144,6 +147,7 @@ void bakmei_export(void)
 	module_id = create_module(input_file);
 
 	// Generate Cross References
+	generate_cross_references();
 
 	// Set up Detailed Operands
 
@@ -152,6 +156,147 @@ void bakmei_export(void)
 
 	time(&run_time);
 	msg("Done. Completed in %.2lf seconds.\n", difftime(run_time, start_time));
+}
+
+map<ea_t, ea_t> global_branches;
+map<ea_t, int*> instruction_address_lookup;
+
+// A ULLONG in decimal is max 20 characters long
+#define MAX_INT_STRLEN 20
+
+struct refpair_struct
+{
+	// This is required for the find function
+	bool operator==(refpair_struct sec)
+	{
+		return source == sec.source && dest == sec.dest;
+	}
+	int source;
+	int dest;
+};
+
+void generate_cross_references()
+{
+	vector<refpair_struct> *function_added = new vector<refpair_struct>();
+	vector<refpair_struct> *basic_block_added = new vector<refpair_struct>();
+	vector<refpair_struct>::iterator pair_iter;
+
+	int *id_tuple_source, *id_tuple_dest;
+	char *errmsg;
+	char *sql;
+	int result = 0;
+	
+	int sql_size = 82 /*INSN_TO_INSN length*/ + MAX_INT_STRLEN * 2 + 1 /*Z*/;
+
+	struct refpair_struct refpair;
+
+	for each(pair<ea_t, ea_t> xref in global_branches)
+	{
+		try
+		{
+            id_tuple_source = instruction_address_lookup[xref.first];
+            id_tuple_dest   = instruction_address_lookup[xref.second];
+ 
+			// 82 is the same length for the next two queries, so there's no need to reallocate
+			sql = (char *) malloc(sql_size);           
+			sprintf_s(sql, sql_size, INSERT_INSN_TO_INSN_XREFS, id_tuple_source[0], id_tuple_dest[0]);
+
+			// Execute the sql statement
+			result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+		 
+			if (errmsg != NULL)
+			{
+				msg("Error %s", errmsg);
+				sqlite3_free(errmsg);
+				return;
+			}
+
+			refpair.source = id_tuple_source[1];
+			refpair.dest = id_tuple_dest[1];
+			
+			pair_iter = find(basic_block_added->begin(), basic_block_added->end(), refpair);
+
+            if (pair_iter == basic_block_added->end()) // Not found				
+			{
+				sprintf_s(sql, sql_size, INSERT_BLOC_TO_BLOC_XREFS, id_tuple_source[1], id_tuple_dest[1]);
+				// Execute the sql statement
+				result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+			 
+				if (errmsg != NULL)
+				{
+					msg("Error %s", errmsg);
+					sqlite3_free(errmsg);
+					return;
+				}
+				basic_block_added->push_back(refpair);
+
+				refpair.source = id_tuple_source[2];
+				refpair.dest = id_tuple_dest[2];
+
+				pair_iter = find(function_added->begin(), function_added->end(), refpair);
+
+                if (refpair.source != refpair.dest && pair_iter == function_added->end())
+				{
+					sprintf_s(sql, sql_size, INSERT_FUNC_TO_FUNC_XREFS, id_tuple_source[2], id_tuple_dest[2]);
+
+                    // Execute the sql statement
+					result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
+				 
+					if (errmsg != NULL)
+					{
+						msg("Error %s", errmsg);
+						sqlite3_free(errmsg);
+						return;
+					}
+					function_added->push_back(refpair);
+				}
+			}
+		}
+		catch (char *str)// TODO: catch this properly! KeyError, details
+		{			
+            // TODO pick up all this lost code (Mainly thunks and unfunctioned code)
+            msg("Missing instruction for 0x%08x / 0x%08x - It's probably not in a defined function. Skipping.", xref.first, xref.second);
+		}
+
+		// Deallocate always
+		if (NULL != sql)
+		{
+			free(sql);
+		}
+		
+	}
+
+ //   // Build Data XRefs
+	//delete(function_added); delete(basic_block_added);
+ //   function_added = new vector<refpair_struct>();
+	//basic_block_added = new vector<refpair_struct>();
+
+ //   for (dref in global_drefs.keys())
+	//{
+ //       try
+	//	{
+ //           id_tuple_source = instruction_address_lookup[dref[0]]
+
+ //           curs.execute(INSERT_INSN_TO_DATA_XREFS % (id_tuple_source[0], dref[1]))
+
+ //           if not basic_block_added.has_key((id_tuple_source[1], dref[1]))
+	//		{
+ //               curs.execute(INSERT_BLOC_TO_DATA_XREFS % (id_tuple_source[1], dref[1]))
+ //               basic_block_added[(id_tuple_source[1], dref[1])] = 1
+
+ //               if id_tuple_source[2] != id_tuple_dest[2] and not function_added.has_key((id_tuple_source[2], dref[1]))
+	//			{
+ //                   curs.execute(INSERT_FUNC_TO_DATA_XREFS % (id_tuple_source[2], dref[1]))
+ //                   function_added[(id_tuple_source[2], id_tuple_dest[2])] = 1
+	//			}
+	//		}
+	//	}
+ //       catch KeyError, details:
+	//	{
+ //           // TODO pick up all this lost code (Mainly thunks and unfunctioned code)
+ //           msg("0x%08x: Missing instruction for Data Ref.", dref[0])
+	//	}
+	//}
 }
 
 void export_database(char *outfile)
@@ -221,7 +366,6 @@ void export_database(char *outfile)
 			return;
 		}
 		free(sql);
-
 
 		// Clean up
 		free(dst_table); 
@@ -1224,6 +1368,7 @@ void create_memory_reference_operand(vector<operand_leaf> *tree, op_t ida_op, ch
 
 	return;
 }
+
 
 void enumerate_imports(int module_id)
 {

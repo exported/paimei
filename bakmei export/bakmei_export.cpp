@@ -41,6 +41,23 @@ struct operand_leaf
 	int parent;
 };
 
+struct refpair_struct
+{
+	bool operator<(refpair_struct sec)
+	{
+		return source < sec.source || (source == sec.source && dest < sec.dest);
+	}
+
+	// This is required for the find function
+	bool operator==(refpair_struct sec)
+	{
+		return source == sec.source && dest == sec.dest;
+	}
+
+	int source;
+	int dest;
+};
+
 enum NODE_TYPE
 {
 	MNEMONIC = 0,
@@ -49,6 +66,21 @@ enum NODE_TYPE
 	IMMEDIATE_FLOAT = 3,
 	OPERATOR = 4
 };
+
+// A ULLONG in decimal is max 20 characters long
+#define MAX_INT_STRLEN 20
+
+// This is required for the map comparator. If there's a better way, PLEASE tell me
+struct refpair_struct_lt
+{
+	bool operator()(struct refpair_struct rp1, struct refpair_struct rp2)
+	{
+		return rp1 < rp2;
+	}
+};
+
+map<refpair_struct, int, refpair_struct_lt> global_branches;
+map<ea_t, int*> instruction_address_lookup;
 
 void bakmei_export(void);
 
@@ -146,9 +178,13 @@ void bakmei_export(void)
 	
 	module_id = create_module(input_file);
 
+	//DEBUG
+	msg("[+] Created module\n");
+
 	// Generate Cross References
 	generate_cross_references();
 
+	msg("[+] Created XREFs\n");
 	// Set up Detailed Operands
 
 	// Export Database
@@ -158,29 +194,12 @@ void bakmei_export(void)
 	msg("Done. Completed in %.2lf seconds.\n", difftime(run_time, start_time));
 }
 
-map<ea_t, ea_t> global_branches;
-map<ea_t, int*> instruction_address_lookup;
-
-// A ULLONG in decimal is max 20 characters long
-#define MAX_INT_STRLEN 20
-
-struct refpair_struct
-{
-	// This is required for the find function
-	bool operator==(refpair_struct sec)
-	{
-		return source == sec.source && dest == sec.dest;
-	}
-	int source;
-	int dest;
-};
-
 void generate_cross_references()
 {
 	vector<refpair_struct> *function_added = new vector<refpair_struct>();
 	vector<refpair_struct> *basic_block_added = new vector<refpair_struct>();
 	vector<refpair_struct>::iterator pair_iter;
-
+	
 	int *id_tuple_source, *id_tuple_dest;
 	char *errmsg;
 	char *sql;
@@ -189,21 +208,33 @@ void generate_cross_references()
 	int sql_size = 82 /*INSN_TO_INSN length*/ + MAX_INT_STRLEN * 2 + 1 /*Z*/;
 
 	struct refpair_struct refpair;
-
-	for each(pair<ea_t, ea_t> xref in global_branches)
+	
+	for each(pair<refpair_struct, int> xref in global_branches)
 	{
 		try
 		{
-            id_tuple_source = instruction_address_lookup[xref.first];
-            id_tuple_dest   = instruction_address_lookup[xref.second];
+			id_tuple_source = instruction_address_lookup[xref.first.source];
+            id_tuple_dest   = instruction_address_lookup[xref.first.dest];
  
+			if (id_tuple_source == 0)
+			{
+				msg("[!] possible DREF at 0x%08x\n", xref.first.source);
+				continue;
+			}
+
+			if (id_tuple_dest == 0)
+			{
+				msg("[!] possible DREF at 0x%08x\n", xref.first.dest);
+				continue;
+			}
+
 			// 82 is the same length for the next two queries, so there's no need to reallocate
 			sql = (char *) malloc(sql_size);           
 			sprintf_s(sql, sql_size, INSERT_INSN_TO_INSN_XREFS, id_tuple_source[0], id_tuple_dest[0]);
-
+	
 			// Execute the sql statement
 			result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
-		 
+
 			if (errmsg != NULL)
 			{
 				msg("Error %s", errmsg);
@@ -213,7 +244,7 @@ void generate_cross_references()
 
 			refpair.source = id_tuple_source[1];
 			refpair.dest = id_tuple_dest[1];
-			
+		
 			pair_iter = find(basic_block_added->begin(), basic_block_added->end(), refpair);
 
             if (pair_iter == basic_block_added->end()) // Not found				
@@ -241,7 +272,7 @@ void generate_cross_references()
 
                     // Execute the sql statement
 					result = sqlite3_exec(db_ptr, sql, NULL, NULL, &errmsg);
-				 
+
 					if (errmsg != NULL)
 					{
 						msg("Error %s", errmsg);
@@ -349,8 +380,6 @@ void export_database(char *outfile)
 		// 20 is the offset to the table name
 		char *space = strchr(dst_table + 20, ' ');
 		space[0] = '\0';
-
-		msg("Table name::%s::\n", dst_table +20);
 
 		int sql_size = (strlen(dst_table + 20) * 2) + 35/*sql*/ + 1/*Z*/;
 		char *sql = (char *) malloc(sql_size);
@@ -501,24 +530,24 @@ sqlite3 * create_sqlite_storage(char *input_filename, char **output_filename)
 
 		// TODO This should be done on a file if we're not overwriting
 
-		//// Test for schema
-		//int table_count = 0;
-		//sqlite3_exec(ret_val, "SELECT name FROM sqlite_master WHERE type='table';", &schema_check_callback, &table_count, NULL);
+		// Test for schema
+		int table_count = 0;
+		sqlite3_exec(ret_val, "SELECT name FROM sqlite_master WHERE type='table';", &schema_check_callback, &table_count, NULL);
 
-		//if (table_count <= 0)
-		//{
-		//	for (int i = 0; i < 16; i++)
-		//	{
-		//		sqlite3_exec(ret_val, SQLITE_CREATE_BAKMEI_SCHEMA[i], NULL, NULL, NULL);
-		//	}
-		//}
-		//else
-		//{
-		//	if (table_count != 16)
-		//	{
-		//		msg("We might have problems, there were %d tables in the database\n", table_count);
-		//	}
-		//}
+		if (table_count <= 0)
+		{
+			for (int i = 0; i < 16; i++)
+			{
+				sqlite3_exec(ret_val, SQLITE_CREATE_BAKMEI_SCHEMA[i], NULL, NULL, NULL);
+			}
+		}
+		else
+		{
+			if (table_count != 16)
+			{
+				msg("We might have problems, there were %d tables in the database\n", table_count);
+			}
+		}
 	}
 
 	return ret_val;
@@ -640,6 +669,49 @@ char *sql_escape(char *source)
 	return ret_val;
 }
 
+
+void generate_basic_block_branches(ea_t ea)
+{
+	//TODO: Stop at drefs
+	//DBG msg("[+] Creating branches for %08x.\n");
+	// Branches to
+	ea_t prev_code_ea = prev_not_tail(ea);
+	ea_t prev_ea = prev_code_ea;
+	struct refpair_struct refpair;
+
+	while (!isCode(getFlags(prev_code_ea)))
+	{
+		prev_code_ea  = prev_not_tail(prev_code_ea);
+	}
+
+	ea_t xref = 0;
+	xrefblk_t xb;
+
+	for (bool ok=xb.first_to(ea, XREF_ALL); ok; ok=xb.next_to())
+	{
+		xref = xb.from;
+		if (xref != prev_ea && xref != prev_code_ea && isCode(getFlags(xref)))
+		{
+			refpair.source = xref;
+			refpair.dest = ea;
+			global_branches[refpair] = 1;
+		}
+	}
+
+	// Branches from
+	for (bool ok=xb.first_from(ea, XREF_ALL); ok; ok=xb.next_from())
+	{
+		xref = xb.to;
+		if (xref != next_not_tail(ea) && isCode(getFlags(xref)))
+		{
+			refpair.source = ea;
+			refpair.dest = xref;
+			global_branches[refpair] = 1;
+		}
+	}
+	//DBG msg("[+] Created branches for %08x.\n");
+}
+
 void create_function(func_t *current_function, int module_id)
 {
 	int function_id = 0;
@@ -709,6 +781,9 @@ void create_function(func_t *current_function, int module_id)
 				ea_t prev_ea       = prev_not_tail(addr);
 				ea_t next_ea       = next_not_tail(addr);
 
+				// Add to Global branch table
+				generate_basic_block_branches(addr);
+
 				// ensure that both prev_ea and next_ea reference code and not data.
 				// TODO : Why does this call prev_not_tail twice? This code doesn't even make sense. cjh
 				while (!isCode(getFlags(prev_ea)))
@@ -717,7 +792,7 @@ void create_function(func_t *current_function, int module_id)
 				while (!isCode(getFlags(next_ea)))
 					next_ea = prev_not_tail(next_ea);
 
-				// TODO: Currently CALLs are (sometimes??) terminating basic blocks.. is this the behavior we want?
+				// TODO: Currently CALLs are (sometimes??) terminating basic blocks.. is this the behavior we want?				
 
 				// if the current instruction is a ret instruction, end the current node at ea.
 				// if there is a branch from the current instruction, end the current node at ea.
@@ -845,8 +920,12 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 	free(sql);
 	instruction_id = sqlite3_last_insert_rowid(db_ptr);
 
-	// TODO
-	// instruction_address_lookup[ea] = (dbid, block_id, function_id)
+	// TODO : THIS IS A MEMORY LEAK. FIX THAT.	
+	int * addr_ref = (int *) malloc(sizeof(int) * 3);
+	addr_ref[0] = instruction_id;
+	addr_ref[1] = basic_block_id;
+	addr_ref[2] = function_id;
+	instruction_address_lookup[address] = addr_ref;
 
 	create_operands(instruction_id, address);
 

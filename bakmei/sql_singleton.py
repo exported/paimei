@@ -393,7 +393,13 @@ class sql_singleton(object):
                 curs = self.connection(DSN)
                 sql_query = bakmei.sqlite_queries.cSELECT_FUNCTION
 
+            
             results = curs.execute(sql_query % function_id).fetchone()
+            
+            print "ugh"
+            print sql_query % function_id
+            print results
+            print "hgu"
 
             if results[5] and results[5] != 0:
                 exported = True

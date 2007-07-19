@@ -25,6 +25,7 @@ char *SQLITE_CREATE_BAKMEI_SCHEMA[TABLE_COUNT] = {
      "   base            int UNSIGNED NOT NULL,"
      "   signature       text default '',"
      "   version         varchar(255) NOT NULL,"
+	 "   entry_point     int UNSIGNED,"
      "   comment         int UNSIGNED"
      "   )", 
 

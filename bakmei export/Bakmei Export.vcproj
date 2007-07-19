@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;C:\IDA\sdk\idasdk51\include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;__IDP__;__NT__"
+				AdditionalIncludeDirectories="&quot;C:\Program Files\MySQL\MySQL Server 5.0\include&quot;;C:\IDA\sdk\idasdk51\include"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;__IDP__;__NT__;__WIN__; _WIN32"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -63,10 +63,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ida.lib"
+				AdditionalDependencies="ida.lib mysqlclient.lib"
 				OutputFile="C:\Program Files\IDA\plugins\$(ProjectName).plw"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;C:\IDA\sdk\idasdk51\libvc.w32&quot;"
+				AdditionalLibraryDirectories="&quot;C:\Program Files\MySQL\MySQL Server 5.0\lib\opt&quot;;C:\IDA\sdk\idasdk51\libvc.w32"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"

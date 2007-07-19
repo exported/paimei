@@ -15,6 +15,10 @@
  Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ***********************************************************************************************************************/
 
+// MySQL API will die without this include
+#include <winsock2.h>
+
+#include <mysql.h>
 
 #include <ida.hpp>
 #include <idp.hpp>
@@ -23,7 +27,6 @@
 #include <time.h>
 
 #include "sqlite3.h"
-
 #include "sqlite_syntax.hpp" 
 
 #include <vector>
@@ -32,6 +35,26 @@
 
 using namespace std;
 
+#pragma region CONSTANTS
+#define MAX_INT_STRLEN			20		// A ULLONG in decimal is max 20 characters long
+#define MAX_MYSQL_HOSTNAME		255		// If your hostname is bigger, you're probably an asshole.
+
+// Export Options
+#define ADVANCED_EXPORT			0x0001	// Advanced export means all of the instruction/operand details
+#define DBTYPE_SQLITE			0x0100	// SQLite file on local system
+#define DBTYPE_MYSQL			0x0200	// MySQL database over a network, FAR SLOWER
+
+enum NODE_TYPE
+{
+	MNEMONIC = 0,
+	SYMBOL = 1,
+	IMMEDIATE_INT = 2,
+	IMMEDIATE_FLOAT = 3,
+	OPERATOR = 4
+};
+#pragma endregion
+
+#pragma region structures
 struct operand_leaf
 {
 	int operator_type;
@@ -43,6 +66,7 @@ struct operand_leaf
 
 struct refpair_struct
 {
+	// This comparator is used in the map construct.
 	bool operator<(refpair_struct sec)
 	{
 		return source < sec.source || (source == sec.source && dest < sec.dest);
@@ -58,17 +82,12 @@ struct refpair_struct
 	int dest;
 };
 
-enum NODE_TYPE
+struct mysql_data
 {
-	MNEMONIC = 0,
-	SYMBOL = 1,
-	IMMEDIATE_INT = 2,
-	IMMEDIATE_FLOAT = 3,
-	OPERATOR = 4
+	char hostname[MAX_MYSQL_HOSTNAME];
+	char username[255];
+	char password[255];
 };
-
-// A ULLONG in decimal is max 20 characters long
-#define MAX_INT_STRLEN 20
 
 // This is required for the map comparator. If there's a better way, PLEASE tell me
 struct refpair_struct_lt
@@ -78,22 +97,32 @@ struct refpair_struct_lt
 		return rp1 < rp2;
 	}
 };
+#pragma endregion
 
+#pragma region globals
 map<refpair_struct, int, refpair_struct_lt> global_branches;
 map<ea_t, int*> instruction_address_lookup;
+sqlite3 *db_ptr;
+#pragma endregion
 
+#pragma region Function_Prototypes
 void bakmei_export(void);
 
-int select_options(char *, char **);
-sqlite3 * create_sqlite_storage(char *, char **);
-void export_database(char *);
+int select_options(char *, void **);
+int create_sqlite_storage(char *, char **);
+void export_database(int, void *);
 
+void export_mysql_database(mysql_data *);
+void export_sqlite_database(char *);
 
 void enumerate_imports(int);
 void enumerate_rpc(int);
 void generate_cross_references(void);
 
 char *sql_escape(char *);
+int schema_check_callback(void *, int, char **, char **);
+int schema_dump_callback(void *, int, char **, char **);
+
 
 int create_module(char*);
 void create_function(func_t *, int);
@@ -105,9 +134,9 @@ void create_operand(int, ea_t, int, bool advanced = false);
 void create_memory_reference_operand(vector<operand_leaf> *, op_t, char *, ea_t);
 void create_phrase_operand(vector<operand_leaf> *, op_t, char *, ea_t);
 void create_displacement_operand(vector<operand_leaf> *, op_t, char *, ea_t);
+#pragma endregion
 
-sqlite3 *db_ptr;
-
+#pragma region IDA_Specific
 int IDAP_init(void)
 {
 	// Do checks here to ensure the plug-in is being used within
@@ -123,6 +152,8 @@ void IDAP_term(void)
 {
 	// Stuff to do when exiting, clean up jobs go here
 
+	msg("Finished\n");
+
 	// TODO : Cleanup Routines
 	sqlite3_close(db_ptr);
 
@@ -132,15 +163,32 @@ void IDAP_term(void)
 // Eventually we'll have it choose which type of export based on the arg here
 void IDAP_run(int arg)
 {
-	// Meat-o-licious
-	bakmei_export();
+	// This try/catch is kinda worthless
+	try
+	{
+		// Meat-o-licious
+		bakmei_export();
+	}
+	catch (char *whatever)
+	{
+		//nothin
+		msg("oh no!\n");
+		msg("[!] %s\nAborting!\n", whatever);
+	}
+
+	for each(pair<ea_t, int*> ial in instruction_address_lookup)
+	{
+		if (ial.second != NULL)
+			free((void *)ial.second);
+	}		
+
+	instruction_address_lookup.clear();
+	global_branches.clear();
 }
 
 char IDAP_comment[]		= "This is the Bak Mei export plugin.";
 char IDAP_help[]		= "Bak Mei Exporter";
-
 char IDAP_name[]		= "Bak Mei Exporter";
-
 char IDAP_hotkey[]		= "Shift-Alt-B";
 
 // The all-important exported PLUGIN object
@@ -156,18 +204,24 @@ plugin_t PLUGIN =
 	IDAP_name,					// Name from the Edit menu
 	IDAP_hotkey					// Hot key to run the plugin
 };
-
+#pragma endregion
 
 void bakmei_export(void)
 {
 	time_t start_time, run_time;
 	int module_id = 0;
 	char input_file[400]; // Seriously, why 400? I'm a lazy f
-	char *output_file = NULL;
-	int advanced_export = 0;
+	void *db_info = NULL;
+	int export_options = 0;
 
 	get_input_file_path(input_file, 400);
-	advanced_export = select_options(input_file, &output_file);
+	export_options = select_options(input_file, &db_info);
+
+	if (export_options == -1)
+	{
+		msg("Aborting export.\n");
+		return;
+	}
 
 	msg("Analyzing IDB...\n");
 	
@@ -188,7 +242,7 @@ void bakmei_export(void)
 	// Set up Detailed Operands
 
 	// Export Database
-	export_database(output_file);
+	export_database(export_options & 0xFF00, db_info);
 
 	time(&run_time);
 	msg("Done. Completed in %.2lf seconds.\n", difftime(run_time, start_time));
@@ -330,7 +384,40 @@ void generate_cross_references()
 	//}
 }
 
-void export_database(char *outfile)
+
+void export_database(int database_type, void *dbinfo)
+{
+	if (database_type == DBTYPE_SQLITE)
+	{
+		export_sqlite_database((char *) dbinfo);
+	}
+	else if (database_type == DBTYPE_MYSQL)
+	{
+		export_mysql_database((mysql_data *) dbinfo);
+	}
+}
+
+void export_mysql_database(mysql_data *mydbinfo)
+{
+	// TODO : for now we're going to pretend one module is ever inserted
+	// into the database. I know that's a lie. You know that's a lie.
+	// As the only two people to ever read through this code, let's keep
+	// this a secret. We can make it our little game. 
+	msg("Dumping MySQL\n");
+
+	sqlite3_exec(db_ptr, "select * from module", &schema_dump_callback, NULL, NULL);
+
+
+	/*MYSQL *mysqldb = NULL;
+
+	mysql_init(mysqldb);
+
+	mysql_real_connect(mysqldb, mydbinfo->hostname, mydbinfo->username; mydbinfo->password, "bakmei", 0, NULL, 0);
+
+	mysql_query(mysqldb, sql);*/
+}
+
+void export_sqlite_database(char *outfile)
 {	
 	// If file exists, delete it
 	// TODO
@@ -409,13 +496,25 @@ void export_database(char *outfile)
 }
 
 // Returns 0 for standard, 1 for Advanced Operand Export
-int select_options(char *input_filename, char **output_filename)
+int select_options(char *input_filename, void **db_info)
 {
 	const char initial_format[] = 
 		"STARTITEM 0\n"
 		"HELP\n"
-		"The text seen in the 'help window' when the\n"
-		"user hits the 'Help' button.\n"
+		"Database Types:\n\n"		
+		"SQLite: This will export the database to a SQLite file stored locally on the \n"
+		"hard disk. This is generally the faster option but limits the processing \n"
+		"capabilities later on.\n\n"
+		"MySQL:  This will export the information to a MySQL database either on \n"
+		"your network or to 'localhost'. MySQL is more powerful for processing on \n"
+		"later, but this process takes far longer due to network latency.\n\n"
+
+		"Advanced Operand Export:\n\n"		
+		"This exports not only the text representation of the instructions, but also \n"
+		"the operand tree representations. It is not very stable at the present time, \n"
+		"but will allow for advanced analysis when it is complete. Checking this box \n"
+		"is NOT recommended as it will take a substantially longer time to export \n"
+		"with no real value.\n"
 		"ENDHELP\n"
 
 		"Choose the database engine for export.\n"					// Title
@@ -432,6 +531,7 @@ int select_options(char *input_filename, char **output_filename)
 		"Advanced Operand Export (UNSTABLE):C>>\n\n"
 		;
 
+	// TODO fill out HELP
 	const char mysql_format[] = 
 		"STARTITEM 0\n"
 		"HELP\n"
@@ -450,26 +550,119 @@ int select_options(char *input_filename, char **output_filename)
 	short db_format = 0;
 	
 	int ok = AskUsingForm_c(initial_format, &db_format, &advanced_export);
+	if (!ok)
+	{
+		return -1;
+	}
 
 	// TODO : Handle Cancels
-	
+
+	// Don't want this zero based, it's a flag
+	db_format = (db_format + 1) << 8;
+
 	switch(db_format)
 	{
-		case 0:
-			// SQLite
-			db_ptr = create_sqlite_storage(input_filename, output_filename);
-			
+		case DBTYPE_SQLITE:
+			// SQLite			
+			ok = create_sqlite_storage(input_filename, (char **) db_info);
+
+			if (!ok)
+				return -1;
+	
 			break;
-		case 1:
+		case DBTYPE_MYSQL:
 			// MySQL
-			char hostname[255] = "";
-			char username[255] = "";
-			char password[255] = "";
+			*db_info = (struct mysql_data*) malloc(sizeof(struct mysql_data));
+			
+			strcpy_s(((mysql_data *)*db_info)->hostname, 255, "hostname");
+			strcpy_s(((mysql_data *)*db_info)->username, 255, "username");
+			strcpy_s(((mysql_data *)*db_info)->password, 255, "password");
+
+			// TODO load vars
+			ok = AskUsingForm_c(mysql_format, 
+				&(((mysql_data*)*db_info)->hostname),
+				&(((mysql_data*)*db_info)->username),
+				&(((mysql_data*)*db_info)->password));
+			if (!ok) 
+				return -1;
+
+			// TODO : test connection
 
 			break;
 	}
 
-	return advanced_export;
+	// sqlite is used to aggregate the information regardless, this may need to 
+	// change as we run into 64-bit addressing issues. Memory consumption may
+	// play an issue too, this bridge will be crossed when we get to it.
+
+	// Open in-memory SQL database
+	sqlite3_open(":memory:", &db_ptr);
+	
+	// TODO This should be done on a file if we're not overwriting
+
+	// Test for schema
+	int table_count = 0;
+	sqlite3_exec(db_ptr, "SELECT name FROM sqlite_master WHERE type='table';", &schema_check_callback, &table_count, NULL);
+
+	if (table_count <= 0)
+	{
+		for (int i = 0; i < 16; i++)
+		{
+			sqlite3_exec(db_ptr, SQLITE_CREATE_BAKMEI_SCHEMA[i], NULL, NULL, NULL);
+		}
+	}
+	else
+	{
+		if (table_count != 16)
+		{
+			msg("We might have problems, there were %d tables in the database\n", table_count);
+		}
+	}
+
+	return (advanced_export & 0xFF) | (db_format);
+}
+
+int schema_dump_callback(void *results, int num_fields, char **fields, char **col_names)
+{
+	msg("fields: %d\n", num_fields);
+
+	char *nullstring = "NULL";
+
+	switch (num_fields)
+	{
+	case 7:
+		// module
+		char *modsql = "INSERT INTO module VALUES (%s, %s, %s, %s, %s, %s, %s);";
+
+		char *id			= fields[0];
+		char *name			= (fields[1] != NULL) ? sql_escape(fields[1]) : nullstring;
+		char *base			= (fields[2] != NULL) ? fields[2] : nullstring;
+		msg(fields[3]);msg("\n");
+		char *signature		= (fields[3] != NULL) ? sql_escape(fields[3]) : nullstring;
+		char *version		= (fields[4] != NULL) ? sql_escape(fields[4]) : nullstring;
+		char *entry_point	= (fields[5] != NULL) ? fields[5] : nullstring;
+		char *comment		= (fields[6] != NULL) ? fields[6] : nullstring;
+
+		int sqlen = strlen(id) + strlen(name) + strlen(base) + strlen(signature) +
+					strlen(version) + strlen(entry_point) + strlen(comment) + 41 /*Syntax*/ + 1/*Z*/;
+
+		char *sql = (char *) malloc(sqlen);
+
+		sprintf_s(sql, sqlen, modsql, id, name, base, signature, version, entry_point, comment);
+
+		msg(sql);
+
+		// Clean up
+		if (name[0]		 != 'N') free(name);
+		if (signature[0] != 'N') free(signature);
+		if (version[0]	 != 'N') free(version);
+
+		break;
+	}
+
+	msg("\n");
+
+	return 0;
 }
 
 int schema_check_callback(void *counter, int num_fields, char **fields, char **col_names)
@@ -480,7 +673,7 @@ int schema_check_callback(void *counter, int num_fields, char **fields, char **c
 	return 0;
 }
 
-sqlite3 * create_sqlite_storage(char *input_filename, char **output_filename)
+int create_sqlite_storage(char *input_filename, char **output_filename)
 {
 	char *filename = NULL, *suggested_file = NULL;
 	int suggested_file_length = 0;
@@ -523,41 +716,18 @@ sqlite3 * create_sqlite_storage(char *input_filename, char **output_filename)
 				}
 			}
 		}
-
-		// Open SQL database
-		sqlite3_open(":memory:"/*filename*/, &ret_val);
-		
-
-		// TODO This should be done on a file if we're not overwriting
-
-		// Test for schema
-		int table_count = 0;
-		sqlite3_exec(ret_val, "SELECT name FROM sqlite_master WHERE type='table';", &schema_check_callback, &table_count, NULL);
-
-		if (table_count <= 0)
-		{
-			for (int i = 0; i < 16; i++)
-			{
-				sqlite3_exec(ret_val, SQLITE_CREATE_BAKMEI_SCHEMA[i], NULL, NULL, NULL);
-			}
-		}
-		else
-		{
-			if (table_count != 16)
-			{
-				msg("We might have problems, there were %d tables in the database\n", table_count);
-			}
-		}
 	}
+	else
+		return 0;
 
-	return ret_val;
+	return 1;
 }
 
+int create_module(char *input_file)
 /*
 	It is expected that the input file as passed in includes all path separators.
 	At the moment, I will only parse by '\' as portability isn't my biggest concern.
 */
-int create_module(char *input_file)
 {
 	int module_id = 0;
 	char *module_name;
@@ -633,6 +803,15 @@ char *sql_escape(char *source)
 	int quote_counter = -1;
 	char *temp = source-1;
 
+	// Catch non-NULL empty strings
+	if (strlen(source) == 0)
+	{
+		char *empty = (char *)malloc(3);
+		empty[0] = '\''; empty[1] = '\''; empty[2] = 0;
+
+		return empty;
+	}
+
 	do
 	{		
 		temp++;
@@ -672,8 +851,6 @@ char *sql_escape(char *source)
 
 void generate_basic_block_branches(ea_t ea)
 {
-	//TODO: Stop at drefs
-	//DBG msg("[+] Creating branches for %08x.\n");
 	// Branches to
 	ea_t prev_code_ea = prev_not_tail(ea);
 	ea_t prev_ea = prev_code_ea;
@@ -709,7 +886,6 @@ void generate_basic_block_branches(ea_t ea)
 			global_branches[refpair] = 1;
 		}
 	}
-	//DBG msg("[+] Created branches for %08x.\n");
 }
 
 void create_function(func_t *current_function, int module_id)
@@ -920,7 +1096,6 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 	free(sql);
 	instruction_id = sqlite3_last_insert_rowid(db_ptr);
 
-	// TODO : THIS IS A MEMORY LEAK. FIX THAT.	
 	int * addr_ref = (int *) malloc(sizeof(int) * 3);
 	addr_ref[0] = instruction_id;
 	addr_ref[1] = basic_block_id;

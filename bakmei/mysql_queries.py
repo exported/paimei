@@ -208,7 +208,7 @@ cSELECT_BASIC_BLOCK_INSTRUCTION_REFERENCES  = "SELECT b.address, d.address FROM 
 
 ### FUNCTION ###
 
-cSELECT_FUNCTION                            = "SELECT f.name, f.module, f.start_address, f.end_address, i.id, f.exported FROM function AS f, import as i WHERE f.id = %d AND i.function = f.id;"
+cSELECT_FUNCTION                            = "SELECT f.name, f.module, f.start_address, f.end_address, i.id, f.exported FROM function AS f LEFT JOIN import as i ON f.id = %d AND i.function = f.id;"
 cSELECT_FRAME_INFO                          = "SELECT saved_reg_size, frame_size, ret_size, local_var_size, arg_size FROM frame_info WHERE function = %d;"
 cSELECT_ARGS                                = "SELECT name FROM function_variables WHERE function = %d AND flags = 1;"
 cSELECT_LOCAL_VARS                          = "SELECT name FROM function_variables WHERE function = %d AND flags = 2;"
@@ -234,7 +234,7 @@ cUPDATE_FUNCTION_LOCAL_VAR_SIZE             = "UPDATE frame_info SET local_var_s
 
 ### MODULE ###
 
-cSELECT_MODULE                              = "SELECT name, base, signature FROM module WHERE id = %d;"
+cSELECT_MODULE                              = "SELECT name, base, signature, comment FROM module WHERE id = %d;"
 cSELECT_MODULE_NUM_FUNCTIONS                = "SELECT count(*) FROM function WHERE module = %d;"
 cSELECT_MODULE_FUNCTIONS                    = "SELECT id FROM function WHERE module = %d"
 cSELECT_MODULE_IMPORTED_FUNCTIONS           = "SELECT id FROM function WHERE module = %d AND import IS NOT NULL"

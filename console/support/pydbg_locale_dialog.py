@@ -99,7 +99,7 @@ class pydbg_locale_dialog(wx.Dialog):
         self.parent.pydbg_host = host
         self.parent.pydbg_port = port
 
-        self.pydbg_set_locate(host, port)
+        self.pydbg_set_locale(host, port)
         self.Destroy()
 
     def pydbg_set_locale (self, host, port):

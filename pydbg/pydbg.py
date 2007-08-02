@@ -1925,9 +1925,7 @@ class pydbg:
 
         self._log("get_debug_privileges()")
 
-        current_process = kernel32.GetCurrentProcess()
-
-        if not advapi32.OpenProcessToken(current_process, TOKEN_ADJUST_PRIVILEGES, byref(h_token)):
+        if not advapi32.OpenProcessToken(kernel32.GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, byref(h_token)):
             raise pdx("OpenProcessToken()", True)
 
         if not advapi32.LookupPrivilegeValueA(0, "seDebugPrivilege", byref(luid)):
@@ -2711,7 +2709,10 @@ class pydbg:
 
         while length:
             if not kernel32.ReadProcessMemory(self.h_process, address, read_buf, length, byref(count)):
-                raise pdx("ReadProcessMemory(%08x, %d, read=%d)" % (address, length, count.value), True)
+                if not len(data):
+                    raise pdx("ReadProcessMemory(%08x, %d, read=%d)" % (address, length, count.value), True)
+                else:
+                    return data
 
             data    += read_buf.raw
             length  -= count.value

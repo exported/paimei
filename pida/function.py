@@ -189,6 +189,9 @@ class function (pgraph.graph, pgraph.node):
             # grab the name of the current local variable or argument.
             name = get_member_name(frame_struct.get_member(i).id)
 
+            if name == None:
+                continue
+
             if frame_offset > argument_boundary:
                 self.args[end_offset] = name
             else:

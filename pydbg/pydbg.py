@@ -29,7 +29,7 @@ import copy
 import signal
 import struct
 import pydasm
-
+import socket
 
 from my_ctypes  import *
 from defines    import *
@@ -40,6 +40,7 @@ try:
     kernel32 = windll.kernel32
     advapi32 = windll.advapi32
     ntdll    = windll.ntdll
+    iphlpapi = windll.iphlpapi
 except:
     kernel32 = CDLL("libmacdll.dylib")
     advapi32 = kernel32
@@ -581,7 +582,7 @@ class pydbg:
             Section 15.2
 
         Alternatively, you can register a custom handler to handle hits on the specific hw breakpoint slot.
-        
+
         *Warning: Setting hardware breakpoints during the first system breakpoint will be removed upon process
         continue.  A better approach is to set a software breakpoint that when hit will set your hardware breakpoints.
 
@@ -2532,8 +2533,8 @@ class pydbg:
 
         @see: page_guard_clear()
 
-        @rtype:     pydbg
-        @return:    Self
+        @rtype:  pydbg
+        @return: Self
         '''
 
         self._guards_active = True
@@ -2547,6 +2548,98 @@ class pydbg:
                 pass
 
         return self.ret_self()
+
+
+    ####################################################################################################################
+    def pid_to_port (self, pid):
+        '''
+        A helper function that enumerates the IPv4 endpoints for a given process ID.
+
+        @author:    Justin Seitz
+        @type  pid: Integer
+        @param pid: Process ID to find port information on.
+
+        @raise pdx: An exception is raised on failure
+        @rtype:     A list of tuples
+        @return:    A list of the protocol, bound address and listening port
+        '''
+
+        # local variables to hold all our necessary sweetness.
+        listening_port = None
+        bound_address  = None
+        protocol       = None
+        port_list      = []
+        tcp_table      = MIB_TCPTABLE_OWNER_PID()
+        udp_table      = MIB_UDPTABLE_OWNER_PID()
+        init_size      = c_int()
+
+        #### TCP ENDPOINTS
+
+        # the first run is to determine the sizing of the struct.
+        size_result = iphlpapi.GetExtendedTcpTable(byref(tcp_table),        \
+                                                   byref(init_size),        \
+                                                   False,                   \
+                                                   AF_INET,                 \
+                                                   TCP_TABLE_OWNER_PID_ALL, \
+                                                   0)
+
+        if not size_result:
+            raise pdx("Couldn't retrieve extended TCP information for PID: %d" % pid, True)
+
+        # retrieve the table of TCP_ROW structs, with the correct size this time.
+        reslt       = iphlpapi.GetExtendedTcpTable(byref(tcp_table),        \
+                                                   byref(init_size),        \
+                                                   False,                   \
+                                                   AF_INET,                 \
+                                                   TCP_TABLE_OWNER_PID_ALL, \
+                                                   0)
+
+        # step through the entries. we only want ports that have the listening flag set. snag the port, address and
+        # protocol tuple and add it to port_list.
+        for i in xrange(tcp_table.dwNumEntries):
+            if tcp_table.table[i].dwOwningPid == pid:
+                if tcp_table.table[i].dwState == MIB_TCP_STATE_LISTEN:
+                    listening_port = "%d" % socket.ntohs(tcp_table.table[i].dwLocalPort)
+                    bound_address  = socket.inet_ntoa(struct.pack("L", tcp_table.table[i].dwLocalAddr))
+                    protocol       = "TCP"
+
+                    port_list.append((protocol, bound_address, listening_port))
+
+        #### UDP ENDPOINTS
+
+        # NOTE: An application can bind a UDP port explicitly to send datagrams, this may not be 100% accurate
+        # so we only take into account those UDP sockets which are bound in a manner that allows datagrams on any
+        # interface.
+        init_size   = c_int(0)
+        size_resuld = iphlpapi.GetExtendedUdpTable(byref(udp_table),    \
+                                                   byref(init_size),    \
+                                                   False,               \
+                                                   AF_INET,             \
+                                                   UDP_TABLE_OWNER_PID, \
+                                                   0)
+
+        # retrieve the table of UDP_ROW structs.
+        if not size_result:
+            raise pdx("Couldn't retrieve extended UDP information for PID: %d" % pid, True)
+
+        result     = iphlpapi.GetExtendedUdpTable(byref(udp_table),    \
+                                                  byref(init_size),    \
+                                                  False,               \
+                                                  AF_INET,             \
+                                                  UDP_TABLE_OWNER_PID, \
+                                                  0)
+
+        for i in range(udp_table.dwNumEntries):
+            if udp_table.table[i].dwOwningPid == pid:
+                # if the local addr is 0 then it is a listening socket accepting datagrams.
+                if udp_table.table[i].dwLocalAddr == 0:
+                    listening_port = "%d" % socket.ntohs(udp_table.table[i].dwLocalPort)
+                    bound_address  = socket.inet_ntoa(struct.pack("L", udp_table.table[i].dwLocalAddr))
+                    protocol       = "UDP"
+
+                    port_list.append((protocol, bound_address, listening_port))
+
+        return port_list
 
 
     ####################################################################################################################

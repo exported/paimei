@@ -70,7 +70,7 @@ class PROCESSENTRY32(Structure):
         ('pcPriClassBase',      DWORD),
         ('dwFlags',             DWORD),
         ('szExeFile',           CHAR * 260),
-]
+    ]
 
 class MODULEENTRY32(Structure):
     _fields_ = [
@@ -84,7 +84,40 @@ class MODULEENTRY32(Structure):
         ("hModule",       DWORD),
         ("szModule",      CHAR * 256),
         ("szExePath",     CHAR * 260),
-]
+    ]
+
+class _MIB_TCPROW_OWNER_PID(Structure):
+    _fields_ = [
+        ("dwState",      DWORD),
+        ("dwLocalAddr",  DWORD),
+        ("dwLocalPort",  DWORD),
+        ("dwRemoteAddr", DWORD),
+        ("dwRemotePort", DWORD),
+        ("dwOwningPid",  DWORD),
+    ]
+
+class MIB_TCPTABLE_OWNER_PID(Structure):
+    _fields_ = [
+        ("dwNumEntries", DWORD),
+        ("table",        _MIB_TCPROW_OWNER_PID * 512)
+    ]
+
+    _anonymous_ = ("table",)
+
+class _MIB_UDPROW_OWNER_PID(Structure):
+    _fields_ = [
+        ("dwLocalAddr", DWORD),
+        ("dwLocalPort", DWORD),
+        ("dwOwningPid", DWORD)
+    ]
+
+class MIB_UDPTABLE_OWNER_PID(Structure):
+    _fields_ = [
+        ("dwNumEntries", DWORD),
+        ("table",        _MIB_UDPROW_OWNER_PID * 512)
+    ]
+
+    _anonymous_ = ("table",)
 
 ###
 ### manually declare various structures as needed.
@@ -94,7 +127,7 @@ class SYSDBG_MSR(Structure):
     _fields_ = [
         ("Address", c_ulong),
         ("Data",    c_ulonglong),
-]
+    ]
 
 ###
 ### manually declare various #define's as needed.
@@ -159,7 +192,15 @@ SE_PRIVILEGE_ENABLED           = 0x00000002
 SW_SHOW                        = 0x00000005
 THREAD_ALL_ACCESS              = 0x001F03FF
 TOKEN_ADJUST_PRIVILEGES        = 0x00000020
+UDP_TABLE_OWNER_PID            = 0x00000001
+VIRTUAL_MEM                    = 0x00003000
 
 # for NtSystemDebugControl()
 SysDbgReadMsr                  = 16
 SysDbgWriteMsr                 = 17
+
+# for mapping TCP ports and PIDs
+AF_INET                        = 0x00000002
+AF_INET6                       = 0x00000017
+MIB_TCP_STATE_LISTEN           = 0x00000002
+TCP_TABLE_OWNER_PID_ALL        = 0x00000005

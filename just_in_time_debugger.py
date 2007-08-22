@@ -1,5 +1,21 @@
 #!c:\\python\\python.exe
 
+"""
+PyDbg Just-In-Time Debugger
+Copyright (C) 2007 Pedram Amini <pedram.amini@gmail.com>
+
+$Id$
+
+To install:
+    Create a registry string value named "Debugger" with the following value:
+    
+        "c:\python\python.exe" "c:\vmfarm\shared\paimei\jit_test.py" %ld %ld
+
+    Under the following key:
+        
+        HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug
+"""
+
 import sys
 import utils
 

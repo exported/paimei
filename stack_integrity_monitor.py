@@ -1,46 +1,35 @@
 #!c:\python\python.exe
 
-# $Id$
-
 """
-speed ups:
+Stack Integrity Monitor
+Copyright (C) 2007 Pedram Amini <pedram.amini@gmail.com>
+
+$Id$
+
+Description:
+    A command line utility implemented in under 150 lines of Python code which provides an automated solution to the
+    task of tracking down the source of a stack overflow. The main reason stack overflows are exploitable is because
+    control information is stored in the same medium as volatile user-controllable data. If we can move or mirror the
+    call-chain "out of band", then we can verify the integrity of the stack at run-time. Skipping over the intricate
+    details, here is the high level overview of how the utility works:
+
+        1. Instantiate a debugger object and attach to the target program.
+        2. Set a breakpoint where we want the trace to start, this can be as simple as setting a break on recv().
+        3. Once the breakpoint is hit, set the active thread to single step.
+        4. When a CALL instruction is reached, copy the stack and return addresses to an internal "mirror" list.
+        5. When a RET instruction is reached, walk through the "mirror" list and verify that the values match the
+           actual stack.
+        6. When the last saved return address is reached, pop it off the internal "mirror" list.
+
+    If during the stack integrity check a mismatch is found, then not only do we know that a stack overflow has
+    occurred, but we know which functions frame the overflow originated in and we can pinpoint the cause of the
+    overflow. For more information see:
+
+        http://dvlabs.tippingpoint.com/blog/2007/05/02/pin-pointing-stack-smashes
+
+TODO (performance improvements):
     - replace disasm with byte checks
     - step over rep sequences
-
-turn this:
-    [INVALID]:41414141 Unable to disassemble at 41414141 from thread 568 caused access violation when attempting to read from 0x41414141
-    
-    CONTEXT DUMP
-      EIP: 41414141 Unable to disassemble at 41414141
-      EAX: 00000001 (         1) -> N/A
-      EBX: 0259eedc (  39448284) -> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA (stack)
-      ECX: 00000000 (         0) -> N/A
-      EDX: ffffffff (4294967295) -> N/A
-      EDI: 00000000 (         0) -> N/A
-      ESI: 0259f102 (  39448834) -> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA (stack)
-      EBP: 00000001 (         1) -> N/A
-      ESP: 0259e2d4 (  39445204) -> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA (stack)
-      +00: 41414141 (1094795585) -> N/A
-      +04: 41414141 (1094795585) -> N/A
-      +08: 41414141 (1094795585) -> N/A
-      +0c: 41414141 (1094795585) -> N/A
-      +10: 41414141 (1094795585) -> N/A
-      +14: 41414141 (1094795585) -> N/A
-    
-    disasm around:
-            0x41414141 Unable to disassemble
-
-into this:
-    0259fc24: TmRpcSrv.dll.65741721
-    0259e7b4: StRpcSrv.dll.65671190
-    0259e7a8: Eng50.dll.61181d8c
-    0259e790: Eng50.dll.611819a0
-    0259e564: Eng50.dll.61181a50
-    0259e2d0: Eng50.dll.61190fa4 --> 41414141
-    0259e03c: Eng50.dll.61190fd2
-    
-    STACK INTEGRITY VIOLATON AT: Eng50.dll.61194b8e
-    analysis took 35 seconds
 """
 
 import sys

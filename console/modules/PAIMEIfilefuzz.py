@@ -22,7 +22,8 @@
 @organization: www.tippingpoint.com
 '''
 
-import sys, os, thread, time, datetime, copy, struct
+import sys, os, thread, time, datetime, copy, struct, smtplib
+from email.MIMEText import MIMEText
 
 try:
     import win32api, win32con
@@ -251,6 +252,8 @@ class TestCase:
         evt = ThreadEventUpdate(pos = self.current_pos, stats = self.stats)
         wx.PostEvent(self.main_window, evt)
         
+        self.mail_exception("PAIMEI File Fuzz", self.program_name, logmessage)
+        
         try:
             pydbg.terminate_process()
         except pdx, x:
@@ -259,6 +262,18 @@ class TestCase:
         
         return DBG_CONTINUE
 
+    def mail_exception(self, sender, program_name, message):
+        msg = MIMEText(message)
+
+        msg["Subject"] = "%s %s" % (sender, self.current_file)
+        msg["From"]    = sender
+        msg["To"]      = "Fuzz Results"
+        
+        s = smtplib.SMTP()
+        s.connect("usut001.3com.com", 25)
+        s.sendmail("tsrt@tippingpoint.com", "fuzz.results@gmail.com", msg.as_string())
+        s.close()
+        
     def get_handler(self, extension, current_file):
         handler = ""
         

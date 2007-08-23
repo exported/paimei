@@ -233,7 +233,8 @@ class TestCase:
         crash_bin = utils.crash_binning.crash_binning()
         crash_bin.record_crash(pydbg)
         
-        logmessage = crash_bin.crash_synopsis()
+        logmessage = "\n\n[!] %s caused an access violation\n" % self.current_file
+        logmessage += crash_bin.crash_synopsis()
         
         self.stats["num_crashes"] += 1
         self.stats["last_crash_addr"] = "%08x" % pydbg.dbg.u.Exception.ExceptionRecord.ExceptionAddress
@@ -607,10 +608,21 @@ class PAIMEIfilefuzz(wx.Panel):
             self.logfile = open(self.destination + "\\" + "filefuzz.log", "a")
             
         self.msg("================================ %s ================================" % self.format_date())
-            
-        self.start = 0
-        self.end = self.file_list_pos + 1
         
+        if self.start_control.GetValue() == "":
+            self.start = 0
+        else:
+            self.start = int(self.start_control.GetValue())
+            
+        if self.end_control.GetValue() == "":
+            self.end = self.file_list_pos + 1
+        else:
+            self.end = int(self.end_control.GetValue())
+            
+        if self.start > self.end:
+            self.msgbox("Please make start < end jerk")
+            return(-1)
+
         self.file_list = []
         
         for count in xrange(self.start, self.end, 1):
@@ -837,7 +849,20 @@ class PAIMEIfilefuzz(wx.Panel):
             self.msg("Couldnt open %s" % fullpath)
             return -1
         
-        filecontents = filehandle.read()
+        try:
+            filecontents = filehandle.read()
+        except:
+            self.msg("Couldnt read %s" % fullpath)
+            
+            filehandle.close()
+            
+            return -1
+        
+        try:    
+            filehandle.close()
+        except:
+            self.msg("Couldnt close %s" % fullpath)
+            return -1
         
         try:
             filename = os.path.basename(fullpath)

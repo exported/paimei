@@ -23,7 +23,11 @@
 '''
 
 import sys, os, thread, time, datetime, copy, struct, smtplib
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEBase import MIMEBase
 from email.MIMEText import MIMEText
+from email.Utils import COMMASPACE, formatdate
+from email import Encoders
 
 try:
     import win32api, win32con
@@ -59,8 +63,15 @@ class TestCase:
         self.paused = False
         self.current_pos = 0
         self.current_file = ""
+        
         self.first_chance = self.main_window.first_chance
         self.show_window = self.main_window.show_window
+        
+        # Handles our email settings
+        self.email_on = self.main_window.email_on
+        self.email_to = self.main_window.email_to
+        self.email_from = self.main_window.email_from
+        self.email_server = self.main_window.email_server
         
     def Start(self):
         if not self.program_name and dynamic:
@@ -252,7 +263,8 @@ class TestCase:
         evt = ThreadEventUpdate(pos = self.current_pos, stats = self.stats)
         wx.PostEvent(self.main_window, evt)
         
-        self.mail_exception("PAIMEI File Fuzz", self.program_name, logmessage)
+        if self.email_on:
+            self.mail_exception(logmessage)
         
         try:
             pydbg.terminate_process()
@@ -262,17 +274,27 @@ class TestCase:
         
         return DBG_CONTINUE
 
-    def mail_exception(self, sender, program_name, message):
-        msg = MIMEText(message)
-
-        msg["Subject"] = "%s %s" % (sender, self.current_file)
-        msg["From"]    = sender
-        msg["To"]      = "Fuzz Results"
+    def mail_exception(self, message):
+        msg = MIMEMultipart()
+        msg.attach(MIMEText(message))
+        
+        msg["Subject"] = "PAIMEI File Fuzz %s" % (self.current_file)
+        msg["From"]    = self.email_from
+        msg["To"]      = self.email_to
+        msg["Date"]    = formatdate(localtime=True)
+        
+        part = MIMEBase('application', "octet-stream")
+        part.set_payload( open(self.current_file,"rb").read() )
+        Encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment; filename="%s"'
+                       % os.path.basename(self.current_file))
+        msg.attach(part)
         
         s = smtplib.SMTP()
-        s.connect("usut001.3com.com", 25)
-        s.sendmail("tsrt@tippingpoint.com", "fuzz.results@gmail.com", msg.as_string())
+        s.connect(self.email_server, 25)
+        s.sendmail(self.email_from, self.email_to, msg.as_string())
         s.close()
+        
         
     def get_handler(self, extension, current_file):
         handler = ""
@@ -324,6 +346,12 @@ class PAIMEIfilefuzz(wx.Panel):
     running_time         = "00:00:00"
     end_time             = "00:00:00"
     logfile              = ""
+
+    # This handles the setup of the email
+    email_on             = True
+    email_from           = "tsrt@tippingpoint.com"
+    email_to             = "fuzz.results@gmail.com"
+    email_server         = "usut001.3com.com"
     
     def __init__(self, *args, **kwds):
         # begin wxGlade: PAIMEIfilefuzz.__init__

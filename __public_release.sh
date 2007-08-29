@@ -3,7 +3,6 @@
 rm -f ollydbg_connector/paimei_ollydbg_connector.ncb
 
 rm -rf deprecated
-rm -rf fuzz_assist
 rm -rf docs/PAIMEIpstalker_flash_demo
 
 find ./ -name .svn -exec rm -rf {} \;

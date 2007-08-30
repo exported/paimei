@@ -33,7 +33,7 @@ import time
 
 # globals.
 try:
-    USAGE            = "file_fuzz_ticker.py <parent program> <target file> <offending offset> <fuzz width>\n"
+    USAGE            = "file_fuzz_ticker.py <parent program> <target file> <offending offset (dec.)> <fuzz width>\n"
     crash_bin        = utils.crash_binning.crash_binning()
     fuzz_library     = []
     max_num          = None
@@ -43,7 +43,7 @@ try:
     # argument parsing.
     parent_program   = sys.argv[1]
     target_file      = sys.argv[2]
-    offending_offset = int(sys.argv[3], 16)
+    offending_offset = int(sys.argv[3])
     fuzz_width       = int(sys.argv[4])
     extension        = "." + target_file.rsplit(".")[-1]
 except:

@@ -1047,16 +1047,30 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 	unsigned char bytes[20]; // Max Size in the database
 
 	// Get the raw bytes
-	for (int counter = 0; (address + counter) < end_address; counter++)
+
+	// Allocate 2 chars per byte, plus null terminator
+	char *byte_string = (char *)malloc((end_address - address)*2 + 2 /* SQL quotes */ + 1/*Z*/);
+
+	byte_string[0] = '\'';
+
+	int counter = 0;
+	for (counter = 0; (address + counter) < end_address; counter++)
 	{
 		bytes[counter] = get_byte(address+counter);
 		// TODO: may be best to convert to the string form here.
+		
+		sprintf_s((byte_string+1) + (counter * 2), 4 /*size in bytes*/, "%02x", bytes[counter]);
 
 		if (counter > 20)
 		{
 			msg("0x%08x: Check instruction here for long bytes\n", address);
 		}
 	}
+
+	// Close off the string. The +1 is to keep in mind the original quote, as the counter on it's own 
+	// should be 1 more character over.
+	byte_string[(counter*2)+1] = '\'';
+	byte_string[(counter*2)+2] = 0;
 
 	comment_size = get_cmt(address, 0, comment, 255);
 
@@ -1082,13 +1096,15 @@ void create_instruction(ea_t address, int basic_block_id, int function_id, int m
 					+ 10 /* max module id size */
 					+ 10 /* max function idsize */ 
 					+ 10 /* max basic_block_id size */
-					+ 20 /* max bytes size ?? escape later */
+					+ 20 /* max bytes size ?? escape later*/
+					+ 2  /* quotes for byte string */
 					+ 1 /*Z*/;
 
 	char *sql = (char *) malloc(sql_size);
 		
-	sprintf_s(sql, sql_size, INSERT_INSTRUCTION, address, basic_block_id, function_id, module_id, safe_mnem, "'FFFF'");
+	sprintf_s(sql, sql_size, INSERT_INSTRUCTION, address, basic_block_id, function_id, module_id, safe_mnem, byte_string);
 	free(safe_mnem); // Done with this, clean it up.
+	free(byte_string); // Clean up the byte string, as it's no longer needed
 
 	// Execute the sql statement
 	char *errmsg;

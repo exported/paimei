@@ -21,6 +21,7 @@ import binascii
 
 from defines        import *
 from sql_singleton  import *
+from operand        import *
 
 class instruction(object):
     '''
@@ -435,7 +436,7 @@ class instruction(object):
         ret_val = self.mnem
 
         for oper in self.operands:
-            ret_val += " " + oper + ","
+            ret_val += " " + oper.__str__() + "," # TODO: find why __str__ doesn't automatically convert
             
         ret_val = ret_val[:-1]
 

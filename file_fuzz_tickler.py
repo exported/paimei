@@ -20,6 +20,7 @@ Description:
           paths. explore with crash_bin_explorer.py utility
 """
 
+from ctypes        import *
 from pydbg         import *
 from pydbg.defines import *
 
@@ -34,6 +35,7 @@ import time
 # globals.
 try:
     USAGE            = "file_fuzz_ticker.py <parent program> <target file> <offending offset (dec.)> <fuzz width>\n"
+    KILL_DELAY       = 5
     crash_bin        = utils.crash_binning.crash_binning()
     fuzz_library     = []
     max_num          = None
@@ -43,7 +45,7 @@ try:
     # argument parsing.
     parent_program   = sys.argv[1]
     target_file      = sys.argv[2]
-    offending_offset = int(sys.argv[3])
+    offending_offset = int(sys.argv[3]) + 1
     fuzz_width       = int(sys.argv[4])
     extension        = "." + target_file.rsplit(".")[-1]
 except:
@@ -103,16 +105,39 @@ def do_pydbg_dance (the_file):
     dbg.set_callback(EXCEPTION_ACCESS_VIOLATION, av_handler)
     dbg.load(parent_program, the_file, show_window=False)
 
-    thread.start_new_thread(threaded_killer, (1, dbg))
+    thread.start_new_thread(threaded_killer, (KILL_DELAY, dbg))
 
     dbg.run()
+
+    # kill all excel remnants.
+    kill_excels()
+
+
+def kill_excels ():
+    remaining = True
+    dbg       = pydbg()
+    dbg.get_debug_privileges()
+
+    # kill all excel remnants.
+    while remaining:
+        remaining = False
+
+        for pid, proc in dbg.enumerate_processes():
+            if proc.lower() == "excel.exe":
+                dbg.h_process = dbg.open_process(pid)
+                dbg.terminate_process()
+                remaining = True
+
+    # reset office registry status (HKEY_CURRENT_USER / HKEY_LOCAL_MACHINE)
+    windll.shlwapi.SHDeleteKeyA(0x80000001, "Software\\Microsoft\\Office\\11.0\\Excel\\Resiliency")
+    windll.shlwapi.SHDeleteKeyA(0x80000002, "Software\\Microsoft\\Office\\11.0\\Excel\\Resiliency")
 
 
 ########################################################################################################################
 
 print "[*] tickling target file %s" % target_file
 print "[*] through %s" % parent_program
-print "[*] at mutant offset %d (0x%x)" % (offending_offset, offending_offset)
+print "[*] at mutant offset %d (0x%x)" % (offending_offset-1, offending_offset-1)
 print "[*] with fuzz width %d" % fuzz_width
 
 # initialize our fuzz library based on fuzz width.
@@ -147,11 +172,20 @@ for value in fuzz_library:
     bottom = data[ offending_offset - 1 + fuzz_width:]
     middle = struct.pack(">" + struct_lengths[fuzz_width], value)
 
-    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-    tmp_file.write(top + middle + bottom)
-    tmp_file.close()
+    worked = False
 
+    while not worked:
+        try:
+            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+            tmp_file.write(top + middle + bottom)
+            tmp_file.close()
+            worked = True
+        except:
+            kill_excels()
+
+    assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
+
     do_pydbg_dance("fuzz_tickle_tmp" + extension)
 
     i       += 1
@@ -173,11 +207,20 @@ for value in fuzz_library:
     bottom = data[ new_offset - 1 + fuzz_width:]
     middle = struct.pack(">" + struct_lengths[fuzz_width], value)
 
-    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-    tmp_file.write(top + middle + bottom)
-    tmp_file.close()
+    worked = False
 
+    while not worked:
+        try:
+            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+            tmp_file.write(top + middle + bottom)
+            tmp_file.close()
+            worked = True
+        except:
+            kill_excels()
+
+    assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
+
     do_pydbg_dance("fuzz_tickle_tmp" + extension)
 
     i       += 1
@@ -199,11 +242,20 @@ for value in fuzz_library:
     bottom = data[ new_offset - 1 + fuzz_width:]
     middle = struct.pack(">" + struct_lengths[fuzz_width], value)
 
-    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-    tmp_file.write(top + middle + bottom)
-    tmp_file.close()
+    worked = False
 
+    while not worked:
+        try:
+            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+            tmp_file.write(top + middle + bottom)
+            tmp_file.close()
+            worked = True
+        except:
+            kill_excels()
+
+    assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
+
     do_pydbg_dance("fuzz_tickle_tmp" + extension)
 
     i       += 1
@@ -228,11 +280,20 @@ for i in xrange(100):
         middle += chr(byte)
         extra  += "%02x " % byte
 
-    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-    tmp_file.write(top + middle + bottom)
-    tmp_file.close()
+    worked = False
 
+    while not worked:
+        try:
+            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+            tmp_file.write(top + middle + bottom)
+            tmp_file.close()
+            worked = True
+        except:
+            kill_excels()
+
+    assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
+
     do_pydbg_dance("fuzz_tickle_tmp" + extension)
 
     crashes = 0

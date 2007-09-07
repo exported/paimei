@@ -376,10 +376,12 @@ class PAIMEIfilefuzz(wx.Panel):
         self.fuzz_sizer_staticbox = wx.StaticBox(self.main_window_pane, -1, "Fuzz")
         
         self.program_name_label = wx.StaticText(self.main_window_pane, -1, "Program Name")
-        self.program_name_control = filebrowse.FileBrowseButton(self.main_window_pane, -1, size=(500, -1), labelText = "")
+        self.program_name_control = filebrowse.FileBrowseButtonWithHistory(self.main_window_pane, -1, size=(500, -1), labelText = "")
+        self.program_name_control.SetHistory([])
         
         self.source_name_label = wx.StaticText(self.main_window_pane, -1, "Source File Name")
-        self.source_name_control = filebrowse.FileBrowseButton(self.main_window_pane, -1, size=(500, -1), labelText = "")
+        self.source_name_control = filebrowse.FileBrowseButtonWithHistory(self.main_window_pane, -1, size=(500, -1), labelText = "")
+        self.source_name_control.SetHistory([])
         
         self.destination_label = wx.StaticText(self.main_window_pane, -1, "Destination Directory")
         self.destination_control = filebrowse.DirBrowseButton(self.main_window_pane, -1, size=(500, -1), labelText = "")
@@ -590,6 +592,11 @@ class PAIMEIfilefuzz(wx.Panel):
             self.msgbox("Source file does not exist")
             return -1
         
+        # We store new history for control
+        history = self.source_name_control.GetHistory()
+        history.append(self.source_name)
+        self.source_name_control.SetHistory(history)
+        
         self.destination = self.destination_control.GetValue()
         if not os.path.isdir(self.destination):
             self.msgbox("Destination directory does not exist")
@@ -644,6 +651,12 @@ class PAIMEIfilefuzz(wx.Panel):
         self.paused = False
         
         self.program_name = self.program_name_control.GetValue()
+        
+        # We store new history for control
+        history = self.program_name_control.GetHistory()
+        history.append(self.program_name)
+        self.program_name_control.SetHistory(history)
+        
         self.timeout = int(self.timer_control.GetValue())
         
         # This should be an option, but since we are moving to the new ui i wont waste my time

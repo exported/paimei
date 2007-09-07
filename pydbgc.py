@@ -33,20 +33,22 @@ class PydbgClient:
         self.breakpoints = []
 
         self.commands = []
-        self.commands.append({"command": "bp", "description": "Set a breakpoint (ex: bp 7ffdb000)", "handler": self.breakpoint})
-        self.commands.append({"command": "bl", "description": "List breakpoints", "handler": self.list_breakpoints})
-        self.commands.append({"command": "bc", "description": "Clear breakpoints", "handler": self.clear_breakpoints})
-        self.commands.append({"command": "bd", "description": "Delete a breakpoint (ex: db 2)", "handler": self.delete_breakpoint})
-        self.commands.append({"command": "s", "description": "Single Step", "handler": self.single_step})
-        self.commands.append({"command": "sb", "description": "Single Step Backwards", "handler": self.step_back})
-        self.commands.append({"command": "r", "description": "Modify a register (ex: r eax=10)", "handler": self.register})
-        self.commands.append({"command": "dd", "description": "Dump Data", "handler": self.dump_data})
-        self.commands.append({"command": "dc", "description": "Dump Data Charactes", "handler": self.dump_data_characters})
-        self.commands.append({"command": "k", "description": "Call Stack", "handler": self.call_stack})
-        self.commands.append({"command": "seh", "description": "Current SEH", "handler": self.seh})
-        self.commands.append({"command": "g", "description": "Resume Execution", "handler": self.go})
-        self.commands.append({"command": "quit", "description": "Quit", "handler": self.quit})
-        self.commands.append({"command": "help", "description": "Help", "handler": self.print_help})
+        self.commands.append({"command": "bc",   "description": "Clear breakpoints",                  "handler": self.clear_breakpoints})
+        self.commands.append({"command": "bd",   "description": "Delete a breakpoint (ex: db 2)",     "handler": self.delete_breakpoint})
+        self.commands.append({"command": "bl",   "description": "List breakpoints",                   "handler": self.list_breakpoints})
+        self.commands.append({"command": "bp",   "description": "Set a breakpoint (ex: bp 7ffdb000)", "handler": self.breakpoint})
+        self.commands.append({"command": "dc",   "description": "Dump Data Charactes",                "handler": self.dump_data_characters})
+        self.commands.append({"command": "dd",   "description": "Dump Data",                          "handler": self.dump_data})
+        self.commands.append({"command": "g",    "description": "Resume Execution",                   "handler": self.go})
+        self.commands.append({"command": "h",    "description": "Help",                               "handler": self.print_help})
+        self.commands.append({"command": "help", "description": "Help",                               "handler": self.print_help})
+        self.commands.append({"command": "k",    "description": "Call Stack",                         "handler": self.call_stack})
+        self.commands.append({"command": "quit", "description": "Quit",                               "handler": self.quit})
+        self.commands.append({"command": "r",    "description": "Modify a register (ex: r eax=10)",   "handler": self.register})
+        self.commands.append({"command": "s",    "description": "Single Step",                        "handler": self.single_step})
+        self.commands.append({"command": "sb",   "description": "Single Step Backwards",              "handler": self.step_back})
+        self.commands.append({"command": "seh",  "description": "Current SEH",                        "handler": self.seh})
+        self.commands.append({"command": "u",    "description": "Disassemble (ex: u 7ffdb000",        "handler": self.disassemble})
 
 
     ####################################################################################################################
@@ -142,6 +144,11 @@ class PydbgClient:
         7c901230 cc              int     3
         '''
 
+        try:
+            module = self.dbg.addr_to_module(address).szModule
+        except:
+            module = "N/A"
+
         sys.stdout.write("\n")
         sys.stdout.write("eax=%08x ebx=%08x ecx=%08x edx=%08x esi=%08x edi=%08x\n" %
         (self.get_reg_value("eax"), self.get_reg_value("ebx"), self.get_reg_value("ecx"),
@@ -149,7 +156,7 @@ class PydbgClient:
         sys.stdout.write("eip=%08x esp=%08x ebp=%08x\n\n" %
         (self.get_reg_value("eip"), self.get_reg_value("esp"), self.get_reg_value("ebp")))
         sys.stdout.write("%s!%08x  %s\n\n" %
-        (self.dbg.addr_to_module(address).szModule, address, self.dbg.disasm(address)))
+        (module, address, self.dbg.disasm(address)))
 
         return 0
 
@@ -184,6 +191,19 @@ class PydbgClient:
 
         self.dbg.bp_set(address, restore=True, handler=self.breakpoint_handler)
         self.breakpoints.append(address)
+
+        return 0
+
+
+    ####################################################################################################################
+    def disassemble(self, *arguments, **keywords):
+        try:
+            address = string.atol(arguments[0], 16)
+        except:
+            sys.stdout.write("Syntax error\n")
+            return -1
+
+        sys.stdout.write(self.dbg.disasm(address))
 
         return 0
 

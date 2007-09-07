@@ -1,4 +1,4 @@
-#!c:\\python\\python.exe
+#!c:\python\python.exe
 
 """
 File Fuzz Tickler
@@ -20,22 +20,21 @@ Description:
           paths. explore with crash_bin_explorer.py utility
 """
 
-from ctypes        import *
-from pydbg         import *
-from pydbg.defines import *
-
-import utils
-import sys
 import os
+import sys
+import utils
 import struct
 import random
-import thread
-import time
+
+from pydbg import *
+from pydbg.defines import *
 
 # globals.
 try:
     USAGE            = "file_fuzz_ticker.py <parent program> <target file> <offending offset (dec.)> <fuzz width>\n"
-    KILL_DELAY       = 5
+    PUSH             = "\x68"
+    CALL             = "\xE8"
+    KILL_DELAY       = 5000     # milliseconds
     crash_bin        = utils.crash_binning.crash_binning()
     fuzz_library     = []
     max_num          = None
@@ -45,7 +44,7 @@ try:
     # argument parsing.
     parent_program   = sys.argv[1]
     target_file      = sys.argv[2]
-    offending_offset = int(sys.argv[3]) + 1
+    offending_offset = int(sys.argv[3])
     fuzz_width       = int(sys.argv[4])
     extension        = "." + target_file.rsplit(".")[-1]
 except:
@@ -65,6 +64,7 @@ if not os.path.exists(target_file):
     sys.exit(1)
 
 
+########################################################################################################################
 def add_integer_boundaries (integer):
     '''
     Add the supplied integer and border cases to the integer fuzz heuristics library.
@@ -89,51 +89,64 @@ def av_handler (dbg):
     return DBG_CONTINUE
 
 
-def threaded_killer (deadline, dbg):
-    time.sleep(deadline)
+def bp_handler (dbg):
+    # on initial break-in, create a new thread in the target process which executes:
+    #   Sleep(sleep_time);
+    #   ExitProcess(69);
+    if dbg.first_breakpoint:
+        insert_threaded_timer(dbg)
 
-    try:
-        dbg.terminate_process()
-    except:
-        pass
+    # this shouldn't happen, but i'd like to know if it does.
+    else:
+        raw_input("how did we get here?....")
+
+    return DBG_CONTINUE
 
 
-def do_pydbg_dance (the_file):
-    global parent_program
-
+def do_pydbg_dance (proggie, the_file):
     dbg = pydbg()
+    dbg.load(proggie, the_file, show_window=False)
     dbg.set_callback(EXCEPTION_ACCESS_VIOLATION, av_handler)
-    dbg.load(parent_program, the_file, show_window=False)
-
-    thread.start_new_thread(threaded_killer, (KILL_DELAY, dbg))
+    dbg.set_callback(EXCEPTION_BREAKPOINT,       bp_handler)
 
     dbg.run()
 
-    # kill all excel remnants.
-    kill_excels()
 
+def insert_threaded_timer (dbg):
+    # resolve the addresses of kernel32.Sleep() and kernel32.ExitProcess()
+    Sleep       = dbg.func_resolve_debuggee("kernel32", "Sleep")
+    ExitProcess = dbg.func_resolve_debuggee("kernel32", "ExitProcess")
 
-def kill_excels ():
-    remaining = True
-    dbg       = pydbg()
-    dbg.get_debug_privileges()
+    # allocate some memory for our instructions.
+    thread_address = address = dbg.virtual_alloc(None, 512, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
 
-    # kill all excel remnants.
-    while remaining:
-        remaining = False
+    # assemble and write: PUSH sleep_time
+    assembled = PUSH + struct.pack("<L", KILL_DELAY)
+    dbg.write(address, assembled)
+    address += len(assembled)
 
-        for pid, proc in dbg.enumerate_processes():
-            if proc.lower() == "excel.exe":
-                dbg.h_process = dbg.open_process(pid)
-                dbg.terminate_process()
-                remaining = True
+    # assemble and write: CALL kernel32.Sleep()
+    relative_address = (Sleep - address - 5)  # -5 for the length of the CALL instruction
+    assembled = CALL + struct.pack("<L", relative_address)
+    dbg.write(address, assembled)
+    address += len(assembled)
 
-    # reset office registry status (HKEY_CURRENT_USER / HKEY_LOCAL_MACHINE)
-    windll.shlwapi.SHDeleteKeyA(0x80000001, "Software\\Microsoft\\Office\\11.0\\Excel\\Resiliency")
-    windll.shlwapi.SHDeleteKeyA(0x80000002, "Software\\Microsoft\\Office\\11.0\\Excel\\Resiliency")
+    # assemble and write: PUSH 69 (exit code)
+    assembled = PUSH + struct.pack("<L", 69)
+    dbg.write(address, assembled)
+    address += len(assembled)
 
+    # assemble and write: CALL kernel32.ExitProcess()
+    relative_address = (ExitProcess - address - 5)  # -5 for the length of the CALL instruction
+    assembled = CALL + struct.pack("<L", relative_address)
+    dbg.write(address, assembled)
+    address += len(assembled)
 
+    # start a remote thread
+    if not windll.kernel32.CreateRemoteThread(dbg.h_process, None, 0, thread_address, 0, 0, None):
+        raise pdx("CreateRemoteThread() failed.", True)
 ########################################################################################################################
+
 
 print "[*] tickling target file %s" % target_file
 print "[*] through %s" % parent_program
@@ -155,38 +168,37 @@ add_integer_boundaries(max_num)
 print "[*] fuzz library initialized with %d entries" % len(fuzz_library)
 
 # add the base line crash to the crash bin.
-do_pydbg_dance(target_file)
+extra  = "BASELINE"
+do_pydbg_dance(parent_program, target_file)
 
 # read and store original data from target file.
 fh   = open(target_file, "rb")
 data = fh.read()
 fh.close()
 
+
+###########################################################
 # fuzz through all possible fuzz values at offending offset.
+###
+
 print "[*] fuzzing at offending offset"
 i = 0
 
 for value in fuzz_library:
     extra  = "offending: 0x%x" % value
-    top    = data[:offending_offset - 1]
-    bottom = data[ offending_offset - 1 + fuzz_width:]
+    top    = data[:offending_offset]
+    bottom = data[ offending_offset + fuzz_width:]
     middle = struct.pack(">" + struct_lengths[fuzz_width], value)
 
-    worked = False
-
-    while not worked:
-        try:
-            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-            tmp_file.write(top + middle + bottom)
-            tmp_file.close()
-            worked = True
-        except:
-            kill_excels()
+    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+    tmp_file.write(top + middle + bottom)
+    tmp_file.close()
 
     assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
+    assert((top + middle + bottom)[offending_offset] == middle)
 
-    do_pydbg_dance("fuzz_tickle_tmp" + extension)
+    do_pydbg_dance(parent_program, "fuzz_tickle_tmp" + extension)
 
     i       += 1
     crashes  = 0
@@ -196,27 +208,24 @@ for value in fuzz_library:
 
     print "\tcompleted %d of %d in this set (bins: %d, crashes: %d)\r" % (i, len(fuzz_library), len(crash_bin.bins), crashes),
 
+
+###########################################################
 # now fuzz through all possible fuzz values at offending offset - fuzz_width.
+###
+
 print "\n[*] fuzzing at offending offset - fuzz width"
 i = 0
 new_offset = offending_offset - fuzz_width
 
 for value in fuzz_library:
     extra  = "offending-fuzz_width: 0x%x" % value
-    top    = data[:new_offset - 1]
-    bottom = data[ new_offset - 1 + fuzz_width:]
+    top    = data[:new_offset]
+    bottom = data[ new_offset + fuzz_width:]
     middle = struct.pack(">" + struct_lengths[fuzz_width], value)
 
-    worked = False
-
-    while not worked:
-        try:
-            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-            tmp_file.write(top + middle + bottom)
-            tmp_file.close()
-            worked = True
-        except:
-            kill_excels()
+    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+    tmp_file.write(top + middle + bottom)
+    tmp_file.close()
 
     assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
@@ -231,27 +240,24 @@ for value in fuzz_library:
 
     print "\tcompleted %d of %d in this set (bins: %d, crashes: %d)\r" % (i, len(fuzz_library), len(crash_bin.bins), crashes),
 
+
+###########################################################
 # now fuzz through all possible fuzz values at offending offset + fuzz_width.
+###
+
 print "\n[*] fuzzing at offending offset + fuzz width"
 i = 0
 new_offset = offending_offset + fuzz_width
 
 for value in fuzz_library:
     extra  = "offending+fuzz_width: 0x%x" % value
-    top    = data[:new_offset - 1]
-    bottom = data[ new_offset - 1 + fuzz_width:]
+    top    = data[:new_offset]
+    bottom = data[ new_offset + fuzz_width:]
     middle = struct.pack(">" + struct_lengths[fuzz_width], value)
 
-    worked = False
-
-    while not worked:
-        try:
-            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-            tmp_file.write(top + middle + bottom)
-            tmp_file.close()
-            worked = True
-        except:
-            kill_excels()
+    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+    tmp_file.write(top + middle + bottom)
+    tmp_file.close()
 
     assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
@@ -266,13 +272,17 @@ for value in fuzz_library:
 
     print "\tcompleted %d of %d in this set (bins: %d, crashes: %d)\r" % (i, len(fuzz_library), len(crash_bin.bins), crashes),
 
+
+###########################################################
 # now do some random fuzzing around the offending offset.
+###
+
 print "\n[*] fuzzing with random data at offending offset +/- 8"
 
 for i in xrange(100):
     extra  = "random: "
-    top    = data[:offending_offset - 1 - 8]
-    bottom = data[ offending_offset - 1 + 8:]
+    top    = data[:offending_offset - 8]
+    bottom = data[ offending_offset + 8:]
     middle = ""
 
     for o in xrange(16):
@@ -280,21 +290,14 @@ for i in xrange(100):
         middle += chr(byte)
         extra  += "%02x " % byte
 
-    worked = False
-
-    while not worked:
-        try:
-            tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
-            tmp_file.write(top + middle + bottom)
-            tmp_file.close()
-            worked = True
-        except:
-            kill_excels()
+    tmp_file = open("fuzz_tickle_tmp" + extension, "wb+")
+    tmp_file.write(top + middle + bottom)
+    tmp_file.close()
 
     assert(os.stat("fuzz_tickle_tmp" + extension).st_size != 0)
     assert(len(top + middle + bottom) == len(data))
 
-    do_pydbg_dance("fuzz_tickle_tmp" + extension)
+    do_pydbg_dance(parent_program, "fuzz_tickle_tmp" + extension)
 
     crashes = 0
 
@@ -303,12 +306,17 @@ for i in xrange(100):
 
     print "\tcompleted %d of %d in this set (bins: %d, crashes: %d)\r" % (i, len(fuzz_library), len(crash_bin.bins), crashes),
 
+
+###########################################################
 # print synopsis.
+###
+
 crashes = 0
 for bin in crash_bin.bins.itervalues():
     crashes += len(bin)
 
-print "\n[*] fuzz tickling complete."
+print
+print "[*] fuzz tickling complete."
 print "[*] crash bin contains %d crashes across %d containers" % (crashes, len(crash_bin.bins))
 print "[*] saving crash bin to file_fuzz_tickler.crash_bin"
 

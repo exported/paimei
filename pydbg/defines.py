@@ -102,7 +102,6 @@ class MIB_TCPTABLE_OWNER_PID(Structure):
         ("table",        _MIB_TCPROW_OWNER_PID * 512)
     ]
 
-    _anonymous_ = ("table",)
 
 class _MIB_UDPROW_OWNER_PID(Structure):
     _fields_ = [
@@ -117,7 +116,6 @@ class MIB_UDPTABLE_OWNER_PID(Structure):
         ("table",        _MIB_UDPROW_OWNER_PID * 512)
     ]
 
-    _anonymous_ = ("table",)
 
 ###
 ### manually declare various structures as needed.

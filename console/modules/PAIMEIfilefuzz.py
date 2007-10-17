@@ -681,7 +681,8 @@ class PAIMEIfilefuzz(wx.Panel):
 
         self.file_list = []
         
-        for count in xrange(self.start, self.end, 1):
+        #for count in xrange(self.start, self.end, 1):
+        for count in range(self.file_list_box_control.GetCount()):
             testcase = {}
             testcase[count] = self.file_list_box_control.GetString(count)
             self.file_list.append(testcase)

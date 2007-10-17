@@ -329,7 +329,7 @@ class PAIMEIfilefuzz(wx.Panel):
     running              = False
     paused               = False
     first_chance         = True
-    show_window          = False
+    show_window          = True
     
     file_list_pos        = 0
     byte_length          = 0

@@ -22,7 +22,7 @@
 @organization: www.tippingpoint.com
 '''
 
-import sys, os, thread, time, datetime, copy, struct, smtplib
+import sys, os, thread, time, datetime, copy, struct, smtplib, shutil
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.MIMEText import MIMEText
@@ -55,6 +55,7 @@ class TestCase:
         self.program_name = program_name
         self.program_type = ""
         self.program_cache = {}
+        self.crash_dir = 'crashes'
         self.timeout = timeout
         self.file_list = file_list
         self.pydbg = ""
@@ -244,7 +245,21 @@ class TestCase:
         
         crash_bin = utils.crash_binning.crash_binning()
         crash_bin.record_crash(pydbg)
+
+        # Lets move the file to our crashes directory
+        if not os.path.isdir(self.crash_dir):
+            try:
+                os.mkdir(self.crash_dir)
+            except:
+                evt = ThreadEventLog(msg = "Could not create crash directory")
+                wx.PostEvent(self.main_window, evt)
         
+        try:
+            shutil.copyfile(self.current_file, self.crash_dir + "\\" + self.current_file)
+        except:
+            evt = ThreadEventLog(msg = "Could not copy %s to %s" % (self.current_file, self.crash_dir + "\\" + self.current_file))
+            wx.PostEvent(self.main_window, evt)
+                
         logmessage = "\n\n[!] %s caused an access violation\n" % self.current_file
         logmessage += crash_bin.crash_synopsis()
         

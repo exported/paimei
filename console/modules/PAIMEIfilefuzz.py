@@ -55,7 +55,7 @@ class TestCase:
         self.program_name = program_name
         self.program_type = ""
         self.program_cache = {}
-        self.crash_dir = 'crashes'
+        self.crash_dir = self.main_window.destination + '\\' + 'crashes'
         self.timeout = timeout
         self.file_list = file_list
         self.pydbg = ""
@@ -255,9 +255,9 @@ class TestCase:
                 wx.PostEvent(self.main_window, evt)
         
         try:
-            shutil.copyfile(self.current_file, self.crash_dir + "\\" + self.current_file)
+            shutil.copyfile(self.main_window.destination + '\\' + self.current_file, self.crash_dir + "\\" + self.current_file)
         except:
-            evt = ThreadEventLog(msg = "Could not copy %s to %s" % (self.current_file, self.crash_dir + "\\" + self.current_file))
+            evt = ThreadEventLog(msg = "Could not copy %s to %s" % (self.main_window.destination + '\\' + self.current_file, self.crash_dir + "\\" + self.current_file))
             wx.PostEvent(self.main_window, evt)
                 
         logmessage = "\n\n[!] %s caused an access violation\n" % self.current_file
@@ -581,7 +581,7 @@ class PAIMEIfilefuzz(wx.Panel):
         self.destination = self.destination_control.GetValue()
         if not os.path.isdir(self.destination):
             self.msgbox("Destination directory does not exist")
-            return(-1)
+            return -1
         
         while self.file_list_box_control.GetCount() > 0:
             self.file_list_box_control.Delete(0)

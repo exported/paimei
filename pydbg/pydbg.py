@@ -118,6 +118,7 @@ class pydbg:
         self.exception_address        = None      # from dbg.u.Exception.ExceptionRecord.ExceptionAddress
         self.write_violation          = None      # from dbg.u.Exception.ExceptionRecord.ExceptionInformation[0]
         self.violation_address        = None      # from dbg.u.Exception.ExceptionRecord.ExceptionInformation[1]
+        self.exception_code           = None      # from dbg.u.Exception.ExceptionRecord.ExceptionCode
 
         self.breakpoints              = {}        # internal breakpoint dictionary, keyed by address
         self.memory_breakpoints       = {}        # internal memory breakpoint dictionary, keyed by base address
@@ -855,6 +856,7 @@ class pydbg:
             self.exception_address = dbg.u.Exception.ExceptionRecord.ExceptionAddress
             self.write_violation   = dbg.u.Exception.ExceptionRecord.ExceptionInformation[0]
             self.violation_address = dbg.u.Exception.ExceptionRecord.ExceptionInformation[1]
+            self.exception_code    = dbg.u.Exception.ExceptionRecord.ExceptionCode
 
             if dbg.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT:
                 continue_status = self.event_handler_create_process()

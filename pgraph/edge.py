@@ -40,7 +40,7 @@ class edge (object):
     gml_line_width  = 1.0
 
     ####################################################################################################################
-    def __init__ (self, src, dst):
+    def __init__ (self, src, dst, label=""):
         '''
         Class constructor.
 
@@ -58,7 +58,7 @@ class edge (object):
 
         # general graph attributes.
         self.color = 0x000000
-        self.label = ""
+        self.label = label
 
         # gml relevant attributes.
         self.gml_arrow       = "none"

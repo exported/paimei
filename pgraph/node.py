@@ -49,7 +49,7 @@ class node (object):
     udraw_info      = ""
 
     ####################################################################################################################
-    def __init__ (self, id=None):
+    def __init__ (self, id=None, label=""):
         '''
         '''
 
@@ -59,7 +59,7 @@ class node (object):
         # general graph attributes
         self.color        = 0xEEF7FF
         self.border_color = 0xEEEEEE
-        self.label        = ""
+        self.label        = label
         self.shape        = "box"
 
         # gml relevant attributes.

@@ -219,8 +219,8 @@ class pydbg:
         # obtain necessary debug privileges.
         self.get_debug_privileges()
 
-        self.pid       = pid
-        self.h_process = self.open_process(pid)
+        self.pid = pid
+        self.open_process(pid)
 
         self.debug_active_process(pid)
 
@@ -2475,12 +2475,12 @@ class pydbg:
         @raise pdx: An exception is raised on failure.
         '''
 
-        h_process = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
+        self.h_process = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
 
-        if not h_process:
+        if not self.h_process:
             raise pdx("OpenProcess(%d)" % pid, True)
 
-        return h_process
+        return self.h_process
 
 
     ####################################################################################################################
@@ -2675,7 +2675,7 @@ class pydbg:
 
 
     ####################################################################################################################
-    def process_snapshot (self):
+    def process_snapshot (self, mem_only=False):
         '''
         Take memory / context snapshot of the debuggee. All threads must be suspended before calling this routine.
 
@@ -2693,13 +2693,14 @@ class pydbg:
         self.memory_snapshot_blocks   = []
         self.memory_snapshot_contexts = []
 
-        # enumerate the running threads and save a copy of their contexts.
-        for thread_id in self.enumerate_threads():
-            context = self.get_thread_context(None, thread_id)
-
-            self.memory_snapshot_contexts.append(memory_snapshot_context(thread_id, context))
-
-            self._log("saving thread context of thread id: %08x" % thread_id)
+        if not mem_only:
+            # enumerate the running threads and save a copy of their contexts.
+            for thread_id in self.enumerate_threads():
+                context = self.get_thread_context(None, thread_id)
+    
+                self.memory_snapshot_contexts.append(memory_snapshot_context(thread_id, context))
+    
+                self._log("saving thread context of thread id: %08x" % thread_id)
 
         # scan through the entire memory range and save a copy of suitable memory blocks.
         while cursor < 0xFFFFFFFF:

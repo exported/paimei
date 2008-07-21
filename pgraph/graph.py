@@ -22,14 +22,16 @@
 @organization: www.openrce.org
 '''
 
-import node
-import edge
-import cluster
+from node    import node
+from edge    import edge
+from cluster import cluster
 
 import copy
 
 class graph (object):
     '''
+    Abstract graph class. Graphs can be added and subtracted from one another. Iteration steps through nodes.
+
     @todo: Add support for clusters
     @todo: Potentially swap node list with a node dictionary for increased performance
     '''
@@ -39,23 +41,54 @@ class graph (object):
     edges    = None
     nodes    = None
 
-    ####################################################################################################################
-    def __init__ (self, id=None):
-        '''
-        '''
 
-        try:
-            self.id       = id
-        except AttributeError:
-            #ignore this
-            pass
-        self.clusters = []
+    ####################################################################################################################
+    def __init__ (self, _id=None):
+        if _id != None:
+            self.id = _id
+        else:
+            self.id = id(self)
+
+        self.nodes    = {}
         self.edges    = {}
-        try:
-            self.nodes    = {}
-        except NotImplementedError:
-            #ignore this, used by some inherited values
-            pass
+        self.clusters = []
+        self.history  = []
+
+
+    ####################################################################################################################
+    '''
+    Function aliases.
+    
+    Note we don't implement these like so:
+    
+        self.add_graph = self.graph_cat
+        self.del_graph = self.graph_sub
+
+    Because it will break the pickle process.
+    '''
+
+    def add_graph (self, other_graph):
+        return self.graph_cat(other_graph)
+
+
+    def del_graph (self, other_graph):
+        return self.graph_sub(other_graph)
+
+
+    ####################################################################################################################
+    def __add__ (self, other_graph):
+        new_graph = copy.copy(self)
+        new_graph.add_graph(other_graph)
+
+        return new_graph
+
+
+    ####################################################################################################################
+    def __sub__ (self, other_graph):
+        new_graph = copy.copy(self)
+        new_graph.del_graph(other_graph)
+
+        return new_graph
 
 
     ####################################################################################################################
@@ -95,35 +128,59 @@ class graph (object):
 
 
     ####################################################################################################################
-    def add_graph (self, other_graph):
-        '''
-        Alias of graph_cat(). Concatenate the other graph into the current one.
-
-        @todo: Add support for clusters
-        @see:  graph_cat()
-
-        @type  other_graph: pgraph.graph
-        @param other_graph: Graph to concatenate into this one.
-        '''
-
-        return self.graph_cat(other_graph)
-
-
-    ####################################################################################################################
     def add_node (self, node):
         '''
         Add a pgraph node to the graph. Ensures a node with the same id does not already exist in the graph.
 
-        @type  node: pGRAPH Node
-        @param node: Node to add to graph
+        @type  node: pGRAPH Node (or list of nodes)
+        @param node: Node (or list of nodes) to add to graph
         '''
+
+        # this logic allows you to pass a list of nodes in.
+        if type(node) is list:
+            for x in node:
+                self.add_node(x)
+
+            return
 
         node.number = len(self.nodes)
 
         if not self.nodes.has_key(node.id):
             self.nodes[node.id] = node
 
+            if len(self.history) == 2:
+                self.history.pop(0)
+
+            self.history.append(node)
+
         return self
+
+
+    ####################################################################################################################
+    def create_edge (self, label=""):
+        '''
+        Convenience routine for creating an edge between the last two added nodes.
+        '''
+
+        if not len(self.history) == 2:
+            return
+
+        e = edge(self.history[0].id, self.history[1].id, label)
+        self.add_edge(e)
+
+        return e
+
+
+    ####################################################################################################################
+    def create_node (self, _id=None, label=""):
+        '''
+        Convenience routine for quickly creating and adding a node in one step.
+        '''
+
+        n = node(_id, label)
+        self.add_node(n)
+
+        return n
 
 
     ####################################################################################################################
@@ -172,22 +229,6 @@ class graph (object):
 
 
     ####################################################################################################################
-    def del_graph (self, other_graph):
-        '''
-        Alias of graph_sub(). Remove the elements shared between the current graph and other graph from the current
-        graph.
-
-        @todo: Add support for clusters
-        @see:  graph_sub()
-
-        @type  other_graph: pgraph.graph
-        @param other_graph: Graph to diff/remove against
-        '''
-
-        return self.graph_sub(other_graph)
-
-
-    ####################################################################################################################
     def del_node (self, node_id):
         '''
         Remove a node from the graph.
@@ -213,6 +254,7 @@ class graph (object):
         @rtype:  List
         @return: List of edges from the specified node
         '''
+
         return [edge for edge in self.edges.values() if edge.src == id]
 
 
@@ -337,7 +379,8 @@ class graph (object):
         '''
         Concatenate the other graph into the current one.
 
-        @todo: Add support for clusters
+        @todo:  Add support for clusters
+        @alias: add_graph()
 
         @type  other_graph: pgraph.graph
         @param other_graph: Graph to concatenate into this one.
@@ -396,7 +439,6 @@ class graph (object):
                         next_level.append(to_add)
 
                     down_graph.add_node(copy.copy(to_add))
-
                     down_graph.add_edge(copy.copy(edge))
 
             if next_level:
@@ -457,7 +499,8 @@ class graph (object):
         Remove the elements shared between the current graph and other graph from the current
         graph.
 
-        @todo: Add support for clusters
+        @todo:  Add support for clusters
+        @alias: del_graph()
 
         @type  other_graph: pgraph.graph
         @param other_graph: Graph to diff/remove against

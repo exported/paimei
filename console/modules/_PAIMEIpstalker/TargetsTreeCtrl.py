@@ -95,7 +95,7 @@ class TargetsTreeCtrl (wx.TreeCtrl):
         tag_name = tag_name.replace("\\", "\\\\").replace("'", "\\'")
 
         new_tag = mysql.cursor()
-        new_tag.execute("INSERT INTO cc_tags SET target_id = '%d', tag = '%s'" % (selected["id"], tag_name))
+        new_tag.execute("INSERT INTO cc_tags SET target_id = '%d', tag = '%s', notes = ''" % (selected["id"], tag_name))
 
         # refresh the targets list.
         self.on_retrieve_targets(None)
@@ -127,7 +127,7 @@ class TargetsTreeCtrl (wx.TreeCtrl):
         target_name = target_name.replace("\\", "\\\\").replace("'", "\\'")
 
         new_target = mysql.cursor()
-        new_target.execute("INSERT INTO cc_targets SET target = '%s'" % target_name)
+        new_target.execute("INSERT INTO cc_targets SET target = '%s', notes = ''" % target_name)
 
         # refresh the targets list.
         self.on_retrieve_targets(None)

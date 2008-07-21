@@ -49,11 +49,15 @@ class node (object):
     udraw_info      = ""
 
     ####################################################################################################################
-    def __init__ (self, id=None, label=""):
+    def __init__ (self, _id=None, label=""):
         '''
         '''
 
-        self.id     = id
+        if _id != None:
+            self.id = _id
+        else:
+            self.id = id(self)
+
         self.number = 0
 
         # general graph attributes

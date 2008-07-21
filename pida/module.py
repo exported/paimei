@@ -127,7 +127,7 @@ class module (pgraph.graph):
 
                     self.nodes[from_func.startEA].outbound_eas[ref].append(func.ea_start)
 
-                    edge = pgraph.edge.edge(from_func.startEA, func.ea_start)
+                    edge = pgraph.edge(from_func.startEA, func.ea_start)
 
                     self.add_edge(edge)
 
@@ -149,7 +149,7 @@ class module (pgraph.graph):
                         node.color = 0xB4B4DA
                         self.add_node(node)
 
-                        edge = pgraph.edge.edge(func.ea_start, address)
+                        edge = pgraph.edge(func.ea_start, address)
                         self.add_edge(edge)
 
 

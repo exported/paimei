@@ -45,40 +45,40 @@ try:
         esp_8 int(10) unsigned NOT NULL default '0',
         esp_c int(10) unsigned NOT NULL default '0',
         esp_10 int(10) unsigned NOT NULL default '0',
-        eax_deref text NOT NULL default '',
-        ebx_deref text NOT NULL default '',
-        ecx_deref text NOT NULL default '',
-        edx_deref text NOT NULL default '',
-        edi_deref text NOT NULL default '',
-        esi_deref text NOT NULL default '',
-        ebp_deref text NOT NULL default '',
-        esp_deref text NOT NULL default '',
-        esp_4_deref text NOT NULL default '',
-        esp_8_deref text NOT NULL default '',
-        esp_c_deref text NOT NULL default '',
-        esp_10_deref text NOT NULL default '',
+        eax_deref text NOT NULL,
+        ebx_deref text NOT NULL,
+        ecx_deref text NOT NULL,
+        edx_deref text NOT NULL,
+        edi_deref text NOT NULL,
+        esi_deref text NOT NULL,
+        ebp_deref text NOT NULL,
+        esp_deref text NOT NULL,
+        esp_4_deref text NOT NULL,
+        esp_8_deref text NOT NULL,
+        esp_c_deref text NOT NULL,
+        esp_10_deref text NOT NULL,
         is_function int(1) unsigned NOT NULL default '0',
         module varchar(255) NOT NULL default '',
         base int(10) unsigned NOT NULL default '0',
         PRIMARY KEY  (target_id,tag_id,num),
         KEY tag_id (tag_id),
         KEY target_id (target_id)
-        ) TYPE=MyISAM""")
+        ) ENGINE=MyISAM""")
 
     cursor.execute("""CREATE TABLE cc_tags (
         id int(10) unsigned NOT NULL auto_increment,
         target_id int(10) unsigned NOT NULL default '0',
         tag varchar(255) NOT NULL default '',
-        notes text NOT NULL default '',
+        notes text NOT NULL,
         PRIMARY KEY  (id)
-        ) TYPE=MyISAM""")
+        ) ENGINE=MyISAM""")
 
     cursor.execute("""CREATE TABLE cc_targets (
         id int(10) unsigned NOT NULL auto_increment,
         target varchar(255) NOT NULL default '',
-        notes text NOT NULL default '',
+        notes text NOT NULL,
         PRIMARY KEY  (id)
-        ) TYPE=MyISAM""")
+        ) ENGINE=MyISAM""")
 
     cursor.execute("""CREATE TABLE pp_hits (
         id int(10) unsigned NOT NULL auto_increment,
@@ -113,7 +113,7 @@ try:
         boron_tag varchar(255) NOT NULL default '',
         module_id int(10) unsigned NOT NULL default '0',
         PRIMARY KEY  (id)
-        ) TYPE=MyISAM""")
+        ) ENGINE=MyISAM""")
 
     cursor.execute("""CREATE TABLE pp_modules (
         id int(10) unsigned NOT NULL auto_increment,
@@ -121,7 +121,7 @@ try:
         base int(10) unsigned NOT NULL default '0',
         notes text NOT NULL,
         PRIMARY KEY  (id)
-        ) TYPE=MyISAM""")
+        ) ENGINE=MyISAM""")
 
     cursor.execute("""CREATE TABLE pp_recon (
         id int(10) unsigned NOT NULL auto_increment,
@@ -134,7 +134,7 @@ try:
         boron_tag varchar(255) NOT NULL default '',
         notes text NOT NULL,
         PRIMARY KEY  (id)
-        ) TYPE=MyISAM""")
+        ) ENGINE=MyISAM""")
 
 except MySQLdb.ProgrammingError, err:
     error("Failed creating db / tables: %s" % err[1])

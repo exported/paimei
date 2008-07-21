@@ -97,7 +97,7 @@ for bin, crashes in crashbin.bins.iteritems():
                     n.count += 1
                     n.label = "[%d] %s" % (n.count, entry)
 
-                edge = pgraph.edge.edge(n.id, last)
+                edge = pgraph.edge(n.id, last)
                 graph.add_edge(edge)
                 last = n.id
         print "%s," % crash.extra,

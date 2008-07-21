@@ -1,6 +1,6 @@
 REM $Id$
 
-set PythonPath=C:\Python24
+set PythonPath=C:\Python25
 
 %PythonPath%\python.exe %PythonPath%\Scripts\epydoc.py -o docs\PyDbg     --css blue --name "PyDbg - Python Win32 Debugger" --url "http://www.openrce.org" pydbg\defines.py pydbg\breakpoint.py pydbg\hardware_breakpoint.py pydbg\memory_breakpoint.py pydbg\memory_snapshot_block.py pydbg\memory_snapshot_context.py pydbg\my_ctypes.py pydbg\pdx.py pydbg\pydbg.py pydbg\pydbg_core.py pydbg\system_dll.py
 %PythonPath%\python.exe %PythonPath%\Scripts\epydoc.py -o docs\PIDA      --css blue --name "PIDA - Pedram's IDA"           --url "http://www.openrce.org" pida\defines.py pida\basic_block.py pida\function.py pida\instruction.py pida\module.py

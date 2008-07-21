@@ -30,7 +30,7 @@ __all__ = \
     "node",
 ]
 
-from cluster import *
-from edge    import *
-from graph   import *
-from node    import *
+from cluster import cluster
+from graph   import graph
+from node    import node
+from edge    import edge

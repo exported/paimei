@@ -80,7 +80,7 @@ def graph_connect (dbg, buff_addr, size, realloc=False):
     graph.add_node(allocator)
     graph.add_node(allocated)
 
-    edge = pgraph.edge.edge(allocator.id, allocated.id)
+    edge = pgraph.edge(allocator.id, allocated.id)
     edge.label = "%d" % count
 
     graph.add_edge(edge)

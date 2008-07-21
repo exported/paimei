@@ -254,8 +254,10 @@ def meat_and_potatoes (mysql):
             for xref in CodeRefsTo(location, True) + DataRefsTo(location):
                 if GetMnem(xref) in ("call", "jmp"):
                     # ensure the xref does not exist within a known library routine.
-                    if GetFunctionFlags(xref) & FUNC_LIB:
-                        continue
+                    flags = GetFunctionFlags(xref)
+                    if flags:
+                        if flags & FUNC_LIB:
+                            continue
 
                     ###
                     ### peek a call with format string arguments

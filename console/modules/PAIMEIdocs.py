@@ -31,10 +31,10 @@ class PAIMEIdocs(wx.Panel):
 
     sections = {
                    "General":   "../docs/index.html",
-                   "PyDbg":     "../docs/PyDBG/public/trees.html",
-                   "PIDA":      "../docs/PIDA/public/trees.html",
-                   "pGRAPH":    "../docs/pGRAPH/public/trees.html",
-                   "Utilities": "../docs/Utilities/public/trees.html",
+                   "PyDbg":     "../docs/PyDBG/class-tree.html",
+                   "PIDA":      "../docs/PIDA/class-tree.html",
+                   "pGRAPH":    "../docs/pGRAPH/class-tree.html",
+                   "Utilities": "../docs/Utilities/class-tree.html",
                }
 
     list_book  = None     # handle to list book.

@@ -273,7 +273,7 @@ class function (pgraph.graph, pgraph.node):
 
             # create all the edges.
             for (src, dst, color) in edges:
-                edge = pgraph.edge.edge(src, dst)
+                edge = pgraph.edge(src, dst)
                 edge.color = color
                 self.add_edge(edge)
 

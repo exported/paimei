@@ -2,6 +2,15 @@
 
 # $Id$
 
+'''
+    Struct Spy
+    
+    Copyright (C) 2006 Cody Pierce <codyrpierce@gmail.com>
+    
+    Description: This PyDbg will monitor structures being used based on their register+offset instruction. It will log all read, writes, and values, along with the addresses they occured at. It will then output this into a navigable html where you can drill down into the structure and its access. 
+    
+'''
+
 ######################################################################
 #
 # Includes

@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 
-# $Id$
+'''
+    File Access Tracker
+    
+    Copyright (C) 2006 Cody Pierce <codyrpierce@gmail.com>
+    
+    Description: This PyDbg script will attempt to track files being read or written too during execution. This is especially useful when tracking file format vulnerabilities. It is not perfect, and is dependent on the size of the file, and method of reading. Libraries can be added for tracking, and multiple heaps can also be monitored.
+
+'''
 
 ######################################################################
 #
@@ -84,7 +91,7 @@ def handler_breakpoint(dbg):
     
     return DBG_CONTINUE
 
-def restore_guards (dbg): 
+def restore_guards(dbg): 
     dbg.page_guard_restore() 
     
     return DBG_CONTINUE
@@ -396,11 +403,11 @@ if not attach_target_proc(dbg, procname, filename):
 
 dbg.debug_event_loop()
 
-#print "\nBuffers hit:\n"
-#for buf in dbg.buffers:
-#    print "%d" % buf["id"]
-#    print "=" * 72
-#    print "Address:      0x%08x" % buf["address"]
-#    print "Size:         0x%x" % buf["size"]
-#    print "Last Address: 0x%08x" % buf["last_addr"]
-#    print "Last Hit:     0x%08x\n" % buf["last_hit"]
+print "\nBuffers hit:\n"
+for buf in dbg.buffers:
+    print "%d" % buf["id"]
+    print "=" * 72
+    print "Address:      0x%08x" % buf["address"]
+    print "Size:         0x%x" % buf["size"]
+    print "Last Address: 0x%08x" % buf["last_addr"]
+    print "Last Hit:     0x%08x\n" % buf["last_hit"]

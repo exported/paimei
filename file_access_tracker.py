@@ -5,7 +5,11 @@
     
     Copyright (C) 2006 Cody Pierce <codyrpierce@gmail.com>
     
-    Description: This PyDbg script will attempt to track files being read or written too during execution. This is especially useful when tracking file format vulnerabilities. It is not perfect, and is dependent on the size of the file, and method of reading. Libraries can be added for tracking, and multiple heaps can also be monitored.
+    Description: This PyDbg script will attempt to track files being read
+    or written too during execution. This is especially useful when
+    tracking file format vulnerabilities. It is not perfect, and is
+    dependent on the size of the file, and method of reading. Libraries
+    can be added for tracking, and multiple heaps can also be monitored.
 
 '''
 

@@ -366,7 +366,7 @@ class PydbgClient:
     def quit(self, *arguments, **keywords):
         self.clear_breakpoints()
         self.steps = []
-
+        
         return 1
 
 

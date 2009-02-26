@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>utils.udraw_connector.udraw_connector</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css"></link>
+</head>
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          <a class="navbar" target="_top" href="http://www.openrce.org">Utilities</a>
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <font size="-1"><b class="breadcrumbs">
+        Package&nbsp;utils ::
+        <a href="utils.udraw_connector-module.html">Module&nbsp;udraw_connector</a> ::
+        Class&nbsp;udraw_connector
+      </b></font></br>
+    </td>
+    <td><table cellpadding="0" cellspacing="0">
+      <tr><td align="right"><font size="-2">[show&nbsp;private&nbsp;|&nbsp;<a href="../public/utils.udraw_connector.udraw_connector-class.html">hide&nbsp;private</a>]</font></td></tr>
+      <tr><td align="right"><font size="-2">[<a href="frames.html"target="_top">frames</a>&nbsp;|&nbsp;<a href="utils.udraw_connector.udraw_connector-class.html" target="_top">no&nbsp;frames</a>]</font></td></tr>
+    </table></td>
+</tr></table>
+
+<!-- =========== START OF CLASS DESCRIPTION =========== -->
+<h2 class="class">Class udraw_connector</h2>
+
+<hr/>
+
+This class provides an abstracted interface for communicating with 
+uDraw(Graph) when it is configured to listen on a TCP socket in server 
+mode.
+<hr/>
+
+<p><b>To Do:</b> Debug various broken routines, abstract more of the uDraw API.
+</p>
+
+
+<!-- =========== START OF METHOD SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Method Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__init__"></a><span class="summary-sig"><span class="summary-sig-name">__init__</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>host</span>,
+          <span class=summary-sig-arg>port</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#change_element_color" class="summary-sig-name"><code>change_element_color</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>element</span>,
+          <span class=summary-sig-arg>id</span>,
+          <span class=summary-sig-arg>color</span>)</span></code>
+<br />
+This command is used to update the attributes of nodes and edges that 
+exist in the current graph.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#focus_node" class="summary-sig-name"><code>focus_node</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>node_id</span>,
+          <span class=summary-sig-arg>animated</span>)</span></code>
+<br />
+Scrolls the visible part of the graph visualization to the node 
+specified by &quot;node_id&quot;.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#graph_new" class="summary-sig-name"><code>graph_new</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>graph</span>)</span></code>
+<br />
+Sends a graph in term representation format to uDraw(Graph) for 
+visualization.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#graph_update" class="summary-sig-name"><code>graph_update</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>graph</span>)</span></code>
+<br />
+This command can be used to update the structure of the currently 
+loaded graph.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#layout_improve_all" class="summary-sig-name"><code>layout_improve_all</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This command starts the layout algorithm to improve the visualization 
+quality of the whole graph by reducing unnecessary edge crossings and 
+edge bends.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#message_loop" class="summary-sig-name"><code>message_loop</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>arg1</span>,
+          <span class=summary-sig-arg>arg2</span>)</span></code>
+<br />
+This routine should be threaded out.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#open_survey_view" class="summary-sig-name"><code>open_survey_view</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Open a survey view showing the whole graph in a reduced scale.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="parse"></a><span class="summary-sig"><span class="summary-sig-name">parse</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>answer</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#scale" class="summary-sig-name"><code>scale</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>parameter</span>)</span></code>
+<br />
+Sets the scale to the given parameter which is a percent value that 
+must be from 1 to 100.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="send"></a><span class="summary-sig"><span class="summary-sig-name">send</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>data</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#set_command_handler" class="summary-sig-name"><code>set_command_handler</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>command</span>,
+          <span class=summary-sig-arg>callback_func</span>)</span></code>
+<br />
+Set a callback for the specified command.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#window_background" class="summary-sig-name"><code>window_background</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>bg</span>)</span></code>
+<br />
+Sets the background of the base window to the color specified by 
+parameter bg.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#window_status" class="summary-sig-name"><code>window_status</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>msg</span>)</span></code>
+<br />
+Displays a message in the right footer area of the base window.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="utils.udraw_connector.udraw_connector-class.html#window_title" class="summary-sig-name"><code>window_title</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>msg</span>)</span></code>
+<br />
+Sets the title of the base window to msg.</td></tr>
+</table><br />
+
+
+<!-- =========== START OF CLASS VARIABLE SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Class Variable Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>dict</code></font></td>
+<td><b><a href="utils.udraw_connector.udraw_connector-class.html#command_handlers"><code>command_handlers</code></a></b> = <span title="{}"><code>{}                                    </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="utils.udraw_connector.udraw_connector-class.html#sock"><code>sock</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+</table><br />
+
+
+<!-- =========== START OF METHOD DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Method Details</th></tr>
+</table>
+
+<a name="change_element_color"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">change_element_color</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>element</span>,
+          <span class=sig-arg>id</span>,
+          <span class=sig-arg>color</span>)</span>
+  </h3>
+  This command is used to update the attributes of nodes and edges 
+  that exist in the current graph.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="focus_node"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">focus_node</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>node_id</span>,
+          <span class=sig-arg>animated</span>=<span class=sig-default>True</span>)</span>
+  </h3>
+  Scrolls the visible part of the graph visualization to the node 
+  specified by &quot;node_id&quot;.
+  <dl><dt></dt><dd>
+<p><b>To Do:</b> This routine is buggy. Appears to only want to work when being called 
+after a call to change_element_color(), though the element color change 
+will not actually work. Need to debug.
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="graph_new"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">graph_new</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>graph</span>)</span>
+  </h3>
+  Sends a graph in term representation format to uDraw(Graph) for 
+  visualization.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="graph_update"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">graph_update</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>graph</span>)</span>
+  </h3>
+  This command can be used to update the structure of the currently 
+  loaded graph.
+  <dl><dt></dt><dd>
+<p><b>To Do:</b> This routine is not behaving appropriately, need to debug.
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="layout_improve_all"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">layout_improve_all</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This command starts the layout algorithm to improve the 
+  visualization quality of the whole graph by reducing unnecessary edge 
+  crossings and edge bends.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="message_loop"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">message_loop</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>arg1</span>,
+          <span class=sig-arg>arg2</span>)</span>
+  </h3>
+<pre class="literalblock">
+This routine should be threaded out. This routine will normally be called in the following fashion:
+
+    thread.start_new_thread(udraw.message_loop, (None, None))
+
+The arguments to this routine are not currently used and will be ignored.
+</pre>
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="open_survey_view"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">open_survey_view</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Open a survey view showing the whole graph in a reduced scale.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="scale"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">scale</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>parameter</span>)</span>
+  </h3>
+  Sets the scale to the given parameter which is a percent value that 
+  must be from 1 to 100.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="set_command_handler"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">set_command_handler</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>command</span>,
+          <span class=sig-arg>callback_func</span>)</span>
+  </h3>
+  Set a callback for the specified command. The prototype of the 
+  callback routines is:
+<pre class="literalblock">
+   func (udraw_connector, args)
+</pre>
+  You can register a callback for any command received from the udraw 
+  server.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>command</b></code> -
+         Command string
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      <dd><code><b>callback_func</b></code> -
+         Function to call when specified exception code is caught.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Function)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="window_background"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">window_background</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>bg</span>)</span>
+  </h3>
+  Sets the background of the base window to the color specified by 
+  parameter bg. This is a RGB value like &quot;#0f331e&quot; in the same 
+  format as used for command-line option -graphbg.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="window_status"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">window_status</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>msg</span>)</span>
+  </h3>
+  Displays a message in the right footer area of the base window.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="window_title"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">window_title</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>msg</span>)</span>
+  </h3>
+  Sets the title of the base window to msg.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+<br />
+
+
+<!-- =========== START OF CLASS VARIABLE DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Class Variable Details</th></tr>
+</table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="command_handlers"></a>
+<h3>command_handlers</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>dict</code>
+
+      </dd>
+<span title="{}">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+{}                                                                     </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="sock"></a>
+<h3>sock</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<br />
+
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          <a class="navbar" target="_top" href="http://www.openrce.org">Utilities</a>
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Thu Sep 14 10:39:51 2006</font></td>
+    <td align="right"><a href="http://epydoc.sourceforge.net"
+                      ><font size="-2">http://epydoc.sf.net</font></a></td>
+  </tr>
+</table>
+</body>
+</html>

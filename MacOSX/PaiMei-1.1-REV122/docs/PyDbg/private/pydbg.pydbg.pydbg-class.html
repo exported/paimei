@@ -1,0 +1,2711 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>pydbg.pydbg.pydbg</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css"></link>
+</head>
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          <a class="navbar" target="_top" href="http://www.openrce.org">PyDbg&nbsp;-&nbsp;Python&nbsp;Win32&nbsp;Debugger</a>
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <font size="-1"><b class="breadcrumbs">
+        Package&nbsp;pydbg ::
+        <a href="pydbg.pydbg-module.html">Module&nbsp;pydbg</a> ::
+        Class&nbsp;pydbg
+      </b></font></br>
+    </td>
+    <td><table cellpadding="0" cellspacing="0">
+      <tr><td align="right"><font size="-2">[show&nbsp;private&nbsp;|&nbsp;<a href="../public/pydbg.pydbg.pydbg-class.html">hide&nbsp;private</a>]</font></td></tr>
+      <tr><td align="right"><font size="-2">[<a href="frames.html"target="_top">frames</a>&nbsp;|&nbsp;<a href="pydbg.pydbg.pydbg-class.html" target="_top">no&nbsp;frames</a>]</font></td></tr>
+    </table></td>
+</tr></table>
+
+<!-- =========== START OF CLASS DESCRIPTION =========== -->
+<h2 class="class">Type pydbg</h2>
+
+<pre class="base-tree">
+<a href="__builtin__.object-class.html"><code>object</code></a> --+    
+         |    
+<a href="pydbg.pydbg_core.pydbg_core-class.html"><code>pydbg_core</code></a> --+
+             |
+            <b>pydbg</b>
+</pre><br />
+
+<hr/>
+
+Extending from the core this class defines a more usable debugger 
+objects implementing a number of features such as:
+<ul>
+  <li>
+    Register manipulation.
+  </li>
+  <li>
+    Soft (INT 3) breakpoints.
+  </li>
+  <li>
+    Memory breakpoints (page permissions).
+  </li>
+  <li>
+    Hardware breakpoints.
+  </li>
+  <li>
+    Exception / event handling call backs.
+  </li>
+  <li>
+    Pydasm (libdasm) disassembly wrapper.
+  </li>
+  <li>
+    Process memory snapshotting and restoring.
+  </li>
+  <li>
+    Endian manipulation routines.
+  </li>
+  <li>
+    Debugger hiding.
+  </li>
+  <li>
+    Function resolution.
+  </li>
+  <li>
+    &quot;Intelligent&quot; memory derefencing.
+  </li>
+  <li>
+    Stack/SEH unwinding.
+  </li>
+  <li>
+    Etc...
+  </li>
+</ul>
+<hr/>
+
+
+<!-- =========== START OF METHOD SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Method Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#__init__" class="summary-sig-name"><code>__init__</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>ff</span>,
+          <span class=summary-sig-arg>cs</span>)</span></code>
+<br />
+Set the default attributes.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_del" class="summary-sig-name"><code>bp_del</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>)</span></code>
+<br />
+Removes the breakpoint from target address.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_del_all" class="summary-sig-name"><code>bp_del_all</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Removes all breakpoints from the debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_del_hw" class="summary-sig-name"><code>bp_del_hw</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>slot</span>)</span></code>
+<br />
+Removes the hardware breakpoint from the specified address or 
+slot.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_del_mem" class="summary-sig-name"><code>bp_del_mem</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>)</span></code>
+<br />
+Removes the memory breakpoint from target address.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_del_mem_all" class="summary-sig-name"><code>bp_del_mem_all</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Removes all memory breakpoints from the debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Bool
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_is_ours" class="summary-sig-name"><code>bp_is_ours</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address_to_check</span>)</span></code>
+<br />
+Determine if a breakpoint address belongs to us.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Mixed
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_is_ours_mem" class="summary-sig-name"><code>bp_is_ours_mem</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address_to_check</span>)</span></code>
+<br />
+Determines if the specified address falls within the range of one of 
+our memory breakpoints.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_set" class="summary-sig-name"><code>bp_set</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>description</span>,
+          <span class=summary-sig-arg>restore</span>,
+          <span class=summary-sig-arg>handler</span>)</span></code>
+<br />
+Sets a breakpoint at the designated address.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_set_hw" class="summary-sig-name"><code>bp_set_hw</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>length</span>,
+          <span class=summary-sig-arg>condition</span>,
+          <span class=summary-sig-arg>description</span>,
+          <span class=summary-sig-arg>restore</span>,
+          <span class=summary-sig-arg>handler</span>)</span></code>
+<br />
+Sets a hardware breakpoint at the designated address.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#bp_set_mem" class="summary-sig-name"><code>bp_set_mem</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>size</span>,
+          <span class=summary-sig-arg>description</span>,
+          <span class=summary-sig-arg>handler</span>)</span></code>
+<br />
+Sets a memory breakpoint at the target address.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#cleanup" class="summary-sig-name"><code>cleanup</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Clean up after ourselves by removing all breakpoints.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#dbg_print_all_guarded_pages" class="summary-sig-name"><code>dbg_print_all_guarded_pages</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+*** DEBUG ROUTINE ***</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#disasm" class="summary-sig-name"><code>disasm</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>)</span></code>
+<br />
+Pydasm disassemble utility function wrapper.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        List
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#disasm_around" class="summary-sig-name"><code>disasm_around</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>num_inst</span>)</span></code>
+<br />
+Given a specified address this routine will return the list of 5 
+instructions before and after the instruction at address (including the 
+instruction at address, so 11 instructions in total).</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#dump_context" class="summary-sig-name"><code>dump_context</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>context</span>,
+          <span class=summary-sig-arg>stack_depth</span>,
+          <span class=summary-sig-arg>print_dots</span>)</span></code>
+<br />
+Return an informational block of text describing the CPU context of 
+the current thread.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Dictionary
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#dump_context_list" class="summary-sig-name"><code>dump_context_list</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>context</span>,
+          <span class=summary-sig-arg>stack_depth</span>,
+          <span class=summary-sig-arg>print_dots</span>)</span></code>
+<br />
+Return an informational list of items describing the CPU context of 
+the current thread.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#event_handler_create_process" class="summary-sig-name"><code>event_handler_create_process</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default CREATE_PROCESS_DEBUG_EVENT handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#event_handler_create_thread" class="summary-sig-name"><code>event_handler_create_thread</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default CREATE_THREAD_DEBUG_EVENT handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#event_handler_exit_process" class="summary-sig-name"><code>event_handler_exit_process</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default EXIT_PROCESS_DEBUG_EVENT handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#event_handler_exit_thread" class="summary-sig-name"><code>event_handler_exit_thread</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default EXIT_THREAD_DEBUG_EVENT handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#event_handler_load_dll" class="summary-sig-name"><code>event_handler_load_dll</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default LOAD_DLL_DEBUG_EVENT handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#event_handler_unload_dll" class="summary-sig-name"><code>event_handler_unload_dll</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default UNLOAD_DLL_DEBUG_EVENT handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#exception_handler_access_violation" class="summary-sig-name"><code>exception_handler_access_violation</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default EXCEPTION_ACCESS_VIOLATION handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#exception_handler_breakpoint" class="summary-sig-name"><code>exception_handler_breakpoint</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default EXCEPTION_BREAKPOINT handler, responsible for 
+transparently restoring soft breakpoints and passing control to the 
+registered user callback handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#exception_handler_guard_page" class="summary-sig-name"><code>exception_handler_guard_page</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default EXCEPTION_GUARD_PAGE handler, responsible for 
+transparently restoring memory breakpoints passing control to the 
+registered user callback handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#exception_handler_single_step" class="summary-sig-name"><code>exception_handler_single_step</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This is the default EXCEPTION_SINGLE_STEP handler, responsible for 
+transparently restoring breakpoints and passing control to the registered 
+user callback handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Raw Bytes
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#flip_endian" class="summary-sig-name"><code>flip_endian</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>dword</span>)</span></code>
+<br />
+Utility function to flip the endianess a given DWORD into raw 
+bytes.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#flip_endian_dword" class="summary-sig-name"><code>flip_endian_dword</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>bytes</span>)</span></code>
+<br />
+Utility function to flip the endianess of a given set of raw bytes 
+into a DWORD.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#func_resolve" class="summary-sig-name"><code>func_resolve</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>dll</span>,
+          <span class=summary-sig-arg>function</span>)</span></code>
+<br />
+Utility function that resolves the address of a given module / 
+function name pair under the context of the debugger.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#func_resolve_debuggee" class="summary-sig-name"><code>func_resolve_debuggee</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>dll_name</span>,
+          <span class=summary-sig-arg>func_name</span>)</span></code>
+<br />
+Utility function that resolves the address of a given module / 
+function name pair under the context of the debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#get_arg" class="summary-sig-name"><code>get_arg</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>index</span>,
+          <span class=summary-sig-arg>context</span>)</span></code>
+<br />
+Given a thread context, this convenience routine will retrieve the 
+function argument at the specified index.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#get_ascii_string" class="summary-sig-name"><code>get_ascii_string</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>data</span>)</span></code>
+<br />
+Retrieve the ASCII string, if any, from data.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydasm instruction
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#get_instruction" class="summary-sig-name"><code>get_instruction</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>)</span></code>
+<br />
+Pydasm disassemble utility function wrapper.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#get_printable_string" class="summary-sig-name"><code>get_printable_string</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>data</span>,
+          <span class=summary-sig-arg>print_dots</span>)</span></code>
+<br />
+description</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#get_unicode_string" class="summary-sig-name"><code>get_unicode_string</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>data</span>)</span></code>
+<br />
+description</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#hex_dump" class="summary-sig-name"><code>hex_dump</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>data</span>,
+          <span class=summary-sig-arg>addr</span>,
+          <span class=summary-sig-arg>prefix</span>)</span></code>
+<br />
+Utility function that converts data into hex dump format.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#hide_debugger" class="summary-sig-name"><code>hide_debugger</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Hide the presence of the debugger.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Bool
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#is_address_on_stack" class="summary-sig-name"><code>is_address_on_stack</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>context</span>)</span></code>
+<br />
+Utility function to determine if the specified address exists on the 
+current thread stack or not.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#page_guard_clear" class="summary-sig-name"><code>page_guard_clear</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Clear all debugger-set PAGE_GUARDs from memory.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#page_guard_restore" class="summary-sig-name"><code>page_guard_restore</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Restore all previously cleared debugger-set PAGE_GUARDs from 
+memory.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#process_restore" class="summary-sig-name"><code>process_restore</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Restore memory / context snapshot of the debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#process_snapshot" class="summary-sig-name"><code>process_snapshot</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Take memory / context snapshot of the debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        List of Tuples
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#seh_unwind" class="summary-sig-name"><code>seh_unwind</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>context</span>)</span></code>
+<br />
+Unwind the the Structured Exception Handler (SEH) chain of the current 
+or specified thread to the best of our abilities.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#set_register" class="summary-sig-name"><code>set_register</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>register</span>,
+          <span class=summary-sig-arg>value</span>)</span></code>
+<br />
+Set the value of a register in the debuggee within the context of the 
+self.h_thread.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#smart_dereference" class="summary-sig-name"><code>smart_dereference</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>print_dots</span>)</span></code>
+<br />
+&quot;Intelligently&quot; discover data behind an address.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Mixed
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#stack_range" class="summary-sig-name"><code>stack_range</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>context</span>)</span></code>
+<br />
+Determine the stack range (top and bottom) of the current or specified 
+thread.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        List
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#stack_unwind" class="summary-sig-name"><code>stack_unwind</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>context</span>)</span></code>
+<br />
+Unwind the stack to the best of our ability.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        String
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#to_binary" class="summary-sig-name"><code>to_binary</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>number</span>,
+          <span class=summary-sig-arg>bit_count</span>)</span></code>
+<br />
+Convert a number into a binary string.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Integer
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg.pydbg-class.html#to_decimal" class="summary-sig-name"><code>to_decimal</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>binary</span>)</span></code>
+<br />
+Convert a binary string into a decimal number.</td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from pydbg_core</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        system_dll
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#addr_to_dll" class="summary-sig-name"><code>addr_to_dll</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>)</span></code>
+<br />
+Return the system DLL that contains the address specified.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        MODULEENTRY32
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#addr_to_module" class="summary-sig-name"><code>addr_to_module</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>)</span></code>
+<br />
+Return the MODULEENTRY32 structure for the module that contains the 
+address specified.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg_core
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#attach" class="summary-sig-name"><code>attach</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>pid</span>)</span></code>
+<br />
+Attach to the specified process by PID.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Bool
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#close_handle" class="summary-sig-name"><code>close_handle</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>handle</span>)</span></code>
+<br />
+Convenience wraper around kernel32.CloseHandle().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#debug_active_process" class="summary-sig-name"><code>debug_active_process</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>pid</span>)</span></code>
+<br />
+Convenience wrapper around GetLastError() and FormatMessage().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#debug_event_iteration" class="summary-sig-name"><code>debug_event_iteration</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Check for and process a debug event.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#debug_event_loop" class="summary-sig-name"><code>debug_event_loop</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Enter the infinite debug event handling loop.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#debug_set_process_kill_on_exit" class="summary-sig-name"><code>debug_set_process_kill_on_exit</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>kill_on_exit</span>)</span></code>
+<br />
+Convenience wrapper around DebugSetProcessKillOnExit().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#detach" class="summary-sig-name"><code>detach</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Detach from debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        List
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#enumerate_modules" class="summary-sig-name"><code>enumerate_modules</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Using the CreateToolhelp32Snapshot() API enumerate and return the list 
+of module name / base address tuples that belong to the debuggee</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        List
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#enumerate_processes" class="summary-sig-name"><code>enumerate_processes</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Using the CreateToolhelp32Snapshot() API enumerate all system 
+processes returning a list of pid / process name tuples.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        List
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#enumerate_threads" class="summary-sig-name"><code>enumerate_threads</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Using the CreateToolhelp32Snapshot() API enumerate all system threads 
+returning a list of thread IDs that belong to the debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Mixed
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#get_attr" class="summary-sig-name"><code>get_attr</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>attribute</span>)</span></code>
+<br />
+Return the value for the specified class attribute.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#get_debug_privileges" class="summary-sig-name"><code>get_debug_privileges</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Obtain necessary privileges for debugging.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Mixed
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#get_system_dll" class="summary-sig-name"><code>get_system_dll</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>idx</span>)</span></code>
+<br />
+Return the system DLL at the specified index.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        CONTEXT
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#get_thread_context" class="summary-sig-name"><code>get_thread_context</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>thread_handle</span>,
+          <span class=summary-sig-arg>thread_id</span>)</span></code>
+<br />
+Convenience wrapper around GetThreadContext().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        MODULEENTRY32
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#iterate_modules" class="summary-sig-name"><code>iterate_modules</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+A simple iterator function that can be used to iterate through all 
+modules the target process has mapped in its address space.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        PROCESSENTRY32
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#iterate_processes" class="summary-sig-name"><code>iterate_processes</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+A simple iterator function that can be used to iterate through all 
+running processes.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        PROCESSENTRY32
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#iterate_threads" class="summary-sig-name"><code>iterate_threads</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+A simple iterator function that can be used to iterate through all 
+running processes.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#load" class="summary-sig-name"><code>load</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>path_to_file</span>,
+          <span class=summary-sig-arg>command_line</span>)</span></code>
+<br />
+Load the specified executable and optional command line arguments into 
+the debugger.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#open_process" class="summary-sig-name"><code>open_process</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>pid</span>)</span></code>
+<br />
+Convenience wrapper around OpenProcess().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#open_thread" class="summary-sig-name"><code>open_thread</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>thread_id</span>)</span></code>
+<br />
+Convenience wrapper around OpenThread().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#read" class="summary-sig-name"><code>read</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>length</span>)</span></code>
+<br />
+Alias to read_process_memory().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        Raw
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#read_process_memory" class="summary-sig-name"><code>read_process_memory</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>length</span>)</span></code>
+<br />
+Read from the debuggee process space.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg_core
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#resume_all_threads" class="summary-sig-name"><code>resume_all_threads</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Resume all process threads.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg_core
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#resume_thread" class="summary-sig-name"><code>resume_thread</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>thread_id</span>)</span></code>
+<br />
+Resume the specified thread.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#ret_self" class="summary-sig-name"><code>ret_self</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+This convenience routine exists for internal functions to call and 
+transparently return the correct version of self.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#run" class="summary-sig-name"><code>run</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Alias for debug_event_loop().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#set_attr" class="summary-sig-name"><code>set_attr</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>attribute</span>,
+          <span class=summary-sig-arg>value</span>)</span></code>
+<br />
+Return the value for the specified class attribute.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#set_callback" class="summary-sig-name"><code>set_callback</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>exception_code</span>,
+          <span class=summary-sig-arg>callback_func</span>)</span></code>
+<br />
+Set a callback for the specified exception (or debug event) code.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#set_debugger_active" class="summary-sig-name"><code>set_debugger_active</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>enable</span>)</span></code>
+<br />
+Enable or disable the control flag for the main debug event loop.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg_core
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#set_thread_context" class="summary-sig-name"><code>set_thread_context</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>context</span>,
+          <span class=summary-sig-arg>thread_handle</span>,
+          <span class=summary-sig-arg>thread_id</span>)</span></code>
+<br />
+Convenience wrapper around SetThreadContext().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#sigint_handler" class="summary-sig-name"><code>sigint_handler</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>signal_number</span>,
+          <span class=summary-sig-arg>stack_frame</span>)</span></code>
+<br />
+Interrupt signal handler.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg_core
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#single_step" class="summary-sig-name"><code>single_step</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>enable</span>,
+          <span class=summary-sig-arg>thread_handle</span>)</span></code>
+<br />
+Enable or disable single stepping in the specified thread or 
+self.h_thread if a thread handle is not specified.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg_core
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#suspend_all_threads" class="summary-sig-name"><code>suspend_all_threads</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Suspend all process threads.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        pydbg_core
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#suspend_thread" class="summary-sig-name"><code>suspend_thread</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>thread_id</span>)</span></code>
+<br />
+Suspend the specified thread.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#terminate_process" class="summary-sig-name"><code>terminate_process</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>exit_code</span>)</span></code>
+<br />
+Terminate the debuggee.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#virtual_alloc" class="summary-sig-name"><code>virtual_alloc</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>size</span>,
+          <span class=summary-sig-arg>alloc_type</span>,
+          <span class=summary-sig-arg>protection</span>)</span></code>
+<br />
+Convenience wrapper around VirtualAllocEx()</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#virtual_free" class="summary-sig-name"><code>virtual_free</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>size</span>,
+          <span class=summary-sig-arg>free_type</span>)</span></code>
+<br />
+Convenience wrapper around VirtualFreeEx()</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        DWORD
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#virtual_protect" class="summary-sig-name"><code>virtual_protect</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>base_address</span>,
+          <span class=summary-sig-arg>size</span>,
+          <span class=summary-sig-arg>protection</span>)</span></code>
+<br />
+Convenience wrapper around VirtualProtectEx()</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">        MEMORY_BASIC_INFORMATION
+</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#virtual_query" class="summary-sig-name"><code>virtual_query</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>)</span></code>
+<br />
+Convenience wrapper around VirtualQueryEx().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#win32_error" class="summary-sig-name"><code>win32_error</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>prefix</span>)</span></code>
+<br />
+Convenience wrapper around GetLastError() and FormatMessage().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#write" class="summary-sig-name"><code>write</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>data</span>,
+          <span class=summary-sig-arg>length</span>)</span></code>
+<br />
+Alias to write_process_memory().</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="pydbg.pydbg_core.pydbg_core-class.html#write_process_memory" class="summary-sig-name"><code>write_process_memory</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>address</span>,
+          <span class=summary-sig-arg>data</span>,
+          <span class=summary-sig-arg>length</span>)</span></code>
+<br />
+Write to the debuggee process space.</td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from object</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__delattr__" class="summary-sig-name"><code>__delattr__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+x.__delattr__('name') &lt;==&gt; del x.name</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__getattribute__" class="summary-sig-name"><code>__getattribute__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+x.__getattribute__('name') &lt;==&gt; x.name</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__hash__" class="summary-sig-name"><code>__hash__</code></a>(<span class=summary-sig-arg>x</span>)</span></code>
+<br />
+x.__hash__() &lt;==&gt; hash(x)</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__new__" class="summary-sig-name"><code>__new__</code></a>(<span class=summary-sig-arg>T</span>,
+          <span class=summary-sig-arg>S</span>,
+          <span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+T.__new__(S, ...) -&gt; a new object with type S, a subtype of T</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__reduce__" class="summary-sig-name"><code>__reduce__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+helper for pickle</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__reduce_ex__" class="summary-sig-name"><code>__reduce_ex__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+helper for pickle</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__repr__" class="summary-sig-name"><code>__repr__</code></a>(<span class=summary-sig-arg>x</span>)</span></code>
+<br />
+x.__repr__() &lt;==&gt; repr(x)</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__setattr__" class="summary-sig-name"><code>__setattr__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+x.__setattr__('name', value) &lt;==&gt; x.name = value</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__str__" class="summary-sig-name"><code>__str__</code></a>(<span class=summary-sig-arg>x</span>)</span></code>
+<br />
+x.__str__() &lt;==&gt; str(x)</td></tr>
+</table><br />
+
+
+<!-- =========== START OF CLASS VARIABLE SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Class Variable Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>dict</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#breakpoints"><code>breakpoints</code></a></b> = <span title="{}"><code>{}                                         </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>bool</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#first_breakpoint"><code>first_breakpoint</code></a></b> = <span title="True"><code>True                                  </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#hardware_breakpoint_hit"><code>hardware_breakpoint_hit</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>dict</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#hardware_breakpoints"><code>hardware_breakpoints</code></a></b> = <span title="{}"><code>{}                                </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#instruction"><code>instruction</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#memory_breakpoint_hit"><code>memory_breakpoint_hit</code></a></b> = <span title="0">0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>dict</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#memory_breakpoints"><code>memory_breakpoints</code></a></b> = <span title="{}"><code>{}                                  </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>list</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#memory_snapshot_blocks"><code>memory_snapshot_blocks</code></a></b> = <span title="[]"><code>[]                              </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>list</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#memory_snapshot_contexts"><code>memory_snapshot_contexts</code></a></b> = <span title="[]"><code>[]                            </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#mnemonic"><code>mnemonic</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#op1"><code>op1</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#op2"><code>op2</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#op3"><code>op3</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#STRING_EXPLORATION_MIN_LENGTH"><code>STRING_EXPLORATION_MIN_LENGTH</code></a></b> = <span title="2">2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="pydbg.pydbg.pydbg-class.html#STRING_EXPLORATON_BUF_SIZE"><code>STRING_EXPLORATON_BUF_SIZE</code></a></b> = <span title="256">256&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>set</code></font></td>
+<td><b><a href="..\private\pydbg.pydbg.pydbg-class.html#_guarded_pages"><code>_guarded_pages</code></a></b> = <span title="set([])"><code>set([])                                 </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>bool</code></font></td>
+<td><b><a href="..\private\pydbg.pydbg.pydbg-class.html#_guards_active"><code>_guards_active</code></a></b> = <span title="True"><code>True                                    </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="..\private\pydbg.pydbg.pydbg-class.html#_restore_breakpoint"><code>_restore_breakpoint</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from pydbg_core</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>dict</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#callbacks"><code>callbacks</code></a></b> = <span title="{}"><code>{}                                           </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>bool</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#client_server"><code>client_server</code></a></b> = <span title="False"><code>False                                    </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#context"><code>context</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#dbg"><code>dbg</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>bool</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#debugger_active"><code>debugger_active</code></a></b> = <span title="True"><code>True                                   </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>bool</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#dirty"><code>dirty</code></a></b> = <span title="False"><code>False                                            </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#exception_address"><code>exception_address</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>bool</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#follow_forks"><code>follow_forks</code></a></b> = <span title="False"><code>False                                     </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#h_process"><code>h_process</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#h_thread"><code>h_thread</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#page_size"><code>page_size</code></a></b> = <span title="0">0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#pid"><code>pid</code></a></b> = <span title="0">0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>list</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#system_dlls"><code>system_dlls</code></a></b> = <span title="[]"><code>[]                                         </code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#violation_address"><code>violation_address</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="pydbg.pydbg_core.pydbg_core-class.html#write_violation"><code>write_violation</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+</table><br />
+
+
+<!-- =========== START OF METHOD DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Method Details</th></tr>
+</table>
+
+<a name="__init__"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">__init__</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>ff</span>=<span class=sig-default>True</span>,
+          <span class=sig-arg>cs</span>=<span class=sig-default>False</span>)</span>
+    <br /><i>(Constructor)</i>
+  </h3>
+  Set the default attributes. See the source if you want to modify the 
+  default creation values.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>ff</b></code> -
+         (Optional, Def=True) Flag controlling whether or not pydbg 
+        attaches to forked processes
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Boolean)</i>
+      <dd><code><b>cs</b></code> -
+         (Optional, Def=False) Flag controlling whether or not pydbg is 
+        in client/server (socket) mode
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Boolean)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#__init__"><code>pydbg.pydbg_core.pydbg_core.__init__</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_del"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_del</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>)</span>
+  </h3>
+  Removes the breakpoint from target address.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address or list of addresses to remove breakpoint from
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD or List)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_set(), bp_del_all(), bp_is_ours()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_del_all"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_del_all</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Removes all breakpoints from the debuggee.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_set(), bp_del(), bp_is_ours()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_del_hw"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_del_hw</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>=<span class=sig-default>None</span>,
+          <span class=sig-arg>slot</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Removes the hardware breakpoint from the specified address or slot. 
+  Either an address or a slot must be specified, but not both.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         (Optional) Address to remove hardware breakpoint from.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      <dd><code><b>slot</b></code> -
+         (Optional)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer (0 through 3))</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_set_hw()
+</p>
+
+<p><b>To Do:</b> Should probably consider moving this into pydbg_core.
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_del_mem"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_del_mem</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>)</span>
+  </h3>
+  Removes the memory breakpoint from target address.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address or list of addresses to remove memory breakpoint 
+        from
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_del_mem_all(), bp_set_mem(), bp_is_ours_mem()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_del_mem_all"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_del_mem_all</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Removes all memory breakpoints from the debuggee.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_del_mem(), bp_set_mem(), bp_is_ours_mem()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_is_ours"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_is_ours</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address_to_check</span>)</span>
+  </h3>
+  Determine if a breakpoint address belongs to us.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address_to_check</b></code> -
+         Address to check if we have set a breakpoint at
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        True if breakpoint in question is ours, False otherwise
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Bool)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> bp_set(), bp_del(), bp_del_all()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_is_ours_mem"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_is_ours_mem</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address_to_check</span>)</span>
+  </h3>
+  Determines if the specified address falls within the range of one of 
+  our memory breakpoints. When handling potential memory breakpoint 
+  exceptions it is mandatory to check the offending address with this 
+  routine as memory breakpoints are implemented by changing page 
+  permissions and the referenced address may very well exist within the 
+  same page as a memory breakpoint but not within the actual range of the 
+  buffer we wish to break on.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address_to_check</b></code> -
+         Address to check if we have set a breakpoint on
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        The starting address of the buffer our breakpoint triggered on 
+        or False if address falls outside range.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Mixed)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> bp_set_mem(), bp_del_mem(), bp_del_mem_all()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_set"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_set</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>,
+          <span class=sig-arg>description</span>=<span class=sig-default>''</span>,
+          <span class=sig-arg>restore</span>=<span class=sig-default>True</span>,
+          <span class=sig-arg>handler</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Sets a breakpoint at the designated address. Register an 
+  EXCEPTION_BREAKPOINT callback handler to catch breakpoint events. If a 
+  list of addresses is submitted to this routine then the entire list of 
+  new breakpoints get the same description and restore. The optional 
+  &quot;handler&quot; parameter can be used to identify a function to 
+  specifically handle the specified bp, as opposed to the generic bp 
+  callback handler. The prototype of the callback routines is:
+<pre class="literalblock">
+   func (pydbg)
+       return DBG_CONTINUE     # or other continue status
+</pre>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address or list of addresses to set breakpoint at
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD or List)</i>
+      <dd><code><b>description</b></code> -
+         (Optional) Description to associate with this breakpoint
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      <dd><code><b>restore</b></code> -
+         (Optional, def=True) Flag controlling whether or not to 
+        restore the breakpoint
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Bool)</i>
+      <dd><code><b>handler</b></code> -
+         (Optional, def=None) Optional handler to call for this bp 
+        instead of the default handler
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Function Pointer)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_is_ours(), bp_del(), bp_del_all()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_set_hw"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_set_hw</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>,
+          <span class=sig-arg>length</span>,
+          <span class=sig-arg>condition</span>,
+          <span class=sig-arg>description</span>=<span class=sig-default>''</span>,
+          <span class=sig-arg>restore</span>=<span class=sig-default>True</span>,
+          <span class=sig-arg>handler</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  <p>Sets a hardware breakpoint at the designated address. Register an 
+  EXCEPTION_SINGLE_STEP callback handler to catch hardware breakpoint 
+  events. Setting hardware breakpoints requires the internal h_thread 
+  handle be set. This means that you can not set one outside the context 
+  of an debug event handler. If you want to set a hardware breakpoint as 
+  soon as you attach to or load a process, do so in the first chance 
+  breakpoint handler.</p>
+  For more information regarding the Intel x86 debug registers and 
+  hardware breakpoints see:
+<pre class="literalblock">
+   http://pdos.csail.mit.edu/6.828/2005/readings/ia32/IA32-3.pdf
+   Section 15.2
+</pre>
+  Alternatively, you can register a custom handler to handle hits on 
+  the specific hw breakpoint slot.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address to set hardware breakpoint at
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      <dd><code><b>length</b></code> -
+         Size of hardware breakpoint in bytes (byte, word or dword)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer (1, 2 or 4))</i>
+      <dd><code><b>condition</b></code> -
+         Condition to set the hardware breakpoint to activate on
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer (HW_ACCESS, HW_WRITE, HW_EXECUTE))</i>
+      <dd><code><b>description</b></code> -
+         (Optional) Description of breakpoint
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      <dd><code><b>restore</b></code> -
+         (Optional, def=True) Flag controlling whether or not to 
+        restore the breakpoint
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Boolean)</i>
+      <dd><code><b>handler</b></code> -
+         (Optional, def=None) Optional handler to call for this bp 
+        instead of the default handler
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Function Pointer)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_del_hw()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="bp_set_mem"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">bp_set_mem</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>,
+          <span class=sig-arg>size</span>,
+          <span class=sig-arg>description</span>=<span class=sig-default>''</span>,
+          <span class=sig-arg>handler</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Sets a memory breakpoint at the target address. This is implemented 
+  by changing the permissions of the page containing the address to 
+  PAGE_GUARD. To catch memory breakpoints you have to register the 
+  EXCEPTION_GUARD_PAGE callback. Within the callback handler check the 
+  internal pydbg variable self.memory_breakpoint_hit to determine if the 
+  violation was a result of a direct memory breakpoint hit or some 
+  unrelated event. Alternatively, you can register a custom handler to 
+  handle the memory breakpoint. Memory breakpoints are automatically 
+  restored via the internal single step handler. To remove a memory 
+  breakpoint, you must explicitly call bp_del_mem().
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Starting address of the buffer to break on
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      <dd><code><b>size</b></code> -
+         Size of the buffer to break on
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      <dd><code><b>description</b></code> -
+         (Optional) Description to associate with this breakpoint
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      <dd><code><b>handler</b></code> -
+         (Optional, def=None) Optional handler to call for this bp 
+        instead of the default handler
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Function Pointer)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+<p><b>See Also:</b> bp_is_ours_mem(), bp_del_mem(), bp_del_mem_all()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="cleanup"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">cleanup</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Clean up after ourselves by removing all breakpoints.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#cleanup"><code>pydbg.pydbg_core.pydbg_core.cleanup</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="dbg_print_all_guarded_pages"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">dbg_print_all_guarded_pages</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  <p>*** DEBUG ROUTINE ***</p>
+  This is a debugging routine that was used when debugging memory 
+  breakpoints. It was too useful to be removed from the release code.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="disasm"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">disasm</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>)</span>
+  </h3>
+  Pydasm disassemble utility function wrapper. Stores the pydasm 
+  decoded instruction in self.instruction.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address to disassemble at
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Disassembled string.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="disasm_around"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">disasm_around</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>,
+          <span class=sig-arg>num_inst</span>=<span class=sig-default>5</span>)</span>
+  </h3>
+  Given a specified address this routine will return the list of 5 
+  instructions before and after the instruction at address (including the 
+  instruction at address, so 11 instructions in total). This is 
+  accomplished by grabbing a larger chunk of data around the address than 
+  what is predicted as necessary and then disassembling forward. If 
+  during the forward disassembly the requested address lines up with the 
+  start of an instruction, then the assumption is made that the forward 
+  disassembly self corrected itself and the instruction set is returned. 
+  If we are unable to align with the original address, then we modify our 
+  data slice and try again until we do.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address to disassemble around
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      <dd><code><b>num_inst</b></code> -
+         (Optional, Def=5) Number of instructions to disassemble 
+        up/down from address
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        List of tuples (address, disassembly) of instructions around 
+        the specified address.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=List)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="dump_context"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">dump_context</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>context</span>=<span class=sig-default>None</span>,
+          <span class=sig-arg>stack_depth</span>=<span class=sig-default>5</span>,
+          <span class=sig-arg>print_dots</span>=<span class=sig-default>True</span>)</span>
+  </h3>
+  Return an informational block of text describing the CPU context of 
+  the current thread. Information includes:
+  <ul>
+    <li>
+      Disassembly at current EIP
+    </li>
+    <li>
+      Register values in hex, decimal and &quot;smart&quot; 
+      dereferenced
+    </li>
+    <li>
+      ESP, ESP+4, ESP+8 ... values in hex, decimal and 
+      &quot;smart&quot; dereferenced
+    </li>
+  </ul>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>context</b></code> -
+         (Optional) Current thread context to examine
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Context)</i>
+      <dd><code><b>stack_depth</b></code> -
+         (Optional, def:5) Number of dwords to dereference off of the 
+        stack (not including ESP)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      <dd><code><b>print_dots</b></code> -
+         (Optional, def:True) Controls suppression of dot in place of 
+        non-printable
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Bool)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Information about current thread context.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> dump_context_list()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="dump_context_list"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">dump_context_list</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>context</span>=<span class=sig-default>None</span>,
+          <span class=sig-arg>stack_depth</span>=<span class=sig-default>5</span>,
+          <span class=sig-arg>print_dots</span>=<span class=sig-default>True</span>)</span>
+  </h3>
+  Return an informational list of items describing the CPU context of 
+  the current thread. Information includes:
+  <ul>
+    <li>
+      Disassembly at current EIP
+    </li>
+    <li>
+      Register values in hex, decimal and &quot;smart&quot; 
+      dereferenced
+    </li>
+    <li>
+      ESP, ESP+4, ESP+8 ... values in hex, decimal and 
+      &quot;smart&quot; dereferenced
+    </li>
+  </ul>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>context</b></code> -
+         (Optional) Current thread context to examine
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Context)</i>
+      <dd><code><b>stack_depth</b></code> -
+         (Optional, def:5) Number of dwords to dereference off of the 
+        stack (not including ESP)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      <dd><code><b>print_dots</b></code> -
+         (Optional, def:True) Controls suppression of dot in place of 
+        non-printable
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Bool)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Dictionary of information about current thread context.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Dictionary)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> dump_context()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="event_handler_create_process"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">event_handler_create_process</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default CREATE_PROCESS_DEBUG_EVENT handler. Calls 
+  through to pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#event_handler_create_process"><code>pydbg.pydbg_core.pydbg_core.event_handler_create_process</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="event_handler_create_thread"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">event_handler_create_thread</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default CREATE_THREAD_DEBUG_EVENT handler. Calls through 
+  to pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#event_handler_create_thread"><code>pydbg.pydbg_core.pydbg_core.event_handler_create_thread</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="event_handler_exit_process"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">event_handler_exit_process</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default EXIT_PROCESS_DEBUG_EVENT handler. Calls through 
+  to pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised to denote process exit.
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#event_handler_exit_process"><code>pydbg.pydbg_core.pydbg_core.event_handler_exit_process</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="event_handler_exit_thread"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">event_handler_exit_thread</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default EXIT_THREAD_DEBUG_EVENT handler. Calls through 
+  to pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#event_handler_exit_thread"><code>pydbg.pydbg_core.pydbg_core.event_handler_exit_thread</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="event_handler_load_dll"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">event_handler_load_dll</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default LOAD_DLL_DEBUG_EVENT handler. Calls through to 
+  pydbg_core. You can access the last loaded dll in your callback handler 
+  with the following example code:
+<pre class="literalblock">
+   last_dll = pydbg.get_system_dll(-1)
+   print &quot;loading:%s into:%08x size:%d&quot; % (last_dll.name, last_dll.base, last_dll.size)
+</pre>
+  The get_system_dll() routine is preferred over directly accessing 
+  the internal data structure for proper and transparent client/server 
+  support.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#event_handler_load_dll"><code>pydbg.pydbg_core.pydbg_core.event_handler_load_dll</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="event_handler_unload_dll"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">event_handler_unload_dll</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default UNLOAD_DLL_DEBUG_EVENT handler. Calls through to 
+  pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#event_handler_unload_dll"><code>pydbg.pydbg_core.pydbg_core.event_handler_unload_dll</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="exception_handler_access_violation"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">exception_handler_access_violation</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default EXCEPTION_ACCESS_VIOLATION handler. Responsible 
+  for handling the access violation and passing control to the registered 
+  user callback handler. Does not call through to pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#exception_handler_access_violation"><code>pydbg.pydbg_core.pydbg_core.exception_handler_access_violation</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="exception_handler_breakpoint"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">exception_handler_breakpoint</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default EXCEPTION_BREAKPOINT handler, responsible for 
+  transparently restoring soft breakpoints and passing control to the 
+  registered user callback handler. Does not call through to 
+  pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#exception_handler_breakpoint"><code>pydbg.pydbg_core.pydbg_core.exception_handler_breakpoint</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="exception_handler_guard_page"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">exception_handler_guard_page</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default EXCEPTION_GUARD_PAGE handler, responsible for 
+  transparently restoring memory breakpoints passing control to the 
+  registered user callback handler. Does not call through to 
+  pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#exception_handler_guard_page"><code>pydbg.pydbg_core.pydbg_core.exception_handler_guard_page</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="exception_handler_single_step"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">exception_handler_single_step</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  This is the default EXCEPTION_SINGLE_STEP handler, responsible for 
+  transparently restoring breakpoints and passing control to the 
+  registered user callback handler. Does not call through to 
+  pydbg_core.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Debug event continue status.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="pydbg.pydbg_core.pydbg_core-class.html#exception_handler_single_step"><code>pydbg.pydbg_core.pydbg_core.exception_handler_single_step</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="flip_endian"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">flip_endian</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>dword</span>)</span>
+  </h3>
+  Utility function to flip the endianess a given DWORD into raw 
+  bytes.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>dword</b></code>
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Converted DWORD in raw bytes.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Raw Bytes)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="flip_endian_dword"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">flip_endian_dword</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>bytes</span>)</span>
+  </h3>
+  Utility function to flip the endianess of a given set of raw bytes 
+  into a DWORD.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>bytes</b></code> -
+         Raw bytes whose endianess to flip
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Raw Bytes)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Converted DWORD.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="func_resolve"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">func_resolve</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>dll</span>,
+          <span class=sig-arg>function</span>)</span>
+  </h3>
+  Utility function that resolves the address of a given module / 
+  function name pair under the context of the debugger.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>dll</b></code> -
+         Name of the DLL (case-insensitive)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      <dd><code><b>function</b></code> -
+         Name of the function to resolve (case-sensitive)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Address
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> func_resolve_debuggee()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="func_resolve_debuggee"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">func_resolve_debuggee</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>dll_name</span>,
+          <span class=sig-arg>func_name</span>)</span>
+  </h3>
+  Utility function that resolves the address of a given module / 
+  function name pair under the context of the debuggee.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>dll_name</b></code> -
+         Name of the DLL (case-insensitive, ex:ws2_32.dll)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      <dd><code><b>func_name</b></code> -
+         Name of the function to resolve (case-sensitive)
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Address of the symbol in the target process address space if 
+        it can be resolved, None otherwise
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+<p><b>Author:</b> Otto Ebeling
+</p>
+
+<p><b>See Also:</b> func_resolve()
+</p>
+
+<p><b>To Do:</b> Add support for followed imports.
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="get_arg"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">get_arg</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>index</span>,
+          <span class=sig-arg>context</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Given a thread context, this convenience routine will retrieve the 
+  function argument at the specified index. The return address of the 
+  function can be retrieved by specifying an index of 0. This routine 
+  should be called from breakpoint handlers at the top of a function.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>index</b></code> -
+         Data to explore for printable ascii string
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      <dd><code><b>context</b></code> -
+         (Optional) Current thread context to examine
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Context)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Value of specified argument.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="get_ascii_string"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">get_ascii_string</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>data</span>)</span>
+  </h3>
+  Retrieve the ASCII string, if any, from data. Ensure that the string 
+  is valid by checking against the minimum length requirement defined in 
+  self.STRING_EXPLORATION_MIN_LENGTH.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>data</b></code> -
+         Data to explore for printable ascii string
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Raw)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        False on failure, ascii string on discovered string.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="get_instruction"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">get_instruction</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>)</span>
+  </h3>
+  Pydasm disassemble utility function wrapper. Returns the pydasm 
+  decoded instruction in self.instruction.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address to disassemble at
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        pydasm instruction
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydasm instruction)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="get_printable_string"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">get_printable_string</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>data</span>,
+          <span class=sig-arg>print_dots</span>=<span class=sig-default>True</span>)</span>
+  </h3>
+  description
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>data</b></code> -
+         Data to explore for printable ascii string
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Raw)</i>
+      <dd><code><b>print_dots</b></code> -
+         (Optional, def:True) Controls suppression of dot in place of 
+        non-printable
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Bool)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        False on failure, discovered printable chars in string 
+        otherwise.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="get_unicode_string"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">get_unicode_string</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>data</span>)</span>
+  </h3>
+  description
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>data</b></code> -
+         Data to explore for printable unicode string
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Raw)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        False on failure, ascii-converted unicode string on discovered 
+        string.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="hex_dump"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">hex_dump</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>data</span>,
+          <span class=sig-arg>addr</span>=<span class=sig-default>0</span>,
+          <span class=sig-arg>prefix</span>=<span class=sig-default>''</span>)</span>
+  </h3>
+  Utility function that converts data into hex dump format.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>data</b></code> -
+         Raw bytes to view in hex dump
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Raw Bytes)</i>
+      <dd><code><b>addr</b></code> -
+         (Optional, def=0) Address to start hex offset display from
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      <dd><code><b>prefix</b></code> -
+         String to prefix each line of hex dump with.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String (Optional, def=&quot;&quot;))</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Hex dump of data.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="hide_debugger"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">hide_debugger</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Hide the presence of the debugger. This routine requires an active 
+  context and therefore can not be called immediately after a load() for 
+  example. Call it from the first chance breakpoint handler. This routine 
+  hides the debugger in the following ways:
+  <ul>
+    <li>
+      Modifies the PEB flag that IsDebuggerPresent() checks for.
+    </li>
+  </ul>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised if we are unable to hide the debugger 
+        for various reasons.
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="is_address_on_stack"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">is_address_on_stack</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>,
+          <span class=sig-arg>context</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Utility function to determine if the specified address exists on the 
+  current thread stack or not.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address to check
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      <dd><code><b>context</b></code> -
+         (Optional) Current thread context to examine
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Context)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        True if address lies in current threads stack range, False 
+        otherwise.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Bool)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="page_guard_clear"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">page_guard_clear</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Clear all debugger-set PAGE_GUARDs from memory. This is useful for 
+  suspending memory breakpoints to single step past a REP 
+  instruction.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> page_guard_restore()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="page_guard_restore"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">page_guard_restore</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Restore all previously cleared debugger-set PAGE_GUARDs from memory. 
+  This is useful for suspending memory breakpoints to single step past a 
+  REP instruction.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> page_guard_clear()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="process_restore"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">process_restore</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Restore memory / context snapshot of the debuggee. All threads must 
+  be suspended before calling this routine.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="process_snapshot"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">process_snapshot</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Take memory / context snapshot of the debuggee. All threads must be 
+  suspended before calling this routine.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="seh_unwind"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">seh_unwind</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>context</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Unwind the the Structured Exception Handler (SEH) chain of the 
+  current or specified thread to the best of our abilities. The SEH chain 
+  is a simple singly linked list, the head of which is pointed to by 
+  fs:0. In cases where the SEH chain is corrupted and the handler address 
+  points to invalid memory, it will be returned as 0xFFFFFFFF.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>context</b></code> -
+         (Optional) Current thread context to examine
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Context)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Naturally ordered list of SEH addresses and handlers.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=List of Tuples)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="set_register"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">set_register</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>register</span>,
+          <span class=sig-arg>value</span>)</span>
+  </h3>
+  Set the value of a register in the debuggee within the context of 
+  the self.h_thread.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>register</b></code> -
+         One of EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP, EIP
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Register)</i>
+      <dd><code><b>value</b></code> -
+         Value to set register to
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Self
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=pydbg)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Raises:</b></dt>
+      <dd><code><b>pdx</b></code> -
+        An exception is raised on failure.
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="smart_dereference"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">smart_dereference</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>address</span>,
+          <span class=sig-arg>print_dots</span>=<span class=sig-default>True</span>)</span>
+  </h3>
+  &quot;Intelligently&quot; discover data behind an address. The 
+  address is dereferenced and explored in search of an ASCII or Unicode 
+  string. In the absense of a string the printable characters are 
+  returned with non-printables represented as dots (.). The location of 
+  the discovered data is returned as well as either &quot;heap&quot;, 
+  &quot;stack&quot; or the name of the module it lies in (global 
+  data).
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>address</b></code> -
+         Address to smart dereference
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=DWORD)</i>
+      <dd><code><b>print_dots</b></code> -
+         (Optional, def:True) Controls suppression of dot in place of 
+        non-printable
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Bool)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        String of data discovered behind dereference.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="stack_range"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">stack_range</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>context</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Determine the stack range (top and bottom) of the current or 
+  specified thread. The desired information is located at offsets 4 and 8 
+  from the Thread Environment Block (TEB), which in turn is pointed to by 
+  fs:0.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>context</b></code> -
+         (Optional) Current thread context to examine
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Context)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        List containing (stack_top, stack_bottom) on success, False 
+        otherwise.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Mixed)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="stack_unwind"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">stack_unwind</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>context</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Unwind the stack to the best of our ability. This function is really 
+  only useful if called when EBP is actually used as a frame pointer. If 
+  it is otherwise being used as a general purpose register then stack 
+  unwinding will fail immediately.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>context</b></code> -
+         (Optional) Current thread context to examine
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Context)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        The current call stack ordered from most recent call 
+        backwards.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=List)</i>
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="to_binary"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">to_binary</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>number</span>,
+          <span class=sig-arg>bit_count</span>=<span class=sig-default>32</span>)</span>
+  </h3>
+  Convert a number into a binary string. This is an ugly one liner 
+  that I ripped off of some site.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>number</b></code> -
+         Number to convert to binary string.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      <dd><code><b>bit_count</b></code> -
+         (Optional, Def=32) Number of bits to include in output 
+        string.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Specified integer as a binary string
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> to_decimal()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+
+<a name="to_decimal"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">to_decimal</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>binary</span>)</span>
+  </h3>
+  Convert a binary string into a decimal number.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>binary</b></code> -
+         Binary string to convert to decimal
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=String)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Returns:</b></dt>
+      <dd>
+        Specified binary string as an integer
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=Integer)</i>
+      </dd>
+    </dl>
+<p><b>See Also:</b> to_binary()
+</p>
+
+  </dd></dl>
+</td></tr></table>
+<br />
+
+
+<!-- =========== START OF CLASS VARIABLE DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Class Variable Details</th></tr>
+</table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="breakpoints"></a>
+<h3>breakpoints</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>dict</code>
+
+      </dd>
+<span title="{}">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+{}                                                                     </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="first_breakpoint"></a>
+<h3>first_breakpoint</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>bool</code>
+
+      </dd>
+<span title="True">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+True                                                                   </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="hardware_breakpoint_hit"></a>
+<h3>hardware_breakpoint_hit</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="hardware_breakpoints"></a>
+<h3>hardware_breakpoints</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>dict</code>
+
+      </dd>
+<span title="{}">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+{}                                                                     </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="instruction"></a>
+<h3>instruction</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="memory_breakpoint_hit"></a>
+<h3>memory_breakpoint_hit</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>int</code>
+
+      </dd>
+<span title="0">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="memory_breakpoints"></a>
+<h3>memory_breakpoints</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>dict</code>
+
+      </dd>
+<span title="{}">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+{}                                                                     </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="memory_snapshot_blocks"></a>
+<h3>memory_snapshot_blocks</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>list</code>
+
+      </dd>
+<span title="[]">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+[]                                                                     </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="memory_snapshot_contexts"></a>
+<h3>memory_snapshot_contexts</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>list</code>
+
+      </dd>
+<span title="[]">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+[]                                                                     </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="mnemonic"></a>
+<h3>mnemonic</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="op1"></a>
+<h3>op1</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="op2"></a>
+<h3>op2</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="op3"></a>
+<h3>op3</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="STRING_EXPLORATION_MIN_LENGTH"></a>
+<h3>STRING_EXPLORATION_MIN_LENGTH</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>int</code>
+
+      </dd>
+<span title="2">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="STRING_EXPLORATON_BUF_SIZE"></a>
+<h3>STRING_EXPLORATON_BUF_SIZE</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>int</code>
+
+      </dd>
+<span title="256">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+256&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="_guarded_pages"></a>
+<h3>_guarded_pages</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>set</code>
+
+      </dd>
+<span title="set([])">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+set([])                                                                </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="_guards_active"></a>
+<h3>_guards_active</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>bool</code>
+
+      </dd>
+<span title="True">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+True                                                                   </pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<table width="100%" class="var-details" bgcolor="#e0e0e0"><tr><td>
+<a name="_restore_breakpoint"></a>
+<h3>_restore_breakpoint</h3>
+<dl>
+  <dt></dt>
+  <dd>
+    <dl>
+      <dt><b>Type:</b></dt>
+      <dd>
+          <code>NoneType</code>
+
+      </dd>
+<span title="None">      <dt><b>Value:</b></dt>
+      <dd><table><tr><td>
+<pre class="variable">
+None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+        </td></tr></table></dd>
+</span>    </dl>
+  </dd>
+</dl></td></tr></table>
+<br />
+
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" align="right" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0">
+      <tr><th class="navbar" align="center">
+        <p class="nomargin">
+          <a class="navbar" target="_top" href="http://www.openrce.org">PyDbg&nbsp;-&nbsp;Python&nbsp;Win32&nbsp;Debugger</a>
+      </p></th></tr></table>
+    </th>
+  </tr>
+</table>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Thu Sep 14 10:39:48 2006</font></td>
+    <td align="right"><a href="http://epydoc.sourceforge.net"
+                      ><font size="-2">http://epydoc.sf.net</font></a></td>
+  </tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,48 @@
+attach e002 - calls exn_init
+Hello Cruel World!
+pid = 57346
+get_task_threads e002
+allocate 4867 0 128
+ALLOCATE RETURNED WITH 8000
+virtual_protect 1303 8000 80 4
+vm_protect(1103, 8000, 80, 0, 3)
+write_memory 1303 8000 40
+virtual_query e002 8030 0
+Virtual query suceeded
+virtual_protect e002 8030 4 40
+vm_protect(1103, 8030, 4, 0, 7)
+read_memory e002 8030 4
+virtual_query e002 8030 0
+Virtual query suceeded
+virtual_protect e002 8030 4 4
+vm_protect(1103, 8030, 4, 0, 3)
+virtual_query e002 1fff 0
+Virtual query suceeded
+virtual_protect e002 1fff 1 40
+vm_protect(1103, 1fff, 1, 0, 7)
+read_memory e002 1fff 1
+virtual_query e002 1fff 0
+Virtual query suceeded
+virtual_protect e002 1fff 1 20
+vm_protect(1103, 1fff, 1, 0, 5)
+virtual_query e002 1fff 0
+Virtual query suceeded
+virtual_protect e002 1fff 1 40
+vm_protect(1103, 1fff, 1, 0, 7)
+write_memory e002 1fff 1
+virtual_query e002 1fff 0
+Virtual query suceeded
+virtual_protect e002 1fff 1 20
+vm_protect(1103, 1fff, 1, 0, 5)
+virtual_query e002 1fff 0
+Virtual query suceeded
+virtual_protect e002 1fff 1 40
+vm_protect(1103, 1fff, 1, 0, 7)
+write_memory e002 1fff 1
+virtual_query e002 1fff 0
+Virtual query suceeded
+virtual_protect e002 1fff 1 20
+vm_protect(1103, 1fff, 1, 0, 5)
+get_task_threads e002
+resume_thread 1303
+detatch e002

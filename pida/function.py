@@ -317,7 +317,7 @@ class function (pgraph.graph, pgraph.node):
         if is_call_insn(ea):
             return []
 
-        xrefs = CodeRefsFrom(ea, 1)
+        xrefs = list(CodeRefsFrom(ea, 1))
 
         # if the only xref from ea is next ea, then return nothing.
         if len(xrefs) == 1 and xrefs[0] == NextNotTail(ea):
@@ -347,7 +347,7 @@ class function (pgraph.graph, pgraph.node):
         while not isCode(GetFlags(prev_code_ea)):
             prev_code_ea = PrevNotTail(prev_code_ea)
 
-        for xref in CodeRefsTo(ea, 1):
+        for xref in list(CodeRefsTo(ea, 1)):
             if not is_call_insn(xref) and xref not in [prev_ea, prev_code_ea]:
                 xrefs.append(xref)
 

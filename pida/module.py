@@ -114,8 +114,8 @@ class module (pgraph.graph):
             print "Enumerating intramodular cross references..."
 
         for func in self.nodes.values():
-            xrefs = CodeRefsTo(func.ea_start, 0)
-            xrefs.extend(DataRefsTo(func.ea_start))
+            xrefs = list(CodeRefsTo(func.ea_start, 0))
+            xrefs.extend(list(DataRefsTo(func.ea_start)))
 
             for ref in xrefs:
                 from_func = get_func(ref)

@@ -23,7 +23,7 @@ except: pass
 
 import cPickle
 import zlib
-import md5
+import hashlib
 import struct
 
 ########################################################################################################################
@@ -408,7 +408,7 @@ def signature (file_name):
         # try this on for size.
         fh = open("c:" + file_name, "rb")
 
-    m  = md5.new()
+    m  = hashlib.md5()
 
     m.update(fh.read())
 

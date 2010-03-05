@@ -200,10 +200,10 @@ for func in functions:
 
         ida_log("enumerating xrefs to %s" % full_name)
 
-        for xref in CodeRefsTo(location, True) + DataRefsTo(location):
+        for xref in list(CodeRefsTo(location, True)) + list(DataRefsTo(location)):
             if GetMnem(xref) in ("call", "jmp"):
                 # ensure the xref does not exist within a known library routine.
-                if GetFunctionFlags(xref) & FUNC_LIB:
+                if GetFunctionFlags(ea) and GetFunctionFlags(xref) & FUNC_LIB:
                     continue
 
                 ###

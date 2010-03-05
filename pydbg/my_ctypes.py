@@ -76,5 +76,5 @@ c_types = (Structure, c_char, c_byte, c_ubyte, c_short, c_ushort, c_int, c_uint,
 
 
 # for each ctype we need to marshal, set it's __reduce__ routine.
-for typ in c_types:
-    typ.__reduce__ = _reduce
+#for typ in c_types:
+#    typ.__reduce__ = _reduce

@@ -141,7 +141,7 @@ class pydbg:
         self.op3                      = None      # pydasm decoded 3rd operand, propagated by self.disasm()
 
         # control debug/error logging.
-        self._log = lambda msg: None
+        self._log = lambda msg: None #sys.stderr.write("PDBG_LOG> " + msg + "\n")
         self._err = lambda msg: sys.stderr.write("PDBG_ERR> " + msg + "\n")
 
         # determine the system page size.
@@ -1438,7 +1438,7 @@ class pydbg:
         with the following example code::
 
             last_dll = pydbg.get_system_dll(-1)
-            print "loading:%s into:%08x size:%d" % (last_dll.name, last_dll.base, last_dll.size)
+            print "loading:%s from %s into:%08x size:%d" % (last_dll.name, last_dll.path, last_dll.base, last_dll.size)
 
         The get_system_dll() routine is preferred over directly accessing the internal data structure for proper and
         transparent client/server support.
@@ -2999,7 +2999,6 @@ class pydbg:
         '''
 
         self._log("setting debug event loop flag to %s" % enable)
-
         self.debugger_active = enable
 
 

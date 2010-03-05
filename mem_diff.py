@@ -203,7 +203,7 @@ md = memory_differ(sys.argv[1])
 imported_objects = {}
 readline.set_completer(rlcompleter.Completer(imported_objects).complete)
 readline.parse_and_bind("tab:complete")
-code.interact(banner="Memory Differ", local=locals())
+code.interact(banner="Memory Differ\nSee dir(md) for help", local=locals())
     
 """
 print "snapped %d blocks" % len(md.get_snap("a"))

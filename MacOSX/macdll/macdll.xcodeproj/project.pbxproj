@@ -162,7 +162,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
 				OTHER_LDFLAGS = "-Wl,-read_only_relocs,suppress";
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+				SDKROOT = "";
 				WARNING_CFLAGS = "-Wall";
 			};
 			name = Debug;
@@ -189,7 +189,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
 				OTHER_LDFLAGS = "-Wl,-read_only_relocs,suppress";
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+				SDKROOT = "";
 				WARNING_CFLAGS = "-Wall";
 			};
 			name = Release;

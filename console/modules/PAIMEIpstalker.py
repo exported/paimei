@@ -129,6 +129,9 @@ class PAIMEIpstalker(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.process_list.on_attach_detach,  self.attach_detach)
         self.process_list.Bind(wx.EVT_LIST_ITEM_SELECTED,             self.process_list.on_select)
 
+        # unselect targets
+        self.targets.UnselectAll()
+
         self.msg("PaiMei Process Stalker")
         self.msg("Module by Pedram Amini\n")
 

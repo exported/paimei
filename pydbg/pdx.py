@@ -22,6 +22,8 @@
 @organization: www.openrce.org
 '''
 
+import os.path
+
 from my_ctypes import *
 from defines   import *
 
@@ -29,7 +31,7 @@ from defines   import *
 try:
     kernel32 = windll.kernel32
 except:
-    kernel32 = CDLL("libmacdll.dylib")
+    kernel32 = CDLL(os.path.join(os.path.dirname(__file__), "libmacdll.dylib"))
 
 class pdx (Exception):
     '''

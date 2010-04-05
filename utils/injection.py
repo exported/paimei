@@ -22,11 +22,17 @@
 @organization: www.openrce.org
 '''
 
+import os.path
+
 from pydbg           import *
 from pydbg.defines   import *
 from pydbg.my_ctypes import *
 
-kernel32 = windll.kernel32
+# macos compatability.
+try:
+    kernel32 = windll.kernel32
+except:
+    kernel32 = CDLL(os.path.join(os.path.dirname(__file__), "libmacdll.dylib"))
 
 ########################################################################################################################
 class inject:

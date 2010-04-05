@@ -22,6 +22,8 @@
 @organization: www.openrce.org
 '''
 
+import os.path
+
 from my_ctypes import *
 from defines   import *
 from windows_h import *
@@ -31,7 +33,7 @@ try:
     kernel32 = windll.kernel32
     psapi    = windll.psapi
 except:
-    kernel32 = CDLL("libmacdll.dylib")
+    kernel32 = CDLL(os.path.join(os.path.dirname(__file__), "libmacdll.dylib"))
     psapi    = kernel32
 
 from pdx import *

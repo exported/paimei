@@ -24,6 +24,7 @@
 @organization: www.openrce.org
 '''
 
+import os.path
 import sys
 import copy
 import signal
@@ -42,7 +43,7 @@ try:
     ntdll    = windll.ntdll
     iphlpapi = windll.iphlpapi
 except:
-    kernel32 = CDLL("libmacdll.dylib")
+    kernel32 = CDLL(os.path.join(os.path.dirname(__file__), "libmacdll.dylib"))
     advapi32 = kernel32
 
 from breakpoint              import *

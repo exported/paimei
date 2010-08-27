@@ -122,6 +122,7 @@ class pydbg:
         self.exception_code           = None      # from dbg.u.Exception.ExceptionRecord.ExceptionCode
 
         self.breakpoints              = {}        # internal breakpoint dictionary, keyed by address
+        self.unresolved_breakpoints   = []        # breakpoints failed to be set at first
         self.memory_breakpoints       = {}        # internal memory breakpoint dictionary, keyed by base address
         self.hardware_breakpoints     = {}        # internal hardware breakpoint array, indexed by slot (0-3 inclusive)
         self.memory_snapshot_blocks   = []        # list of memory blocks at time of memory snapshot
@@ -565,7 +566,7 @@ class pydbg:
                 # add the breakpoint to the internal list.
                 self.breakpoints[address] = breakpoint(address, original_byte, description, restore, handler)
             except:
-                raise pdx("Failed setting breakpoint at %08x" % address)
+                self.unresolved_breakpoints.append( (address,description,restore,handler ) )
 
         return self.ret_self()
 
@@ -1543,6 +1544,11 @@ class pydbg:
             else:
                 self._log("breakpoint not ours %08x" % self.exception_address)
                 continue_status = DBG_EXCEPTION_NOT_HANDLED
+
+            #set the breakpoint failed to be set in the first try
+            for (address,description,restore,handler ) in self.unresolved_breakpoints:
+                self.bp_set( address, description, restore, handler )
+                self.unresolved_breakpoints = []
 
         # breakpoints we did set.
         else:

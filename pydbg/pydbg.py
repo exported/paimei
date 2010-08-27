@@ -95,7 +95,7 @@ class pydbg:
         '''
 
         # private variables, internal use only:
-        self._restore_breakpoint      = None      # breakpoint to restore
+        self._restore_breakpoints      = {}      # breakpoint to restore
         self._guarded_pages           = set()     # specific pages we set PAGE_GUARD on
         self._guards_active           = True      # flag specifying whether or not guard pages are active
 
@@ -1573,7 +1573,7 @@ class pydbg:
             # still active, that way we don't try and single step if the user requested a detach.
             if self.get_attr("debugger_active") and self.breakpoints.has_key(self.exception_address):
                 if self.breakpoints[self.exception_address].restore:
-                    self._restore_breakpoint = self.breakpoints[self.exception_address]
+                    self._restore_breakpoints[ self.dbg.dwThreadId ] = self.breakpoints[self.exception_address]
                     self.single_step(True)
 
                 self.bp_del(self.exception_address)
@@ -1627,7 +1627,7 @@ class pydbg:
         # callback, then tell the single step handler about it. furthermore, check if the debugger is still active,
         # that way we don't try and single step if the user requested a detach.
         if self.get_attr("debugger_active") and mbi.BaseAddress in self._guarded_pages:
-            self._restore_breakpoint = memory_breakpoint(None, None, mbi, None)
+            self._restore_breakpoints[ self.dbg.dwThreadId ] = memory_breakpoint(None, None, mbi, None)
             self.single_step(True)
 
         return continue_status
@@ -1646,8 +1646,8 @@ class pydbg:
         self._log("pydbg.exception_handler_single_step()")
 
         # if there is a breakpoint to restore.
-        if self._restore_breakpoint:
-            bp = self._restore_breakpoint
+        if self._restore_breakpoints.has_key( self.dbg.dwThreadId ):
+            bp = self._restore_breakpoints[ self.dbg.dwThreadId ]
 
             # restore a soft breakpoint.
             if isinstance(bp, breakpoint):
@@ -1688,7 +1688,7 @@ class pydbg:
             continue_status = self.callbacks[EXCEPTION_SINGLE_STEP](self)
 
         # if we single stepped to handle a breakpoint restore.
-        elif self._restore_breakpoint:
+        elif self._restore_breakpoints.has_key( self.dbg.dwThreadId ):
             continue_status = DBG_CONTINUE
 
             # macos compatability.
@@ -1696,6 +1696,7 @@ class pydbg:
             context         = self.get_thread_context(self.h_thread)
             context.EFlags &= ~EFLAGS_TRAP
             self.set_thread_context(context)
+            del self._restore_breakpoints[ self.dbg.dwThreadId ]
 
         else:
             continue_status = DBG_EXCEPTION_NOT_HANDLED
@@ -1712,14 +1713,16 @@ class pydbg:
 
                 if curr.address == prev.address:
                     if prev.restore:
-                        self._restore_breakpoint = prev
+                        self._restore_breakpoints[ self.dbg.dwThreadId ] = prev
                         self.single_step(True)
 
                     self.bp_del_hw(slot=prev.slot)
 
         # reset the hardware breakpoint hit flag and restore breakpoint variable.
         self.hardware_breakpoint_hit = None
-        self._restore_breakpoint     = None
+        if self._restore_breakpoints.has_key( self.dbg.dwThreadId ):
+            del self._restore_breakpoints[ self.dbg.dwThreadId ]
+		
 
         return continue_status
 

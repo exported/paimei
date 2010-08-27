@@ -3656,3 +3656,25 @@ class pydbg:
             self.virtual_protect(_address, _length, old_protect)
         except:
             pass
+            
+    ####################################################################################################################    
+    def get_parameter( self, index ):
+        context = self.get_thread_context( self.h_thread )
+        stack_var = self.read_process_memory( context.Esp+4+index*4, 0x4 )
+        return struct.unpack( "L", stack_var )[0]
+
+    def read_unicode( self, address ):
+        str = ''
+        offset = 0
+        while 1:
+            wch = self.read( address + offset, 2 )
+            str += wch
+            if wch == '\00\00':
+                break
+            offset += 2
+        return str
+
+    def get_return_address( self ):
+        context = self.get_thread_context( self.h_thread )
+        stack_var = self.read_process_memory( context.Esp, 0x4 )
+        return struct.unpack( "L", stack_var )[0]

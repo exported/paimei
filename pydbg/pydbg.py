@@ -123,6 +123,7 @@ class pydbg:
 
         self.breakpoints              = {}        # internal breakpoint dictionary, keyed by address
         self.unresolved_breakpoints   = []        # breakpoints failed to be set at first
+        self.address2symbol           = {}        # address to symbol conversion table
         self.memory_breakpoints       = {}        # internal memory breakpoint dictionary, keyed by base address
         self.hardware_breakpoints     = {}        # internal hardware breakpoint array, indexed by slot (0-3 inclusive)
         self.memory_snapshot_blocks   = []        # list of memory blocks at time of memory snapshot
@@ -570,6 +571,17 @@ class pydbg:
 
         return self.ret_self()
 
+    def bp_set_by_sym (self, module, func_name, description="", restore=True, handler=None):
+        address = self.func_resolve( module, func_name )
+        if address:
+            self.address2symbol[address] = module+"!"+func_name
+            return self.bp_set( address )
+        return None
+
+    def resolve_address_to_sym (self, address):
+        if self.address2symbol.has_key( address ):
+            return self.address2symbol[ address ]
+        return None
 
     ####################################################################################################################
     def bp_set_hw (self, address, length, condition, description="", restore=True, handler=None):

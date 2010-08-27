@@ -879,7 +879,7 @@ class pydbg:
                 continue_status = self.event_handler_create_thread()
 
             elif dbg.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT:
-                continue_status = self.event_handler_exit_process()
+                continue_status = self.event_handler_exit_process(dbg.dwProcessId)
 
             elif dbg.dwDebugEventCode == EXIT_THREAD_DEBUG_EVENT:
                 continue_status = self.event_handler_exit_thread()
@@ -921,6 +921,7 @@ class pydbg:
 
             # close the opened thread handle and resume executing the thread that triggered the debug event.
             self.close_handle(self.h_thread)
+
             kernel32.ContinueDebugEvent(dbg.dwProcessId, dbg.dwThreadId, continue_status)
 
 
@@ -1408,17 +1409,18 @@ class pydbg:
 
 
     ####################################################################################################################
-    def event_handler_exit_process (self):
+    def event_handler_exit_process (self, pid):
         '''
         This is the default EXIT_PROCESS_DEBUG_EVENT handler.
 
         @raise pdx: An exception is raised to denote process exit.
         '''
 
-        self.set_debugger_active(False)
+        if pid == self.pid:
+            self.set_debugger_active(False)
 
         if self.callbacks.has_key(EXIT_PROCESS_DEBUG_EVENT):
-            return self.callbacks[EXIT_PROCESS_DEBUG_EVENT](self)
+            return self.callbacks[EXIT_PROCESS_DEBUG_EVENT](self, pid)
         else:
             return DBG_CONTINUE
 
@@ -1740,7 +1742,6 @@ class pydbg:
         self.hardware_breakpoint_hit = None
         if self._restore_breakpoints.has_key( self.dbg.dwThreadId ):
             del self._restore_breakpoints[ self.dbg.dwThreadId ]
-		
 
         return continue_status
 

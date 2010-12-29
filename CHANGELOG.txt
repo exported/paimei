@@ -1,4 +1,3 @@
-test
 xx.xx.2006 [REV ]
     docs:
         - Updated library, module and developer documentation to reflect new additions.

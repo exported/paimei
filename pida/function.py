@@ -209,73 +209,60 @@ class function (pgraph.graph, pgraph.node):
     def __init_basic_blocks__ (self):
         '''
         Enumerate the basic block boundaries for the current function and store them in a graph structure.
+        
         '''
-
+        import copy
         self.chunks = self.__init_collect_function_chunks__()
-
+        contained_heads = sum([[ea for ea in Heads(chunk_start, chunk_end)] for (chunk_start, chunk_end) in self.chunks],list())
+        blocks = []        
+        edges = []
+        
         for (chunk_start, chunk_end) in self.chunks:
-            edges       = []
-            block_start = chunk_start
 
+            curr_start = chunk_start
             # enumerate the nodes.
             for ea in Heads(chunk_start, chunk_end):
                 # ignore data heads.
                 if not isCode(GetFlags(ea)):
+                    curr_start = NextNotTail(ea)
                     continue
 
-                prev_ea       = PrevNotTail(ea)
                 next_ea       = NextNotTail(ea)
-                branches_to   = self._branches_to(ea)
+                branches_to_next = self._branches_to(next_ea)       
                 branches_from = self._branches_from(ea)
-
-                # ensure that both prev_ea and next_ea reference code and not data.
-                while not isCode(GetFlags(prev_ea)):
-                    prev_ea = PrevNotTail(prev_ea)
-
-                while not isCode(GetFlags(next_ea)):
-                    next_ea = PrevNotTail(next_ea)
-
-                # if the current instruction is a ret instruction, end the current node at ea.
-                if is_ret_insn(ea):
-                    bb = basic_block(block_start, ea, self.depth, self.analysis, self)
-                    self.add_node(bb)
-
-                    # start a new block at the next ea.
-                    block_start = next_ea
-
-                # if there is a branch to the current instruction, end the current node at previous ea.
-                elif branches_to and block_start != ea:
-                    bb = basic_block(block_start, prev_ea, self.depth, self.analysis, self)
-                    self.add_node(bb)
-
-                    # draw an "implicit" branch.
-                    if not is_ret_insn(prev_ea):
-                        edges.append((block_start, ea, 0x0000FF))
-
-                    # start a new block at ea.
-                    block_start = ea
-
-                # if there is a branch from the current instruction, end the current node at ea.
-                elif branches_from:
-                    bb = basic_block(block_start, ea, self.depth, self.analysis, self)
-                    self.add_node(bb)
-
-                    # make a record of the discovered forward edges.
+                is_retn = idaapi.is_ret_insn(ea)
+                
+                if is_retn or not isCode(GetFlags(next_ea)):
+                    blocks.append((curr_start,ea))
+                    curr_start = next_ea  #this will be handled if still not code
+                    
+        
+                elif len(branches_from) > 0:
+                    blocks.append((curr_start,ea))
+                    curr_start = next_ea
+                    
                     for branch in branches_from:
+                        if branch not in contained_heads:
+                            continue
                         if len(branches_from) == 1:  color = 0x0000FF
                         elif branch == next_ea:      color = 0xFF0000
                         else:                        color = 0x00FF00
-
-                        edges.append((block_start, branch, color))
-
-                    # start a new block at the next ea.
-                    block_start = next_ea
-
-            # create all the edges.
-            for (src, dst, color) in edges:
-                edge = pgraph.edge(src, dst)
-                edge.color = color
-                self.add_edge(edge)
+                        edges.append((curr_start, branch, color))
+                 
+                elif len(branches_to_next)> 0:
+                    blocks.append((curr_start,ea))
+                    curr_start = next_ea
+                    # draw an "implicit" branch.
+                    edges.append((ea, next_ea, 0x0000FF))
+                    
+        basicBlocks = [basic_block(bs,be,self.depth, self.analysis, self)\
+                        for (bs,be) in blocks]
+        map(self.add_node,basicBlocks)
+        
+        for (src, dst, color) in edges:
+            edge = pgraph.edge(src, dst)
+            edge.color = color
+            self.add_edge(edge)
 
 
     ####################################################################################################################

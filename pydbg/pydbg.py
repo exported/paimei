@@ -1043,10 +1043,14 @@ class pydbg:
         @rtype:  List
         @return: List of tuples (address, disassembly) of instructions around the specified address.
         '''
-
-        if num_inst < 1 or not int == type(num_inst):
+        
+        if num_inst == 0:
+            return [(address, self.disasm(address))]
+        
+        if num_inst < 0 or not int == type(num_inst):
             self._err("disasm_around called with an invalid window size. reurning error value")
             return [(address, "invalid window size supplied")]
+        
         # grab a safe window size of bytes.
         window_size = (num_inst * 64) / 5
 

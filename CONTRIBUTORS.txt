@@ -17,6 +17,9 @@ Cameron Hotchkies <nummish@0x90.org>
     - General ideas, beta testing and morale support.
     - Ongoing support and additions.
 
+ChanLeeYee <chanleeyee@f13-labs.net>
+    - PIDA enhancements in support for IDAPro version 6.0 and above.
+
 Charlie Miller <charlesamiller@hotmail.com>
     - Bug fix in PyDbg context dump (EBP was being resolved as ESI).
     - Big fix in proc_peek_recon.

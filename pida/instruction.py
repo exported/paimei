@@ -23,6 +23,7 @@
 '''
 
 try:
+    import idautils
     from idaapi   import *
     from idautils import *
     from idc      import *
@@ -159,24 +160,36 @@ class instruction:
         @return: Integer value of referenced constant, otherwise None.
         '''
 
-        instruction = idaapi.get_current_instruction()
+        if idaapi.IDA_SDK_VERSION >=600:
+            instruction = idaapi.cmd.ea
+        else:
+            instruction = idaapi.get_current_instruction()
 
         if not instruction:
             return None
 
         if opnum:
-            op0 = idaapi.get_instruction_operand(instruction, opnum)
+            if idaapi.IDA_SDK_VERSION >=600:
+                op0 = idautils.DecodeInstruction(instruction)[opnum]
+            else:
+                op0 = idaapi.get_instruction_operand(instruction, opnum)
 
             if op0.value and op0.type == o_imm and GetStringType(self.ea) == None:
                 return op0.value
 
         else:
-            op0 = idaapi.get_instruction_operand(instruction, 0)
+            if idaapi.IDA_SDK_VERSION >=600:
+                op0 = idautils.DecodeInstruction(instruction)[0]
+            else:
+                op0 = idaapi.get_instruction_operand(instruction, 0)
 
             if op0.value and op0.type == o_imm and GetStringType(self.ea) == None:
                 return op0.value
 
-            op1 = idaapi.get_instruction_operand(instruction, 1)
+            if idaapi.IDA_SDK_VERSION >=600:
+                op1 = idautils.DecodeInstruction(instruction)[1]
+            else:
+                op1 = idaapi.get_instruction_operand(instruction, 1)
 
             if op1.value and op1.type == o_imm and GetStringType(self.ea) == None:
                 return op1.value
